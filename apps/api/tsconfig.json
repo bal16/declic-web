@@ -1,8 +1,0 @@
-{
-  "extends": "../../packages/tsconfig/base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "types": ["node", "bun-types"]
-  },
-  "include": ["src/**/*", "test/**/*"]
-}
