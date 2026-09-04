@@ -21,12 +21,17 @@
 
     // MD060 - table column style dimatikan, biar prettier yang atur spacing `| --- |`
     // Ini yang bikin error di PRD.md:83 `|---|---|---|`
-    "MD060": false
+    "MD060": false,
+
+    // MD028 - blank line inside blockquote dimatikan
+    // Muncul di docs/db-schema.md:163 antara dua blockquote `> Seeds ...` dan `> system_settings ...`
+    // Marksman tidak nge-lint ini, jadi dimatikan biar tidak bentrok IDE vs Neovim
+    "MD028": false
   },
 
   // markdownlint-cli2 specific (bukan markdownlint biasa)
   "globs": ["**/*.md", "**/*.markdown"],
-  "ignores": ["node_modules/**", ".git/**", ".next/**", "dist/**", "build/**", "coverage/**"],
+  "ignores": ["**/node_modules/**", ".git/**", ".next/**", "dist/**", "build/**", "coverage/**", "apps/**/node_modules/**", "packages/**/node_modules/**"],
 
   // Auto-fix untuk rule yang fixable saat :Conform atau markdownlint-cli2 --fix
   "fix": {

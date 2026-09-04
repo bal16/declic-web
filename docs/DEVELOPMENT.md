@@ -1,7 +1,7 @@
 # Development & Deployment Guide (Monorepo + C1 Mirrors)
 
 **Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
-**Repo decision:** `ADR-001-monorepo-mirror.md` (source of truth `bal16/declic`, read-only mirrors per app)
+**Repo decision:** `adr/ADR-001-monorepo-mirror.md` (source of truth `bal16/declic`, read-only mirrors per app)
 **Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** `db-schema.md` · **Seeds:** `seed.ts`
 
 ---
@@ -52,14 +52,15 @@ declic/                              # bal16/declic (private monorepo)
 │   │                                # enums, flag keys, queue job types
 │   ├── db/                          # (planned) @declic/db — Drizzle schema (db-schema.md)
 │   │   └── src/seed.ts              # (planned) moved from docs/seed.ts
-│   └── tsconfig/                    # (planned) @declic/tsconfig — base/next/nest
+│   └── tsconfig/                    # (planned) @declic/tsconfig — shared base configs
 ├── scripts/
 │   └── mirror.sh                    # (planned) builds C1 mirror branches
 ├── .github/workflows/
 │   ├── ci.yml                       # (planned) install, typecheck, test, docker build
 │   └── mirror.yml                   # (planned) push main → update 3 mirrors + leak-guard
 └── docs/
-    ├── ADR-001-monorepo-mirror.md
+    ├── adr/
+    │   └── ADR-001-monorepo-mirror.md
     ├── DEVELOPMENT.md               # this file
     ├── PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md
     ├── db-schema.md / seed.ts / docker-compose.yml / env.example
@@ -219,7 +220,7 @@ From `PRD.md` §8.5: web and API must share one registrable domain (for example 
 
 ## Cross references
 
-* Repo decision and trade-offs: `ADR-001-monorepo-mirror.md`
+* Repo decision and trade-offs: `adr/ADR-001-monorepo-mirror.md`
 * Product vision and lifecycle: `PRD.md`
 * API and worker specs: `PRD-API.md`, `PRD-Worker.md`, `PRD-FE.md`
 * Schema and seeds: `db-schema.md`, `seed.ts`

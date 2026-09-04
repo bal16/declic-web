@@ -4,7 +4,7 @@
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** `PRD.md` §6/§8.5, `PRD-API.md` §1–§2/§4, `PRD-Worker.md` §1.2, `db-schema.md`, `seed.ts`, `docker-compose.yml`, `DEVELOPMENT.md`
+**Related:** `../PRD.md` §6/§8.5, `../PRD-API.md` §1–§2/§4, `../PRD-Worker.md` §1.2, `../db-schema.md`, `../seed.ts`, `../docker-compose.yml`, `../DEVELOPMENT.md`
 
 ---
 
@@ -82,9 +82,9 @@ Keeps monorepo DX (one PR for a cross-cutting change, one lockfile, `bun --filte
 
 ## Cross references
 
-* Repo layout, dev commands, and deploy flow: `DEVELOPMENT.md`
-* Product vision and roles: `PRD.md`
-* API schema and endpoints: `PRD-API.md`
-* Worker pipeline: `PRD-Worker.md`
-* Canonical schema diagram: `db-schema.md`
-* Seeds: `seed.ts` (moving to `packages/db/src/seed.ts`; see `DEVELOPMENT.md`)
+* Repo layout, dev commands, and deploy flow: `../DEVELOPMENT.md`
+* Product vision and roles: `../PRD.md`
+* API schema and endpoints: `../PRD-API.md`
+* Worker pipeline: `../PRD-Worker.md`
+* Canonical schema diagram: `../db-schema.md`
+* Seeds: `../seed.ts` (moving to `packages/db/src/seed.ts`; see `../DEVELOPMENT.md`)
