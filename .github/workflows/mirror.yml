@@ -1,14 +1,14 @@
 # Mirror fan-out (ADR-001, model C1 — docs/adr/ADR-001-monorepo-mirror.md).
 #
-# Automatic triggers are DISABLED for now: this workflow runs only via manual
-# dispatch. Before enabling automation, ALL of the following must exist:
-#   1. bal16/declic-web (public), bal16/declic-api (private),
-#      bal16/declic-worker (private) on GitHub — DONE,
-#   2. MIRROR_WEB_KEY / MIRROR_API_KEY / MIRROR_WORKER_KEY repo secrets
-#      (per-app SSH deploy keys with write access — GitHub deploy keys
-#      cannot be shared across repos, hence one secret per mirror) — DONE,
-#   3. branch protection on each mirror repo (set after the first push).
-# Then uncomment the push trigger below.
+# Mirror pushes run automatically on every push to main, plus manual
+# dispatch. Prerequisites (all DONE): mirror repos exist, per-app deploy
+# keys stored as MIRROR_WEB/API/WORKER_KEY secrets.
+#
+# Deliberately NO branch protection on mirrors: any real protection
+# (required PRs/checks, push restrictions) would block the automation's
+# force-pushes. Mirrors stay trustworthy through: read-only convention
+# (generated README), deploy keys as the sole writers, and full rebuild
+# from main on every run (history cannot drift).
 
 name: mirror
 
@@ -21,8 +21,8 @@ on:
         default: ''
         type: choice
         options: ['', web, api, worker]
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   mirror:
