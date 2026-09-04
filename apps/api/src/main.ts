@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 import { AppModule } from './app.module';
 import { setupDocs } from './docs';
@@ -10,6 +11,10 @@ async function bootstrap(): Promise<void> {
   });
   // All PRD endpoints live under /api; the liveness probe stays at /health.
   app.setGlobalPrefix('api', { exclude: ['health'] });
+
+  // Single validation story: Zod schemas (via createZodDto DTOs) validate
+  // every body/query/param. Safe for DTO-less routes like /health.
+  app.useGlobalPipes(new ZodValidationPipe());
 
   setupDocs(app);
 

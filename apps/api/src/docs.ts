@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { apiReference } from '@scalar/nestjs-api-reference';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 
 import packageJson from '../package.json';
 
@@ -24,6 +25,10 @@ export function setupDocs(app: INestApplication): void {
       'bearer',
     )
     .build();
-  const document = SwaggerModule.createDocument(app, openApiConfig);
+  // cleanupOpenApiDoc is REQUIRED with nestjs-zod DTOs — without it the
+  // generated document is malformed (unresolved Zod metadata markers).
+  const document = cleanupOpenApiDoc(
+    SwaggerModule.createDocument(app, openApiConfig),
+  );
   app.use('/docs', apiReference({ content: document }));
 }
