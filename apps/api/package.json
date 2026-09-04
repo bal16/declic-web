@@ -2,6 +2,11 @@
   "name": "@declic/api",
   "version": "0.0.0",
   "private": true,
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "dependencies": {
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.0.1",
