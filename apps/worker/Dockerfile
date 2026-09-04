@@ -6,7 +6,7 @@
 # No compile step: Bun runs src/main.ts directly. No inbound ports —
 # scale with replicas, not per-instance concurrency (PRD-Worker.md §4.2).
 
-FROM oven/bun:1.4
+FROM docker.io/oven/bun:1.4
 WORKDIR /srv/declic
 ENV NODE_ENV=production
 

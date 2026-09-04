@@ -6,7 +6,7 @@
 # No compile step: Bun runs src/main.ts directly. Secrets come from the
 # environment at runtime, never baked in (see .dockerignore).
 
-FROM oven/bun:1.4
+FROM docker.io/oven/bun:1.4
 WORKDIR /srv/declic
 ENV NODE_ENV=production
 
