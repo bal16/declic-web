@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/main.ts",
-    "start": "bun src/main.ts",
+    "dev": "NODE_ENV=development bun --watch src/main.ts",
+    "start": "NODE_ENV=production bun src/main.ts",
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
     "test:coverage": "bun test --coverage src/",
