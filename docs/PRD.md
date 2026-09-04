@@ -168,7 +168,7 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
                          └────────┬─────────┘
                                   │
    ┌──────────────┐      ┌───────▼────────┐      ┌──────────────────────┐
-   │  Next.js web  │◄────►│  NestJS API     │◄────►│   PostgreSQL          │
+    │ TanStack web  │◄────►│  NestJS API     │◄────►│   PostgreSQL          │
    │  (public +    │      │  (Bun 1.4)      │      │  (exhibitions, posts, │
    │  photographer │      │                 │      │   photo_items, users, │
    │  + admin UI)  │      │  + Better Auth  │      │   likes, comments)    │
@@ -205,7 +205,7 @@ just in the frontend UI. Runtime feature flags (`feature_flags` table `id=1`: `s
 | Layer | Choice | Notes |
 |---|---|---|
 | Runtime | **Bun 1.4** (stable, Rust-based) | Used across web, API, and worker |
-| Frontend | **Next.js (React) + TypeScript**, Tailwind CSS | SSR/SSG for public gallery SEO and fast first load |
+| Frontend | **TanStack Start (React) + TypeScript**, Tailwind CSS | SSR/streaming + prerender for public gallery SEO and fast first load |
 | Backend API | **NestJS** on Bun | Modular structure: auth, photos, moderation, layout, comments/likes |
 | Worker | **NestJS** on Bun, `@nestjs/bullmq` | Consumes image-processing jobs asynchronously |
 | Database | **PostgreSQL** (self-hosted via Docker) | Relational data: users, exhibitions, posts, photo_items, likes, comments, ordering, audit logs |

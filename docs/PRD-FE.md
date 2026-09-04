@@ -2,12 +2,14 @@
 
 **Version:** 0.4-draft (2026-09-01)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr  
+**Main Stack:** TanStack Start (TanStack Router + file-based routes, Vite), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr  
 **Target:** Web Client (Visitor, Photographer, Admin)  
 **Status:** Draft
-**Last updated:** 2026-09-01
+**Last updated:** 2026-09-04
 
-> This document is the technical specification for the **Frontend Web** of the Déclic platform. For API and image pipeline specifications, see `PRD-API.md` and `PRD-Worker.md`. For general product context, see `PRD.md`. This version reflects **multi-exhibition** (root `/` = latest exhibition, `/archive` + `/exhibition/[slug]`), **SERIES** (`SINGLE`/`SERIES` with `photo_items`), **ARCHIVED freeze** (likes/comments read-only), **runtime feature flags**, and **cuid2** ids.
+> **Framework change (2026-09-04):** web moves from Next.js App Router to **TanStack Start**. Route paths stay the same (`/`, `/post/$postId`, …); only the routing mechanism changes (file-based `$param` routes + route masking for the lightbox instead of intercepting `@modal/(.)` routes, server route + Satori for OG images instead of `next/og`, plain `<img>` + CDN instead of `<Image />`, `beforeLoad` guards instead of middleware). API/worker contracts are unaffected.
+>
+> This document is the technical specification for the **Frontend Web** of the Déclic platform. For API and image pipeline specifications, see `PRD-API.md` and `PRD-Worker.md`. For general product context, see `PRD.md`. This version reflects **multi-exhibition** (root `/` = latest exhibition, `/archive` + `/exhibition/$slug`), **SERIES** (`SINGLE`/`SERIES` with `photo_items`), **ARCHIVED freeze** (likes/comments read-only), **runtime feature flags**, and **cuid2** ids.
 
 ---
 
@@ -15,7 +17,7 @@
 
 This document defines the technical specifications and user interface (UI) design for the Déclic web application.
 
-The web app serves **three user types** within a **single unified Next.js system** (App Router) with access separation based on **Role-Based Access Control (RBAC)** and **Session Guard**:
+The web app serves **three user types** within a **single unified TanStack Start app** (TanStack Router file-based routes, SSR + streaming) with access separation based on **Role-Based Access Control (RBAC)** and **Session Guard** (`beforeLoad` on layout routes):
 
 | Role | Frontend Access | Guard |
 |---|---|---|
@@ -25,7 +27,7 @@ The web app serves **three user types** within a **single unified Next.js system
 
 A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N frames). Likes/comments/curation attach to the **work**; derivatives/blurhash/exif are per **frame**. Gallery grid shows a work as one card (cover = first frame).
 
-**Code location:** `apps/web` (Next.js, Bun 1.4) — see `docker-compose.yml`.
+**Code location:** `apps/web` (TanStack Start on Vite, Bun 1.4 runtime) — see `docker-compose.yml`.
 
 ---
 
@@ -37,10 +39,10 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 |---|---|
 | `/` | **Gallery Home Page (latest exhibition)** — Immersive grid of **works from the latest `PUBLISHED`/`LIVE` exhibition** (resolved via `GET /api/exhibitions?limit=1` then `GET /api/posts?exhibition_id=latest`). Shows exhibition header (title, poster, `start_date`/`end_date`, location) + justified layout by cover image, search (`title`/photographer), sorting (`Curated`, `Most Liked`, `Recent`). Filter `SINGLE`/`SERIES` pills optional. When latest is `ARCHIVED`, banner `"This exhibition is archived — browsing only"` and likes/comments disabled. |
 | `/archive` | **Archive List** — Grid/list of past `ARCHIVED` exhibitions (`GET /api/exhibitions?phase=ARCHIVED`) ordered by `start_date DESC`, with poster + title + date. |
-| `/exhibition/[slug]` | **Exhibition Detail** — Gallery scoped to that `exhibitions.slug` (`GET /api/exhibitions/:slug` + `GET /api/posts?exhibition_slug=:slug`). Same grid/lightbox as `/` but header shows that exhibition’s metadata. `ARCHIVED` banner + frozen engagement if needed. |
-| `@modal/(.)post/[id]` | **Work Lightbox Intercepting Route** — Immersive modal over the grid without full page reload, synced with URL. For `SERIES`, carousel of frames. Uses Next.js **Parallel & Intercepting Routes**. Alias `@modal/(.)photo/[id]` kept for BC → redirects to `post`. Respects `ARCHIVED` freeze (like/comment buttons disabled with tooltip). |
-| `/post/[id]` | **Work Detail Standalone Page** — Fallback / direct link for individual works (includes `exhibition` breadcrumb). SEO-friendly & shareable. Shows all frames. Alias `/photo/[id]` → `/post/[id]`. |
-| `/post/[id]/opengraph-image` | **Dynamic OpenGraph Image** — Automatic social media preview via `next/og` (`ImageResponse`). For SERIES, uses cover frame + series badge + exhibition title. |
+| `/exhibition/$slug` | **Exhibition Detail** — Gallery scoped to that `exhibitions.slug` (`GET /api/exhibitions/:slug` + `GET /api/posts?exhibition_slug=:slug`). Same grid/lightbox as `/` but header shows that exhibition’s metadata. `ARCHIVED` banner + frozen engagement if needed. |
+| `/post/$postId` + lightbox mask | **Work Lightbox (route-masked modal)** — Immersive modal over the grid without full page reload, synced with URL. Clicking a work navigates to the modal route while the URL bar keeps the gallery URL via TanStack Router **route masking**; refresh/share unmasks to `/post/$postId` detail. For `SERIES`, carousel of frames. Alias `/photo/$postId` → `/post/$postId`. Respects `ARCHIVED` freeze (like/comment buttons disabled with tooltip). |
+| `/post/$postId` | **Work Detail Standalone Page** — Fallback / direct link for individual works (includes `exhibition` breadcrumb). SEO-friendly & shareable (SSR + prerender). Shows all frames. Alias `/photo/$postId` → `/post/$postId`. |
+| `/og/$postId` (server route) | **Dynamic OpenGraph Image** — Social media preview rendered server-side as PNG (Satori + resvg, or `@vercel/og` on Vercel). For SERIES, uses cover frame + series badge + exhibition title. |
 | `/about` | **About Exhibition & CLIC** — Exhibition introduction page, curatorial description, and profile of UKM CLIC UNNES. |
 
 ### 2.2 Photographer Area (Contributor Dashboard)
@@ -49,7 +51,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 |---|---|---|
 | `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING`, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
 | `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch MinIO Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from flags. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
-| `/dashboard/edit/[id]` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (and exhibition not `ARCHIVED`). | Owner only |
+| `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (and exhibition not `ARCHIVED`). | Owner only |
 
 ### 2.2.1 Exhibition Selection
 
@@ -70,7 +72,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 ## 3. Key Features & UI Interaction Specs
 
-### 3.1 Public Exhibition & Lightbox (`/`, `/post/[id]`)
+### 3.1 Public Exhibition & Lightbox (`/`, `/post/$postId`)
 
 #### Justified Dynamic Grid (works)
 
@@ -92,12 +94,12 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 - Uses **cursor-based pagination** via `TanStack Query` (`useInfiniteQuery`) — `cursor` + `limit` + `nextCursor` from `GET /api/posts?exhibition_id=...` (or `exhibition_slug`). Default `exhibition_id` is latest exhibition resolved on page load.
 - Placeholder: **blurhash** from the cover frame's `photo_items.blurhash` to prevent **CLS** (see §5).
-- Next.js `<Image />` with responsive `sizes` + `loading="lazy"` except for first 4 works (`priority`).
+- Plain `<img>` with responsive `sizes` + `loading="lazy"` (first 4 works use `fetchpriority="high"` instead of lazy). Derivatives are already CDN-cached per frame, so no framework image optimizer is needed.
 - **ARCHIVED banner:** When `exhibitions.phase === 'ARCHIVED'`, grid shows top banner `"This exhibition is archived — likes and comments are frozen"` and disables like/comment buttons (tooltip `ARCHIVED`).
 
-#### Lightbox Intercepting Modal (`@modal/(.)post/[id]`)
+#### Lightbox Modal (route-masked, `/post/$postId`)
 
-- Uses Next.js **Parallel & Intercepting Routes** — clicking a work card opens the modal without full reload, URL remains `/post/[id]` (shareable, back-button aware).
+- Uses TanStack Router **route masking** — clicking a work card navigates to the modal route while the URL bar keeps showing the gallery URL (shareable, back-button aware). A refresh or shared link loads the unmasked `/post/$postId` detail page instead.
 - **Content:**
   - `SINGLE`: one image (thumbnail/web/lightbox derivatives from the sole `photo_item`).
   - `SERIES`: **carousel** of frames (ordered by `item_order`). Dots + `1/N` indicator. Swipe left/right on mobile, arrow keys on desktop cycle frames **within** the work; after last frame, next swipe navigates to next work in `curated` order.
@@ -108,11 +110,11 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
   - **Metadata Panel Toggle** — Drawer/sidebar shows per-frame EXIF for the currently visible frame (`make`, `model`, `fNumber`, `exposureTime`, `iso`, `focalLength`, `DateTimeOriginal`), plus ability to switch frames and see each frame's metadata.
 - **Accessibility:** `Esc` to close, `←`/`→` to navigate frames/works, `Tab` trapped inside modal, `aria-modal`, carousel has `aria-roledescription="carousel"`.
 
-#### Social Sharing & Dynamic OG Image (`/post/[id]/opengraph-image`)
+#### Social Sharing & Dynamic OG Image (`/og/$postId` server route)
 
-- Integrates `@vercel/og` / `next/og` for dynamic `ImageResponse`.
-- When a `/post/[id]` link is shared to WhatsApp / X / Telegram, the preview card shows the **cover frame** high-res + title + photographer + `SERIES • N` badge + **UKM CLIC UNNES** branding.
-- File: `apps/web/app/post/[id]/opengraph-image.tsx` (alias `photo/[id]` → redirect).
+- A TanStack Start server route renders the preview PNG (Satori + resvg, or `@vercel/og` when deployed on Vercel).
+- When a `/post/$postId` link is shared to WhatsApp / X / Telegram, the preview card shows the **cover frame** high-res + title + photographer + `SERIES • N` badge + **UKM CLIC UNNES** branding.
+- File: `apps/web/src/routes/og.$postId.tsx` (server handler; alias `photo/$postId` → redirect).
 
 ### 3.2 Photographer Work Upload Form (`/dashboard/upload`)
 
@@ -261,7 +263,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 
 | Metric | Target | Strategy |
 |---|---|---|
-| **Largest Contentful Paint (LCP)** | `< 2.0s` | Next.js `<Image />` with `priority` on first 4 **work covers** in viewport; responsive `sizes`; CDN cache for per-frame derivatives |
+| **Largest Contentful Paint (LCP)** | `< 2.0s` | Plain `<img>` with `fetchpriority="high"` on first 4 **work covers** in viewport; responsive `sizes`; CDN cache for per-frame derivatives |
 | **Cumulative Layout Shift (CLS)** | `< 0.05` | Measured cover aspect ratio (`width`/`height` from first `photo_items` derivative) + **blurhash** placeholder before load |
 | **Interaction to Next Paint (INP)** | `< 150ms` | **Optimistic updates** on work Likes & Comments (`posts.likes_count` via TanStack Query `onMutate` + rollback) |
 | **Accessibility (a11y)** | WCAG AA | Full keyboard in Lightbox carousel (`Esc` close, `←`/`→` frame/work, `Tab` trap), pagination announced, `alt` from work `title` + frame index |
@@ -269,7 +271,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 **Additional optimizations:**
 
 - `useInfiniteQuery` with `staleTime` + `cacheTime` for gallery of works — no excessive refetch when navigating back from Lightbox.
-- Dynamic import for `CurationCanvas` + `SeriesCarousel` (only loads `dnd-kit`/carousel code on `/admin/curate` and `/post/[id]`).
+- Route-level code splitting for `CurationCanvas` + `SeriesCarousel` (only loads `dnd-kit`/carousel code on `/admin/curate` and `/post/$postId`).
 - Series lightbox prefetches next frame's `web` derivative.
 
 ---
@@ -286,31 +288,32 @@ const { data: session, isPending } = useSession();
 // session.user.name, session.user.email, session.user.image, session.user.role
 ```
 
-- `better-auth` is mounted on the **NestJS API** (`@thallesp/nestjs-better-auth`), not on Next.js — `apps/web` acts only as a client.
+- `better-auth` is mounted on the **NestJS API** (`@thallesp/nestjs-better-auth`), not on the web app — `apps/web` acts only as a client (same `better-auth/react` `useSession` client SDK).
 - Frontend env: `NEXT_PUBLIC_API_URL=http://localhost:3001`, `NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3001`.
 
 ### 6.2 Session Handling (Cookie vs Bearer)
 
 | Client | Mechanism | Configuration |
 |---|---|---|
-| **Web (Next.js)** | First-party cookie: `HTTP-Only`, `Secure`, `SameSite=Lax` | Web & API must share the same registrable domain (`app.declic.com` + `api.declic.com`) via `trustedOrigins` + CORS. Fallback: reverse-proxy `apps/web` proxies `/api/*` → API |
+| **Web (TanStack Start)** | First-party cookie: `HTTP-Only`, `Secure`, `SameSite=Lax` | Web & API must share the same registrable domain (`app.declic.com` + `api.declic.com`) via `trustedOrigins` + CORS. Fallback: reverse-proxy `apps/web` proxies `/api/*` → API |
 | **Mobile (future)** | `Authorization: Bearer <token>` via Better Auth `bearer()` plugin | No cookies, hits `api.*` directly |
 
 ### 6.3 Auth Guard Component
 
 ```typescript
-// apps/web/middleware.ts or HOC
+// apps/web/src/routes/_authed.tsx (layout route, TanStack Router)
+// beforeLoad checks the Better Auth session + role for all child routes:
 // - /dashboard/*  → requires session + role PHOTOGRAPHER|ADMIN
 // - /admin/*      → requires session + role ADMIN
 // - If not logged in → redirect to /login or show Auth Wall modal
 // - If insufficient role → 403 page
 ```
 
-- Guard is **two-layered**: Middleware (fast redirect) + API `RolesGuard` + `FeatureFlagGuard` + `ExhibitionPhaseGuard` (final authority — UI guard does not replace API guard).
+- Guard is **two-layered**: `beforeLoad` on layout routes (fast redirect) + API `RolesGuard` + `FeatureFlagGuard` + `ExhibitionPhaseGuard` (final authority — UI guard does not replace API guard).
 - Additional upload/engagement guards:
   - if selected `exhibitions.phase === 'ARCHIVED'`, `/dashboard/upload` shows `"Exhibition has been archived, new uploads are closed"` (API also returns `403`).
   - if `feature_flags.series_enabled === false`, upload form hides SERIES toggle/batch UI and shows `"SERIES creation is temporarily disabled"` on attempt (API returns `403 FEATURE_DISABLED`). Existing SERIES works remain visible.
-  - if `exhibitions.phase === 'ARCHIVED'`, like/comment buttons everywhere (gallery, lightbox, `/post/[id]`) are **disabled** with tooltip `"This exhibition is archived — likes and comments are frozen"` (API returns `403 ARCHIVED` on POST). Reads remain.
+  - if `exhibitions.phase === 'ARCHIVED'`, like/comment buttons everywhere (gallery, lightbox, `/post/$postId`) are **disabled** with tooltip `"This exhibition is archived — likes and comments are frozen"` (API returns `403 ARCHIVED` on POST). Reads remain.
   - Frontend reads `GET /api/exhibitions` (latest) + `GET /api/feature-flags` on mount; polling/cache 10s TTL. All `id` params are `cuid2` text — never sorted lexicographically; pagination uses `created_at` cursor. Root `/` auto-resolves to latest exhibition (`start_date DESC`).
 
 ---
@@ -321,4 +324,4 @@ const { data: session, isPending } = useSession();
 - **Backend API:** `PRD-API.md` — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibition_id`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
 - **Image Worker:** `PRD-Worker.md` — `image-processing` per `photo_item` (`cuid2`), aggregation to `posts.status`, scheduler note (no worker change for exhibitions).
 - **DB Schema:** `db-schema.md` — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
-- **Local Infra:** `docker-compose.yml` + `env.example` — services `web` (Next.js), `api` (NestJS), `worker`, `postgres`, `redis`, `minio`.
+- **Local Infra:** `docker-compose.yml` + `env.example` — services `web` (TanStack Start), `api` (NestJS), `worker`, `postgres`, `redis`, `minio`.

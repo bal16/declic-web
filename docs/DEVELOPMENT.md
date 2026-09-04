@@ -1,6 +1,6 @@
 # Development & Deployment Guide (Monorepo + C1 Mirrors)
 
-**Stack:** Bun 1.4 · Next.js (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
+**Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
 **Repo decision:** `ADR-001-monorepo-mirror.md` (source of truth `bal16/declic`, read-only mirrors per app)
 **Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** `db-schema.md` · **Seeds:** `seed.ts`
 
@@ -31,11 +31,12 @@ declic/                              # bal16/declic (private monorepo)
 ├── .env                             # local only, copied from .env.example (never committed)
 ├── .env.example                     # (planned) merged root env (see §4)
 ├── apps/
-│   ├── web/                         # Next.js App Router — @declic/web
+│   ├── web/                         # TanStack Start (Vite) — @declic/web
 │   │   ├── package.json             # (planned) deps on workspace:* contracts/db
 │   │   ├── Dockerfile               # (planned) root-context image, Vercel-compatible build
-│   │   └── app/…                    # routes: /, /archive, /exhibition/[slug],
-│   │                                #   /post/[id], /dashboard/*, /admin/* (PRD-FE.md §2)
+│   │   └── src/routes/…             # routes: /, /archive, /exhibition/$slug,
+│   │                                #   /post/$postId (+ lightbox mask), /og/$postId,
+│   │                                #   /dashboard/*, /admin/* (PRD-FE.md §2)
 │   ├── api/                         # NestJS API + Better Auth — @declic/api
 │   │   ├── package.json             # (planned)
 │   │   ├── Dockerfile               # (planned) root-context image
@@ -78,7 +79,7 @@ declic-api/ (mirror content, generated)
 
 * Bun 1.4 (`bun --version`), Git, Docker + Docker Compose.
 * OAuth credentials for Google/GitHub (only needed to test login; the gallery itself runs without them).
-* No global Nest/Next CLIs required — everything runs through Bun.
+* No global Nest CLIs required — everything runs through Bun (web dev runs via the Vite plugin).
 
 ## 4. Environment
 
@@ -130,7 +131,7 @@ bun packages/db/src/seed.ts
 ### 5.3 Per-app commands (Bun workspaces)
 
 ```bash
-bun run --filter @declic/web dev      # Next.js dev server
+bun run --filter @declic/web dev      # TanStack Start (Vite) dev server
 bun run --filter @declic/api dev      # NestJS API watch mode
 bun run --filter @declic/worker dev   # BullMQ worker watch mode
 bun run --filter "@declic/*" test     # all tests

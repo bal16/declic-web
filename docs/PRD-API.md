@@ -249,7 +249,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
 **Session Strategy:**
 
-- **Web Client (Next.js):** HTTP-Only, Secure, `SameSite=Lax` Cookie.
+- **Web Client (TanStack Start):** HTTP-Only, Secure, `SameSite=Lax` Cookie.
 - **Mobile Client (Future Ready):** `Authorization: Bearer <token>` header via Better Auth `bearer()` plugin.
 
 **CORS & Cookie Domain:**

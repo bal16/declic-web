@@ -12,7 +12,7 @@
 
 Déclic has three runtimes that look like three apps but share one contract surface:
 
-* `apps/web` — Next.js (App Router) public gallery + photographer dashboard + admin UI (`PRD-FE.md` §2).
+* `apps/web` — TanStack Start public gallery + photographer dashboard + admin UI (`PRD-FE.md` §2).
 * `apps/api` — NestJS on Bun, owns Better Auth sessions, RBAC, presigned MinIO uploads, and enqueues one BullMQ job per `photo_items` row (`PRD-API.md` §1/§4).
 * `apps/worker` — NestJS BullMQ consumer, regenerates `blurhash` + derivatives per frame with `Bun.Image` and promotes `posts.status` to `PENDING` (`PRD-Worker.md` §1–§3).
 
