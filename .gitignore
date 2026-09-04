@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Local env (never commit real secrets)
+.env
+.env*.local
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store

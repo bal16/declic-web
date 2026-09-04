@@ -1,0 +1,40 @@
+# Marksman LSP — project-level config
+# =====================================
+# Neovim kamu pakai Marksman via LazyVim:
+#   /home/bal/.config/nvim/lazyvim.json:8 -> extras.lang.markdown
+#   /home/bal/.local/share/nvim/lazy/LazyVim/lua/lazyvim/plugins/extras/lang/markdown.lua:66-71 -> servers.marksman = {}
+#   Binary: /home/bal/.local/share/nvim/mason/bin/marksman (mason)
+#
+# Marksman TIDAK baca settings dari nvim-lspconfig (LazyVim discussion #1442),
+# hanya dari file ini (.marksman.toml) atau user config ~/.config/marksman/config.toml
+# Precedence: project > user > default
+# Default lengkap: https://raw.githubusercontent.com/artempyanykh/marksman/main/Tests/default.marksman.toml
+#
+# File ini juga jadi "project root marker" — tanpa ini atau .git,
+# Marksman jalan di single-file mode (cross-file refs tidak aktif).
+
+[core]
+# Ekstensi markdown yang di-scan
+markdown.file_extensions = ["md", "markdown"]
+# H1 dianggap judul dokumen (true = wiki completion pakai title-slug)
+# Kalau false, completion pakai file-stem (lebih cocok untuk PRD-API, PRD-FE, PRD-Worker)
+title_from_heading = false
+# Sync protocol: "full" lebih stabil (incremental ada bug di beberapa editor)
+text_sync = "full"
+# Experimental incremental refs — biarkan false untuk stabilitas
+incremental_references = false
+
+[code_action]
+# Table of Contents code action (muncul di Neovim via `vim.lsp.buf.code_action`)
+toc.enable = true
+# Heading yang masuk TOC
+toc.include = [1, 2, 3, 4, 5, 6]
+# Bikin file kosong kalau link ke file yang belum ada
+create_missing_file.enable = true
+
+[completion]
+# Max kandidat completion
+candidates = 50
+# Gaya wiki link: "title-slug" (default) vs "file-stem" vs "file-path-stem"
+# file-stem = [[PRD-API]] -> PRD-API.md (paling intuitif untuk repo ini)
+wiki.style = "file-stem"

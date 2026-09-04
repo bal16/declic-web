@@ -1,0 +1,5 @@
+# Shared Bun configuration for the Déclic monorepo.
+# See docs/DEVELOPMENT.md. Per-package overrides (if ever needed)
+# live in a bunfig.toml next to that package's package.json.
+
+[install]

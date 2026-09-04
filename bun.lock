@@ -1,0 +1,46 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "declic",
+    },
+    "apps/api": {
+      "name": "@declic/api",
+      "version": "0.0.0",
+    },
+    "apps/web": {
+      "name": "@declic/web",
+      "version": "0.0.0",
+    },
+    "apps/worker": {
+      "name": "@declic/worker",
+      "version": "0.0.0",
+    },
+    "packages/contracts": {
+      "name": "@declic/contracts",
+      "version": "0.0.0",
+    },
+    "packages/db": {
+      "name": "@declic/db",
+      "version": "0.0.0",
+    },
+    "packages/tsconfig": {
+      "name": "@declic/tsconfig",
+      "version": "0.0.0",
+    },
+  },
+  "packages": {
+    "@declic/api": ["@declic/api@workspace:apps/api"],
+
+    "@declic/contracts": ["@declic/contracts@workspace:packages/contracts"],
+
+    "@declic/db": ["@declic/db@workspace:packages/db"],
+
+    "@declic/tsconfig": ["@declic/tsconfig@workspace:packages/tsconfig"],
+
+    "@declic/web": ["@declic/web@workspace:apps/web"],
+
+    "@declic/worker": ["@declic/worker@workspace:apps/worker"],
+  }
+}

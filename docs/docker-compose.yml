@@ -1,0 +1,183 @@
+name: pameran-foto
+
+# ─────────────────────────────────────────────────────────────
+# Development compose file for "Pameran Foto"
+# Runtime  : Bun (all JS services)
+# Stack    : Next.js (web) + NestJS (api) + BullMQ worker
+#            + PostgreSQL + Redis + MinIO (S3-compatible)
+# Assumes project layout:
+#   ./apps/web     -> Next.js frontend
+#   ./apps/api     -> NestJS API
+#   ./apps/worker  -> image-processing worker (Bun.Image + BullMQ)
+# Copy .env.example to .env before running `docker compose up`
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Database ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pameranfoto}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pameranfoto}
+      POSTGRES_DB: ${POSTGRES_DB:-pameranfoto_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pameranfoto}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pameran-foto-net
+
+  # ── Queue / cache (BullMQ backend) ─────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pameran-foto-net
+
+  # ── Object storage (S3-compatible, dev/prod parity) ───────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pameran-foto-net
+
+  # One-off: auto-create the app's bucket on first startup
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+        mc mb --ignore-existing local/${S3_BUCKET:-pameran-foto};
+        mc anonymous set download local/${S3_BUCKET:-pameran-foto}/public;
+        exit 0;
+      "
+    networks:
+      - pameran-foto-net
+
+  # ── NestJS API (Bun) ───────────────────────────────────────────
+  api:
+    image: oven/bun:1.4
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "bun install && bun run start:dev"
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgres://${POSTGRES_USER:-pameranfoto}:${POSTGRES_PASSWORD:-pameranfoto}@postgres:5432/${POSTGRES_DB:-pameranfoto_dev}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-pameran-foto}
+      S3_FORCE_PATH_STYLE: "true"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-change-me}
+      BETTER_AUTH_URL: http://localhost:3001
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    volumes:
+      - ./apps/api:/app
+      - api_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - pameran-foto-net
+
+  # ── Image-processing worker (NestJS + @nestjs/bullmq + Bun.Image) ──
+  worker:
+    image: oven/bun:1.4
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "bun install && bun run start:dev"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER:-pameranfoto}:${POSTGRES_PASSWORD:-pameranfoto}@postgres:5432/${POSTGRES_DB:-pameranfoto_dev}
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-pameran-foto}
+      S3_FORCE_PATH_STYLE: "true"
+    volumes:
+      - ./apps/worker:/app
+      - worker_node_modules:/app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - pameran-foto-net
+
+  # ── Next.js frontend (Bun) ──────────────────────────────────────
+  web:
+    image: oven/bun:1.4
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "bun install && bun run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_BETTER_AUTH_URL: http://localhost:3001
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      - api
+    networks:
+      - pameran-foto-net
+
+networks:
+  pameran-foto-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  api_node_modules:
+  worker_node_modules:
+  web_node_modules:
