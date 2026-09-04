@@ -2,6 +2,7 @@
 
 **Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
 **Repo decision:** `adr/ADR-001-monorepo-mirror.md` (source of truth `bal16/declic`, read-only mirrors per app)
+**Release decision:** `adr/ADR-002-release-tagging.md` (single `vX.Y.Z` tag, rc-only, deploy deferred)
 **Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** `db-schema.md` · **Seeds:** `seed.ts`
 
 ---
@@ -13,57 +14,69 @@ Four GitHub repos. You only ever push to the first one:
 | Repo | Visibility | Purpose |
 |---|---|---|
 | `bal16/declic` | Private | Monorepo source of truth. All development and PRs happen here. |
-| `bal16/declic-web` | Public | Read-only mirror for the web app. Deploy target: Vercel. Portfolio-safe (no server secrets). |
-| `bal16/declic-api` | Private | Read-only mirror for the API. Deploy target: Docker / long-running host. |
-| `bal16/declic-worker` | Private | Read-only mirror for the worker. Deploy target: Docker / long-running host. |
+| `bal16/declic-web` | Public | Read-only mirror for the web app. Deploy target: TBD (Vercel explicitly out). Portfolio-safe (no server secrets). |
+| `bal16/declic-api` | Private | Read-only mirror for the API. Deploy target: TBD (Docker image available). |
+| `bal16/declic-worker` | Private | Read-only mirror for the worker. Deploy target: TBD (Docker image available). |
 
-## 2. Directory tree (target layout)
+Production images are published to GHCR on release tags (`ghcr.io/bal16/declic-<app>:vX.Y.Z`, see §8).
 
-Current checkout has empty `apps/*` placeholders. The tree below is the target once scaffolding lands (ADR-001 §2). Files marked `(planned)` do not exist yet.
+## 2. Directory tree (actual layout)
+
+Generated from `git ls-files` — this tree describes what exists, not a plan.
+Items marked `(next)` are the known remaining gaps.
 
 ```text
 declic/                              # bal16/declic (private monorepo)
-├── package.json                     # (planned) workspaces: ["apps/*", "packages/*"]
-├── bun.lock                         # (planned) single lockfile at root
-├── bunfig.toml                      # (planned)
-├── tsconfig.base.json               # (planned)
-├── docker-compose.yml               # dev stack (exists, compose spec in docs/)
+├── package.json                     # workspaces: ["apps/*", "packages/*"] + root scripts
+├── bun.lock                         # single lockfile at root (frozen in CI)
+├── bunfig.toml                      # shared Bun config
+├── .gitignore / .dockerignore / .editorconfig
 ├── .env                             # local only, copied from .env.example (never committed)
-├── .env.example                     # (planned) merged root env (see §4)
+├── .env.example                     # merged root env (see §4)
+├── .oxlintrc.json                   # oxlint: correctness=error, web hooks override (§6)
+├── .oxfmtrc.jsonc                   # oxfmt: width 80, single quotes, import+tailwind sort (§6)
+├── lefthook.yml                     # pre-commit: staged oxlint --fix + oxfmt (stage_fixed)
 ├── apps/
 │   ├── web/                         # TanStack Start (Vite) — @declic/web
-│   │   ├── package.json             # deps on workspace:* contracts/db (wired next)
-│   │   ├── Dockerfile               # root-context image (`docker build -f apps/web/Dockerfile .`)
-│   │   └── src/routes/…             # routes: /, /archive, /exhibition/$slug,
-│   │                                #   /post/$postId (+ lightbox mask), /og/$postId,
-│   │                                #   /dashboard/*, /admin/* (PRD-FE.md §2)
+│   │   ├── package.json / tsconfig.json / vite.config.ts
+│   │   ├── Dockerfile               # two-stage, serves Nitro .output
+│   │   ├── src/
+│   │   │   ├── router.tsx           # getRouter() factory + Register augmentation
+│   │   │   ├── routes/__root.tsx + index.tsx
+│   │   │   ├── routeTree.gen.ts     # generated AND committed (typecheck needs it)
+│   │   │   ├── styles.css           # Tailwind v4 entry (oxfmt sort reference)
+│   │   │   └── lib/env.ts           # VITE_* config (VITE_API_URL, VITE_BETTER_AUTH_URL)
+│   │   └── test/home.e2e.test.ts    # boots Nitro build, fetches / over HTTP
 │   ├── api/                         # NestJS API + Better Auth — @declic/api
-│   │   ├── package.json
-│   │   ├── Dockerfile               # root-context image (`docker build -f apps/api/Dockerfile .`)
-│   │   └── src/modules/…            # auth, users, exhibitions, posts/photo-items,
-│   │                                #   curation, moderation, engagement, storage,
-│   │                                #   queue, feature-flags, site-settings, audit
+│   │   ├── package.json / tsconfig.json / Dockerfile
+│   │   └── src/                     # main.ts, app.module.ts (+controller/service, /health)
+│   │       └── test/…               # unit (*.test.ts) + e2e (test/health.e2e.test.ts)
+│   │   # (next) feature modules per PRD-API.md §1.1 (auth, posts, queue, …)
 │   └── worker/                      # BullMQ consumer + Bun.Image — @declic/worker
-│       ├── package.json
-│       ├── Dockerfile               # root-context image (`docker build -f apps/worker/Dockerfile .`)
-│       └── src/…                    # image-processing processor (PRD-Worker.md §3)
+│       ├── package.json / tsconfig.json / Dockerfile (no EXPOSE)
+│       └── src/                     # main.ts (app context), worker.module.ts
+│           └── test/…               # unit + e2e (context lifecycle)
+│       # (next) image-processing consumer per PRD-Worker.md §3
 ├── packages/
-│   ├── contracts/                   # (planned) @declic/contracts — Zod DTOs, Phase/Status
-│   │                                # enums, flag keys, queue job types
-│   ├── db/                          # (planned) @declic/db — Drizzle schema (db-schema.md)
-│   │   └── src/seed.ts              # (planned) moved from docs/seed.ts
-│   └── tsconfig/                    # (planned) @declic/tsconfig — shared base configs
+│   ├── contracts/                   # @declic/contracts — zod (DTO source of truth, next: schemas)
+│   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/seed.ts
+│   └── tsconfig/base.json           # shared strict TS config (decorator metadata on)
 ├── scripts/
-│   └── mirror.sh                    # builds C1 mirror branches (manual run for now)
+│   ├── mirror.sh                    # builds C1 mirror branches (used by mirror.yml)
+│   └── check-coverage.ts            # coverage gate: ≥90% lines per app (used by release.yml)
 ├── .github/workflows/
-│   ├── ci.yml                       # verify + leak-guard (workflow_dispatch only for now)
-│   └── mirror.yml                   # manual dispatch → update 3 mirrors (auto push disabled)
+│   ├── ci.yml                       # verify + leak-guard (workflow_dispatch only)
+│   ├── mirror.yml                   # push to main → update 3 mirrors (automatic)
+│   └── release.yml                  # push tags v* → gates + GHCR + GitHub Release (§8)
+├── .vscode/
+│   ├── settings.json                # oxc formatter/linter on save; eslint+prettier disabled
+│   └── extensions.json              # recommends oxc, tailwind, markdownlint, editorconfig
 └── docs/
-    ├── adr/
-    │   └── ADR-001-monorepo-mirror.md
+    ├── adr/ADR-001-monorepo-mirror.md + ADR-002-release-tagging.md
     ├── DEVELOPMENT.md               # this file
     ├── PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md
-    ├── db-schema.md / seed.ts / docker-compose.yml / env.example
+    └── db-schema.md / seed.ts / docker-compose.yml / env.example
+    # (next) root docker-compose.yml materialized from the docs/ spec
 ```
 
 Each C1 mirror contains its app plus the `packages/*` slice it needs, plus the root build manifest, so a standalone clone builds without the monorepo. Example (`declic-api` mirror):
@@ -78,13 +91,14 @@ declic-api/ (mirror content, generated)
 
 ## 3. Prerequisites
 
-* Bun 1.4 (`bun --version`), Git, Docker + Docker Compose.
-* OAuth credentials for Google/GitHub (only needed to test login; the gallery itself runs without them).
-* No global Nest CLIs required — everything runs through Bun (web dev runs via the Vite plugin).
+* Bun 1.4 (`bun --version`), Git, `gh` CLI (authed as repo owner for mirror/release ops).
+* Container runtime: **Podman** (verified: all three images build + boot-test under podman 6). Plain `docker` works wherever Docker runs — Dockerfiles use the fully-qualified `docker.io/oven/bun:1.4` base for both.
+* OAuth credentials for Google/GitHub (only needed to test login later; nothing needs them yet).
+* No global Nest/Vite CLIs — everything runs through Bun. One install per clone: `bunx lefthook install` (git hooks; local-only).
 
 ## 4. Environment
 
-Root `.env.example` (planned) merges `docs/env.example` plus service URLs. Copy it before first run:
+Root `.env.example` merges `docs/env.example` plus service URLs. Copy it before first run:
 
 ```bash
 cp .env.example .env
@@ -92,63 +106,67 @@ cp .env.example .env
 
 | Key | Used by | Notes |
 |---|---|---|
-| `POSTGRES_USER/PASSWORD/DB` | postgres service | Compose reads these with `pameranfoto*` defaults |
-| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | minio, api, worker | Dev defaults `minioadmin/minioadmin`, bucket `pameran-foto` |
-| `DATABASE_URL`, `REDIS_URL` | api, worker | Point at `postgres`/`redis` service names inside Compose |
-| `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for MinIO |
+| `POSTGRES_USER/PASSWORD/DB`, `DATABASE_URL` | postgres, api, worker | `DATABASE_URL` points at the `postgres` service name inside Compose |
+| `REDIS_URL` | api, worker | Points at the `redis` service name inside Compose |
+| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | minio | Dev defaults `minioadmin/minioadmin`, bucket `pameran-foto` |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for MinIO; endpoint is localhost outside Compose |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | api | URL is `http://localhost:3001` in dev |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | api | Empty = OAuth login disabled, rest of app still runs |
-| `VITE_API_URL`, `VITE_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev |
+| `VITE_API_URL`, `VITE_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev (`VITE_` prefix = client-exposed) |
 
 ## 5. Development
 
 ### 5.1 First-time setup (monorepo)
 
 ```bash
-git clone git@github.com:bal16/declic.git && cd declic
+git clone https://github.com/bal16/declic.git && cd declic
 cp .env.example .env
-bun install
-bun run --filter "@declic/*" build
+bun install --frozen-lockfile
+bunx lefthook install
+bun run lint && bun run format:check && bun run --filter "@declic/*" typecheck
 ```
 
-### 5.2 Full-stack dev via Compose (recommended)
+Notes: remote is HTTPS (via `gh auth`), not SSH. `bun run --filter "@declic/*" build` runs each workspace's `build` script and silently skips workspaces that do not define one (`contracts/db/tsconfig` have no build step).
 
-Uses `docs/docker-compose.yml` services: postgres (5432), redis (6379), minio API (9000) + console (9001), api (3001), worker, web (3000).
+### 5.2 Full-stack dev via Compose (not yet materialized)
 
-```bash
-docker compose up --build
-# gallery:  http://localhost:3000
-# api:      http://localhost:3001/api/feature-flags
-# minio:    http://localhost:9001
-```
+The target stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml`, but no root `docker-compose.yml` exists yet. Until it lands, run each app directly (§5.3) with `cp .env.example .env`. The compose file, when written, must use image builds with root context (`podman build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
 
-Seed the database (flags, site settings, demo exhibition) after postgres is healthy:
-
-```bash
-bun packages/db/src/seed.ts
-# legacy path docs/seed.ts stays as a shim until callers migrate
-```
+Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, site settings, and the demo exhibition. `docs/seed.ts` is the current source of truth.
 
 ### 5.3 Per-app commands (Bun workspaces)
 
 ```bash
-bun run --filter @declic/web dev      # TanStack Start (Vite) dev server
-bun run --filter @declic/api dev      # NestJS API watch mode
-bun run --filter @declic/worker dev   # BullMQ worker watch mode
-bun run --filter "@declic/*" test     # all tests
-bun run --filter "@declic/*" build    # all builds
+bun run --filter @declic/web dev        # TanStack Start (Vite) dev server (:3000)
+bun run --filter @declic/api dev        # NestJS API watch mode (PORT=3001)
+bun run --filter @declic/worker dev     # worker watch mode (exits 0 until BullMQ lands)
+bun run --filter "@declic/*" test       # unit tests (src/)
+bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build output first)
+bun run --filter "@declic/*" build      # per-app builds
+bun run coverage                        # coverage gate: >=90% lines per app (§8)
+bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
 ```
 
 Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `packages/*` plus the affected apps — no version bumps or pointer commits.
 
-### 5.4 Typical dev loop (upload → process → browse)
+### 5.4 Typical dev loop (target flow, wires landing incrementally)
 
-1. `docker compose up` and seed (§5.2).
+1. Start apps (§5.3) and, once Compose lands, `podman-compose up` + seed.
 2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to MinIO, then `POST /api/posts` enqueues one job per frame).
 3. Watch the worker generate thumbnail/web/lightbox derivatives + blurhash; the work flips `PROCESSING → PENDING`.
 4. Approve in `/admin/moderation`, check ordering in `/admin/curate`, browse at `/`.
 
-## 6. Mirrors (how the per-app repos stay updated)
+## 6. Code quality (oxlint + oxfmt, pre-commit)
+
+Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
+
+* **Format** (`.oxfmtrc.jsonc`): width 80, single quotes, import sorting, Tailwind class sorting against `apps/web/src/styles.css`. Generated output (`.output/`, `dist/`, `routeTree.gen.ts`) and `docs/**` are ignored — Markdown prose stays under `markdownlint-cli2`.
+* **Lint** (`.oxlintrc.json`): `correctness` = error everywhere, `react/hooks` baseline, plus an `apps/web/**` override block with stricter hooks rules (`react/rules-of-hooks`, `react/exhaustive-deps`) and test leniency (`no-explicit-any` off in tests).
+* **Known oxlint fact:** nested per-directory configs (e.g. `apps/web/.oxlintrc.json`) are silently ignored in 1.81 — per-app strictness lives in root `overrides`, verified empirically. Do not reintroduce nested configs without re-verifying.
+* **Gates:** Lefthook pre-commit (staged-only, `stage_fixed` so fixes land in the same commit; install per clone) and the `lint` job in `ci.yml`. VS Code uses `oxc.oxc-vscode` for format+fix on save; ESLint/Prettier extensions are disabled via settings + `unwantedRecommendations`.
+* **JSON/YAML:** covered by oxfmt (it already normalizes `package.json` key order and workflow YAML). JSON *lint* (schemas) comes from `$schema` keys + editor support, not oxlint.
+
+## 7. Mirrors (how the per-app repos stay updated)
 
 You do not work in mirrors. The flow is:
 
@@ -160,7 +178,8 @@ every push to bal16/declic:main (`mirror.yml`, `push` trigger)
 ```
 
 * `mirror.yml` also supports manual `workflow_dispatch` (all or one app).
-  `ci.yml` stays manual-only until the first scaffold review.
+  `ci.yml` stays manual-only.
+* Tag pushes do **not** trigger mirrors (workflow listens to `main` only).
 * Auth: one read-write deploy key per mirror (GitHub keys cannot be
   shared across repos), stored as `MIRROR_WEB/API/WORKER_KEY` secrets in
   `bal16/declic`. Checkout uses `GITHUB_TOKEN`; pushes use per-app keys
@@ -169,57 +188,64 @@ every push to bal16/declic:main (`mirror.yml`, `push` trigger)
   would block the automation's force-pushes. Trust comes from the
   read-only convention (generated README), sole-writer deploy keys, and
   full rebuilds from `main` on every run.
-* Each mirror has branch protection and a "read-only mirror of `bal16/declic` — do not push here" README.
-* Leak-guard job fails the workflow if `apps/web` references server secrets or `apps/api|worker` paths (protects the public mirror).
+* Leak-guard (in `ci.yml`) fails the run if `apps/web` references server secrets or `apps/api|worker` paths (protects the public mirror).
 
 Verifying a mirror standalone (example: web):
 
 ```bash
-git clone git@github.com:bal16/declic-web.git /tmp/declic-web
+git clone https://github.com/bal16/declic-web.git /tmp/declic-web
 cd /tmp/declic-web && bun install && bun run build
 ```
 
-## 7. Deployment
+## 8. Release (tag-driven, deploy deferred)
 
-Compose is the **dev** stack. Production splits by workload:
+Full scheme: `adr/ADR-002-release-tagging.md`. Summary:
 
-### 7.1 Web → Vercel (`bal16/declic-web`, public mirror)
+* One tag `vX.Y.Z` releases all apps; pre-releases rc-only (`v0.3.0-rc.N`); no snapshot tags (registry-only `:main-<sha>` later); MAJOR `0` until the first exhibition. Tags always annotated, never moved.
+* `release.yml` (trigger `push` on `tags: ['v*']` + manual dry-run): full gates on the tagged tree (typecheck, unit, build, e2e, **coverage ≥90% lines per app**, lint, format check, leak-guard) → GHCR images (`:vX.Y.Z`, plus `:latest` on finals only, never on rc) → GitHub Release (auto-prerelease on `-rc`).
+* `deploy` job is a disabled stub — deploy targets are undecided.
+* Trial `v0.0.0-rc.1` already validated the pipeline end-to-end (since deleted; its GHCR images await manual deletion — CLI token lacks `packages` scope, use web UI).
 
-Option 1 (recommended): connect Vercel to `bal16/declic-web`, project root = repository root.
+## 9. Deployment
 
-Option 2: connect Vercel to `bal16/declic` with Root Directory = `apps/web`.
+Compose/dev (§5.2) is local. Production artifacts come from releases (§8):
 
-Required env on Vercel: `VITE_API_URL`, `VITE_BETTER_AUTH_URL` (production API origin — see §7.3 cookie constraint).
+### 9.1 Images (available today)
 
-```bash
-# sanity check locally before pushing
-bun run --filter @declic/web build
-```
-
-### 7.2 API + worker → Docker / long-running host
-
-Build from the **monorepo root** (context must include `packages/*`):
+Built from the **monorepo root** (context must include `packages/*`):
 
 ```bash
-docker build -f apps/api/Dockerfile -t declic-api:latest .
-docker build -f apps/worker/Dockerfile -t declic-worker:latest .
+podman build -f apps/api/Dockerfile -t declic-api:local .
+podman build -f apps/worker/Dockerfile -t declic-worker:local .
+podman build -f apps/web/Dockerfile -t declic-web:local .
 ```
 
-Or build from the mirrors (`bal16/declic-api`, `bal16/declic-worker`) — they already contain the needed `packages/*` slice, so the same commands work with `.` = mirror root. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into the image.
+All three have been built and boot-tested under podman 6 (api `/health` → ok, worker context ready, web serves SSR HTML with 200). Base image is `docker.io/oven/bun:1.4` (fully qualified — bare short-names fail podman resolution without `registries.conf`). Or pull release images from GHCR instead of building. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into images.
 
-The worker needs no inbound ports; scale it horizontally (`--scale worker=3` in Compose, or replicas on the host) rather than raising per-instance concurrency for 10–50 MB uploads.
+The worker needs no inbound ports; scale it horizontally (replicas, not per-instance concurrency) rather than raising concurrency for 10–50 MB uploads. Graceful shutdown (`enableShutdownHooks`) is a known follow-up — `podman stop` currently falls back to SIGKILL.
 
-### 7.3 Domain and cookie constraint (Better Auth)
+### 9.2 Per-app destinations (TBD)
+
+Web (Vercel explicitly out), api, and worker destinations are undecided — the project is still in development. The `deploy` job in `release.yml` stays disabled until they are. Related constraint to settle first: §9.3.
+
+### 9.3 Domain and cookie constraint (Better Auth)
 
 From `PRD.md` §8.5: web and API must share one registrable domain (for example `app.<domain>` + `api.<domain>`) configured via Better Auth `trustedOrigins` plus API CORS, so the session cookie stays first-party. Fallback if that is impossible: reverse-proxy `/api/*` through the web domain. Native/mobile clients use the `bearer()` token plugin instead of cookies. Settle the production domains before configuring OAuth redirect URIs and CORS.
 
-## 8. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `bun install` in a mirror fails on `workspace:*` | Mirror built without its `packages/*` slice | Rebuild mirror via `scripts/mirror.sh` (C1); never hand-craft mirrors |
 | Mirror did not update after push/dispatch | Deploy key expired/rotated, or workflow YAML invalid (fails fast, 0s runs) | Rotate the per-app key + secret, re-run `workflow_dispatch`; check logs |
-| Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §7.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
+| Release blocked on coverage | An app dropped below 90% lines | `bun run coverage` locally, add tests, re-tag (never move the old tag) |
+| Cannot delete GHCR trial images via CLI | Token lacks `packages` scope | Delete via web UI (package → settings → delete version) |
+| `vite build` fails: ESM-only plugin loaded by `require` | Web `package.json` lost `"type": "module"` | Restore it — Vite bundles config as CJS without it |
+| `vite build` produces no `.output/` | Missing `nitro()` plugin in `vite.config.ts` | Current Start requires the separate `nitro/vite` plugin |
+| `routeTree.gen.ts` type errors on fresh clone | Generated file missing | Run `bun run --filter @declic/web build` once (file is committed, regenerates deterministically) |
+| Per-app oxlint config ignored | Nested `.oxlintrc.json` files are silently ignored (verified 1.81) | Express per-app rules in root `overrides`, never nested files |
+| `podman build` fails resolving `oven/bun` | Short-name needs `registries.conf` | Dockerfiles already use fully-qualified `docker.io/oven/bun:1.4` |
+| Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §9.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
 | Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
 | MinIO presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |
 
@@ -228,6 +254,8 @@ From `PRD.md` §8.5: web and API must share one registrable domain (for example 
 ## Cross references
 
 * Repo decision and trade-offs: `adr/ADR-001-monorepo-mirror.md`
+* Release/tag decision, limits analysis: `adr/ADR-002-release-tagging.md`
+* Release workflow + coverage gate: `../../.github/workflows/release.yml`, `../../scripts/check-coverage.ts`
 * Product vision and lifecycle: `PRD.md`
 * API and worker specs: `PRD-API.md`, `PRD-Worker.md`, `PRD-FE.md`
 * Schema and seeds: `db-schema.md`, `seed.ts`
