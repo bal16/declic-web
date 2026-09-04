@@ -3,10 +3,11 @@
 # Automatic triggers are DISABLED for now: this workflow runs only via manual
 # dispatch. Before enabling automation, ALL of the following must exist:
 #   1. bal16/declic-web (public), bal16/declic-api (private),
-#      bal16/declic-worker (private) on GitHub,
-#   2. a MIRROR_DEPLOY_KEY repo secret (SSH deploy key with write access
-#      to the three mirror repos),
-#   3. branch protection + "read-only mirror" notice on each mirror repo.
+#      bal16/declic-worker (private) on GitHub — DONE,
+#   2. MIRROR_WEB_KEY / MIRROR_API_KEY / MIRROR_WORKER_KEY repo secrets
+#      (per-app SSH deploy keys with write access — GitHub deploy keys
+#      cannot be shared across repos, hence one secret per mirror) — DONE,
+#   3. branch protection on each mirror repo (set after the first push).
 # Then uncomment the push trigger below.
 
 name: mirror
@@ -32,14 +33,30 @@ jobs:
     # On manual dispatch with a specific app, skip the other two.
     if: ${{ inputs.app == '' || inputs.app == matrix.app }}
     steps:
-      - name: Checkout (full history, SSH for mirror push)
+      - name: Checkout (full history)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ssh-key: ${{ secrets.MIRROR_DEPLOY_KEY }}
+        # No ssh-key here: origin checkout uses GITHUB_TOKEN over HTTPS.
+        # Mirror pushes below authenticate with per-app deploy keys because
+        # dynamic secret names are unsupported in expressions.
 
       - name: Build mirror branch
         run: bash scripts/mirror.sh ${{ matrix.app }}
 
       - name: Push to mirror repo
-        run: git push --force "git@github.com:bal16/declic-${{ matrix.app }}.git" "mirror-${{ matrix.app }}:main"
+        # Deploy keys are per-repo, so each app pushes with its own key
+        # (exactly one of the three steps below runs per matrix entry).
+        env:
+          MIRROR_WEB_KEY: ${{ secrets.MIRROR_WEB_KEY }}
+          MIRROR_API_KEY: ${{ secrets.MIRROR_API_KEY }}
+          MIRROR_WORKER_KEY: ${{ secrets.MIRROR_WORKER_KEY }}
+        run: |
+          case "${{ matrix.app }}" in
+            web) KEY="$MIRROR_WEB_KEY" ;;
+            api) KEY="$MIRROR_API_KEY" ;;
+            worker) KEY="$MIRROR_WORKER_KEY" ;;
+          esac
+          mkdir -p ~/.ssh && printf '%s\n' "$KEY" > ~/.ssh/mirror_push && chmod 600 ~/.ssh/mirror_push
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/mirror_push -o StrictHostKeyChecking=accept-new"
+          git push --force "git@github.com:bal16/declic-${{ matrix.app }}.git" "mirror-${{ matrix.app }}:main"
