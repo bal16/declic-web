@@ -160,8 +160,8 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXT_PUBLIC_BETTER_AUTH_URL: http://localhost:3001
+      VITE_API_URL: http://localhost:3001
+      VITE_BETTER_AUTH_URL: http://localhost:3001
     volumes:
       - ./apps/web:/app
       - web_node_modules:/app/node_modules

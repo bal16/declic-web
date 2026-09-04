@@ -32,8 +32,8 @@ declic/                              # bal16/declic (private monorepo)
 ├── .env.example                     # (planned) merged root env (see §4)
 ├── apps/
 │   ├── web/                         # TanStack Start (Vite) — @declic/web
-│   │   ├── package.json             # (planned) deps on workspace:* contracts/db
-│   │   ├── Dockerfile               # (planned) root-context image, Vercel-compatible build
+│   │   ├── package.json             # deps on workspace:* contracts/db (wired next)
+│   │   ├── Dockerfile               # root-context image (`docker build -f apps/web/Dockerfile .`)
 │   │   └── src/routes/…             # routes: /, /archive, /exhibition/$slug,
 │   │                                #   /post/$postId (+ lightbox mask), /og/$postId,
 │   │                                #   /dashboard/*, /admin/* (PRD-FE.md §2)
@@ -98,7 +98,7 @@ cp .env.example .env
 | `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for MinIO |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | api | URL is `http://localhost:3001` in dev |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | api | Empty = OAuth login disabled, rest of app still runs |
-| `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev |
+| `VITE_API_URL`, `VITE_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev |
 
 ## 5. Development
 
@@ -181,7 +181,7 @@ Option 1 (recommended): connect Vercel to `bal16/declic-web`, project root = rep
 
 Option 2: connect Vercel to `bal16/declic` with Root Directory = `apps/web`.
 
-Required env on Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL` (production API origin — see §7.3 cookie constraint).
+Required env on Vercel: `VITE_API_URL`, `VITE_BETTER_AUTH_URL` (production API origin — see §7.3 cookie constraint).
 
 ```bash
 # sanity check locally before pushing
