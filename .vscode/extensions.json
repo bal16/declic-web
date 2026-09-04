@@ -4,5 +4,9 @@
     "bradlc.vscode-tailwindcss",
     "davidanson.vscode-markdownlint",
     "editorconfig.editorconfig"
+  ],
+  "unwantedRecommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode"
   ]
 }
