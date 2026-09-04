@@ -30,10 +30,11 @@ jobs:
     strategy:
       matrix:
         app: [web, api, worker]
-    # On manual dispatch with a specific app, skip the other two.
-    if: ${{ inputs.app == '' || inputs.app == matrix.app }}
+    # NOTE: `matrix` is unavailable in job-level `if` — selection lives on
+    # each step. On push events there are no inputs, so everything runs.
     steps:
       - name: Checkout (full history)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -42,9 +43,11 @@ jobs:
         # dynamic secret names are unsupported in expressions.
 
       - name: Build mirror branch
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
         run: bash scripts/mirror.sh ${{ matrix.app }}
 
       - name: Push to mirror repo
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
         # Deploy keys are per-repo, so each app pushes with its own key
         # (exactly one of the three steps below runs per matrix entry).
         env:
