@@ -1,0 +1,155 @@
+# Release — tag-driven, deploy-target-agnostic.
+#
+# Tag scheme (agreed, see plan): one vX.Y.Z for all apps; pre-releases
+# rc-only (v0.3.0-rc.N); NO snapshot tags (snapshots arrive later as
+# :main-<sha> images). MAJOR stays 0 until the first exhibition (v1.0.0).
+# Tags are always annotated (`git tag -a`) and never moved.
+#
+# Behavior:
+#   vX.Y.Z       -> full gates -> images :vX.Y.Z + :latest -> GitHub Release
+#   vX.Y.Z-rc.N  -> full gates -> images :vX.Y.Z-rc.N only -> prerelease
+#                  (:latest is NEVER touched by pre-releases)
+# The `deploy` job below is a disabled STUB until deploy targets are decided.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate gates only (no image push, no release)'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+permissions:
+  contents: write # create GitHub Releases
+  packages: write # push images to GHCR
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/bal16/declic
+
+jobs:
+  # Re-runs every gate on the exact tagged tree — never trusts main's status.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck workspaces
+        run: bun run --filter "@declic/*" typecheck
+
+      - name: Test workspaces (unit)
+        run: bun run --filter "@declic/*" test
+
+      - name: Build workspaces
+        run: bun run --filter "@declic/*" build
+
+      - name: Test workspaces (e2e, needs build output)
+        run: bun run --filter "@declic/*" test:e2e
+
+      - name: Lint (oxlint, check mode)
+        run: bun run lint
+
+      - name: Format check (oxfmt)
+        run: bun run format:check
+
+      - name: Leak guard (public web mirror)
+        run: |
+          violations=$(grep -R -l -E "BETTER_AUTH_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|S3_SECRET_KEY|apps/(api|worker)" apps/web --exclude-dir=node_modules || true)
+          if [ -n "$violations" ]; then
+            echo "::error::leak-guard found server references in apps/web:"
+            echo "$violations"
+            exit 1
+          fi
+          echo "leak-guard passed"
+
+  publish:
+    needs: verify
+    # Tag pushes always publish; manual dispatch publishes only when
+    # dry_run is explicitly 'false'.
+    if: ${{ github.event_name == 'push' || inputs.dry_run == 'false' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v5
+
+      - name: Resolve version metadata
+        id: meta
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *"-"* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push images
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          for app in web api worker; do
+            IMAGE="$IMAGE_PREFIX-$app"
+            docker build -f "apps/$app/Dockerfile" -t "$IMAGE:$VERSION" .
+            docker push "$IMAGE:$VERSION"
+            # :latest floats only on final releases, never on rc.
+            if [ "$PRERELEASE" = "false" ]; then
+              docker tag "$IMAGE:$VERSION" "$IMAGE:latest"
+              docker push "$IMAGE:latest"
+            fi
+          done
+
+  release:
+    needs: publish
+    if: ${{ github.event_name == 'push' || inputs.dry_run == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.publish.outputs.version }}
+          PRERELEASE: ${{ needs.publish.outputs.prerelease }}
+        run: |
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$VERSION" --title "Déclic $VERSION" \
+              --generate-notes --prerelease
+          else
+            gh release create "$VERSION" --title "Déclic $VERSION" \
+              --generate-notes --latest
+          fi
+
+  # STUB — filled in once deploy targets are decided. Intentionally disabled.
+  deploy:
+    needs: [verify, publish, release]
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deploy targets undecided — stub disabled"
