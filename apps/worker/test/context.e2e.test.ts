@@ -17,7 +17,7 @@ describe('Worker e2e', () => {
       logger: false,
     });
     await app.init();
-    expect(app.isInitialized).toBe(true);
+    expect(app.get(WorkerModule, { strict: false })).toBeDefined();
     await app.close();
   });
 });
