@@ -1,0 +1,45 @@
+# Mirror fan-out (ADR-001, model C1 — docs/adr/ADR-001-monorepo-mirror.md).
+#
+# Automatic triggers are DISABLED for now: this workflow runs only via manual
+# dispatch. Before enabling automation, ALL of the following must exist:
+#   1. bal16/declic-web (public), bal16/declic-api (private),
+#      bal16/declic-worker (private) on GitHub,
+#   2. a MIRROR_DEPLOY_KEY repo secret (SSH deploy key with write access
+#      to the three mirror repos),
+#   3. branch protection + "read-only mirror" notice on each mirror repo.
+# Then uncomment the push trigger below.
+
+name: mirror
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "App to mirror (empty = all three)"
+        required: false
+        default: ""
+        type: choice
+        options: ["", web, api, worker]
+  # push:
+  #   branches: [main]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [web, api, worker]
+    # On manual dispatch with a specific app, skip the other two.
+    if: ${{ inputs.app == '' || inputs.app == matrix.app }}
+    steps:
+      - name: Checkout (full history, SSH for mirror push)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.MIRROR_DEPLOY_KEY }}
+
+      - name: Build mirror branch
+        run: bash scripts/mirror.sh ${{ matrix.app }}
+
+      - name: Push to mirror repo
+        run: git push --force "git@github.com:bal16/declic-${{ matrix.app }}.git" "mirror-${{ matrix.app }}:main"

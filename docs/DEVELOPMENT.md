@@ -54,10 +54,10 @@ declic/                              # bal16/declic (private monorepo)
 │   │   └── src/seed.ts              # (planned) moved from docs/seed.ts
 │   └── tsconfig/                    # (planned) @declic/tsconfig — shared base configs
 ├── scripts/
-│   └── mirror.sh                    # (planned) builds C1 mirror branches
+│   └── mirror.sh                    # builds C1 mirror branches (manual run for now)
 ├── .github/workflows/
-│   ├── ci.yml                       # (planned) install, typecheck, test, docker build
-│   └── mirror.yml                   # (planned) push main → update 3 mirrors + leak-guard
+│   ├── ci.yml                       # verify + leak-guard (workflow_dispatch only for now)
+│   └── mirror.yml                   # manual dispatch → update 3 mirrors (auto push disabled)
 └── docs/
     ├── adr/
     │   └── ADR-001-monorepo-mirror.md
@@ -153,15 +153,14 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 You do not work in mirrors. The flow is:
 
 ```text
-push to bal16/declic:main
-  → .github/workflows/mirror.yml
+manual "Run workflow" on bal16/declic (`mirror.yml`, `workflow_dispatch`)
   → scripts/mirror.sh builds C1 slices (app + packages slice + manifest)
-  → git subtree split + push (force-update) to
+  → force-push to
     bal16/declic-web:main, bal16/declic-api:main, bal16/declic-worker:main
 ```
 
+* Auto triggers are intentionally disabled: `mirror.yml` has only `workflow_dispatch` until the three mirror repos + `MIRROR_DEPLOY_KEY` secret exist (see the header comment in `mirror.yml`). Same for `ci.yml`.
 * Auth: deploy key or bot PAT with write access to the three mirrors only.
-* Manual trigger: `workflow_dispatch` on `mirror.yml`.
 * Each mirror has branch protection and a "read-only mirror of `bal16/declic` — do not push here" README.
 * Leak-guard job fails the workflow if `apps/web` references server secrets or `apps/api|worker` paths (protects the public mirror).
 
@@ -211,7 +210,7 @@ From `PRD.md` §8.5: web and API must share one registrable domain (for example 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `bun install` in a mirror fails on `workspace:*` | Mirror built without its `packages/*` slice | Rebuild mirror via `scripts/mirror.sh` (C1); never hand-craft mirrors |
-| Mirror did not update after push | `mirror.yml` skipped (not on `main`) or deploy key expired | Use `workflow_dispatch`; rotate key; check workflow logs |
+| Mirror did not update after dispatch | Mirror repos not created yet, `MIRROR_DEPLOY_KEY` missing/expired | Create the 3 repos, set/rotate the key, re-run `workflow_dispatch`; check logs |
 | Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §7.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
 | Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
 | MinIO presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |

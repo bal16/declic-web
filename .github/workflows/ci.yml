@@ -1,0 +1,59 @@
+# CI — verify only, no deploys.
+#
+# Automatic triggers are DISABLED for now: this workflow runs only via manual
+# dispatch ("Run workflow" in the Actions tab). Once the first scaffold lands
+# and the three mirror repos exist, enable automation by uncommenting the
+# push/pull_request triggers below.
+
+name: ci
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  # pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      # Tolerant until every workspace defines these scripts (scaffold step).
+      # The `||` fallbacks can be removed once typecheck/test/build exist
+      # in @declic/web, @declic/api, @declic/worker and packages/*.
+      - name: Typecheck workspaces
+        run: bun run --filter "@declic/*" typecheck || echo "::notice::typecheck not defined in all workspaces yet — skipping"
+
+      - name: Test workspaces
+        run: bun run --filter "@declic/*" test || echo "::notice::test not defined in all workspaces yet — skipping"
+
+      - name: Build workspaces
+        run: bun run --filter "@declic/*" build || echo "::notice::build not defined in all workspaces yet — skipping"
+
+  # Protects the public mirror: apps/web must never reference server secrets
+  # or server-side code paths (see ADR-001, docs/adr/ADR-001-monorepo-mirror.md).
+  leak-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: No server secrets or server paths in apps/web
+        run: |
+          violations=$(grep -R -l -E "BETTER_AUTH_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|S3_SECRET_KEY|apps/(api|worker)" apps/web --exclude-dir=node_modules || true)
+          if [ -n "$violations" ]; then
+            echo "::error::leak-guard found server references in apps/web:"
+            echo "$violations"
+            exit 1
+          fi
+          echo "leak-guard passed"

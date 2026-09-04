@@ -41,7 +41,7 @@ Rules:
 * One lockfile: root `bun.lock`. Subdirectories do not commit their own lockfiles.
 * Cross-package deps use `workspace:*` inside the monorepo.
 * Model C1 means each mirror carries the `packages/*` slice it needs, so a standalone clone of a mirror still runs `bun install && bun run build` with no access to the monorepo.
-* Mirroring is automated: `git subtree split` per app slice on every push to `main` (plus manual dispatch), force-updating the mirror's `main`.
+* Mirroring runs via `scripts/mirror.sh` per app slice (see `scripts/mirror.sh`), force-updating the mirror's `main`. Automation starts as manual `workflow_dispatch` only; the push-to-`main` trigger is enabled once the mirror repos + deploy key exist.
 
 ## 3. Alternatives considered
 
@@ -74,7 +74,7 @@ Keeps monorepo DX (one PR for a cross-cutting change, one lockfile, `bun --filte
 
 * `bun install --frozen-lockfile` clean at root; `bun run --filter "@declic/*"` builds pass.
 * `docker compose up --build` brings up postgres, redis, minio, api, worker, web.
-* A dummy push to `bal16/declic:main` updates all three mirrors to the same content revision.
+* A manual `mirror.yml` dispatch updates all three mirrors to the same content revision.
 * A standalone clone of each mirror builds with `bun install && bun run build`.
 * Leak-guard CI is green (no secret or `apps/api|worker` reference inside `apps/web`).
 
