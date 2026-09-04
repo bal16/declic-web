@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Checkout (full history)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
         # No ssh-key here: origin checkout uses GITHUB_TOKEN over HTTPS.
