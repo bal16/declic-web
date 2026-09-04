@@ -14,6 +14,7 @@
     "test:coverage": "bun run --filter \"@declic/*\" test:coverage",
     "test:e2e": "bun run --filter \"@declic/*\" test:e2e",
     "typecheck": "bun run --filter \"@declic/*\" typecheck",
+    "coverage": "bun scripts/check-coverage.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt .",

@@ -63,6 +63,9 @@ jobs:
       - name: Test workspaces (e2e, needs build output)
         run: bun run --filter "@declic/*" test:e2e
 
+      - name: Coverage gate (>=90% lines per app)
+        run: bun run coverage
+
       - name: Lint (oxlint, check mode)
         run: bun run lint
 
