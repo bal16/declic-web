@@ -154,6 +154,7 @@ bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build outp
 bun run --filter "@declic/*" build      # per-app builds
 bun run coverage                        # coverage gate: >=90% lines per app (§8)
 bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
+
 ```
 
 Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `packages/*` plus the affected apps — no version bumps or pointer commits.
