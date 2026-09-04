@@ -153,14 +153,22 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 You do not work in mirrors. The flow is:
 
 ```text
-manual "Run workflow" on bal16/declic (`mirror.yml`, `workflow_dispatch`)
+every push to bal16/declic:main (`mirror.yml`, `push` trigger)
   → scripts/mirror.sh builds C1 slices (app + packages slice + manifest)
   → force-push to
     bal16/declic-web:main, bal16/declic-api:main, bal16/declic-worker:main
 ```
 
-* Auto triggers are intentionally disabled: `mirror.yml` has only `workflow_dispatch` until the three mirror repos + `MIRROR_DEPLOY_KEY` secret exist (see the header comment in `mirror.yml`). Same for `ci.yml`.
-* Auth: deploy key or bot PAT with write access to the three mirrors only.
+* `mirror.yml` also supports manual `workflow_dispatch` (all or one app).
+  `ci.yml` stays manual-only until the first scaffold review.
+* Auth: one read-write deploy key per mirror (GitHub keys cannot be
+  shared across repos), stored as `MIRROR_WEB/API/WORKER_KEY` secrets in
+  `bal16/declic`. Checkout uses `GITHUB_TOKEN`; pushes use per-app keys
+  via `GIT_SSH_COMMAND` (dynamic secret names are unsupported).
+* Mirrors carry no branch protection by design: PR/check/push restrictions
+  would block the automation's force-pushes. Trust comes from the
+  read-only convention (generated README), sole-writer deploy keys, and
+  full rebuilds from `main` on every run.
 * Each mirror has branch protection and a "read-only mirror of `bal16/declic` — do not push here" README.
 * Leak-guard job fails the workflow if `apps/web` references server secrets or `apps/api|worker` paths (protects the public mirror).
 
@@ -210,7 +218,7 @@ From `PRD.md` §8.5: web and API must share one registrable domain (for example 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `bun install` in a mirror fails on `workspace:*` | Mirror built without its `packages/*` slice | Rebuild mirror via `scripts/mirror.sh` (C1); never hand-craft mirrors |
-| Mirror did not update after dispatch | Mirror repos not created yet, `MIRROR_DEPLOY_KEY` missing/expired | Create the 3 repos, set/rotate the key, re-run `workflow_dispatch`; check logs |
+| Mirror did not update after push/dispatch | Deploy key expired/rotated, or workflow YAML invalid (fails fast, 0s runs) | Rotate the per-app key + secret, re-run `workflow_dispatch`; check logs |
 | Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §7.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
 | Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
 | MinIO presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |
