@@ -11,10 +11,12 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule, {
     bufferLogs: true,
   });
+
   const logger = new PinoNestLogger('Bootstrap');
   app.useLogger(logger);
   await app.init();
   logger.log('@declic/worker context ready');
+  logger.debug(`ENV: ${process.env.NODE_ENV}`);
 }
 
 void bootstrap();

@@ -24,7 +24,7 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   logger.log(`listening on :${port}`);
-  logger.log(`ENV: ${process.env.NODE_ENV}`);
+  logger.debug(`ENV: ${process.env.NODE_ENV}`);
 }
 
 void bootstrap();
