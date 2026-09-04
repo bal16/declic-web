@@ -42,6 +42,12 @@ jobs:
         # Mirror pushes below authenticate with per-app deploy keys because
         # dynamic secret names are unsupported in expressions.
 
+      - name: Set git identity (mirror commits)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
+        run: |
+          git config user.name "declic-mirror-bot"
+          git config user.email "declic-mirror-bot@users.noreply.github.com"
+
       - name: Build mirror branch
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.app == '' || inputs.app == matrix.app }}
         run: bash scripts/mirror.sh ${{ matrix.app }}
