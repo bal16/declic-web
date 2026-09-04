@@ -29,13 +29,16 @@ jobs:
         run: bun install --frozen-lockfile
 
       # Tolerant until every workspace defines these scripts (scaffold step).
-      # The `||` fallbacks can be removed once typecheck/test/build exist
-      # in @declic/web, @declic/api, @declic/worker and packages/*.
+      # The `||` fallbacks can be removed once typecheck/test/test:e2e/build
+      # exist in @declic/web, @declic/api, @declic/worker and packages/*.
       - name: Typecheck workspaces
         run: bun run --filter "@declic/*" typecheck || echo "::notice::typecheck not defined in all workspaces yet — skipping"
 
-      - name: Test workspaces
+      - name: Test workspaces (unit, src/)
         run: bun run --filter "@declic/*" test || echo "::notice::test not defined in all workspaces yet — skipping"
+
+      - name: Test workspaces (e2e, test/)
+        run: bun run --filter "@declic/*" test:e2e || echo "::notice::test:e2e not defined in all workspaces yet — skipping"
 
       - name: Build workspaces
         run: bun run --filter "@declic/*" build || echo "::notice::build not defined in all workspaces yet — skipping"

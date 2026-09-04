@@ -11,6 +11,7 @@
     "dev": "bun run --filter \"@declic/*\" dev",
     "build": "bun run --filter \"@declic/*\" build",
     "test": "bun run --filter \"@declic/*\" test",
+    "test:e2e": "bun run --filter \"@declic/*\" test:e2e",
     "typecheck": "bun run --filter \"@declic/*\" typecheck"
   }
 }

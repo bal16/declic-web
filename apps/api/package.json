@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
-    "test": "bun test",
+    "test": "bun test src/",
+    "test:e2e": "bun test test/",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
