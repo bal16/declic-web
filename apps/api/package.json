@@ -1,5 +1,27 @@
 {
   "name": "@declic/api",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@nestjs/bullmq": "^12.0.0",
+    "@nestjs/common": "^12.0.1",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^12.0.1",
+    "@nestjs/platform-express": "^12.0.1",
+    "@paralleldrive/cuid2": "^3.3.0",
+    "@thallesp/nestjs-better-auth": "^2.8.0",
+    "better-auth": "^1.7.2",
+    "bullmq": "^6.3.4",
+    "drizzle-orm": "^0.45.2",
+    "minio": "^8.0.7",
+    "nestjs-zod": "^5.5.0",
+    "postgres": "^3.4.9",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/minio": "^7.1.1",
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2"
+  }
 }
