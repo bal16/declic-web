@@ -15,11 +15,11 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: "App to mirror (empty = all three)"
+        description: 'App to mirror (empty = all three)'
         required: false
-        default: ""
+        default: ''
         type: choice
-        options: ["", web, api, worker]
+        options: ['', web, api, worker]
   # push:
   #   branches: [main]
 

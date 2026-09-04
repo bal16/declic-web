@@ -1,7 +1,9 @@
 import 'reflect-metadata';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { NestFactory } from '@nestjs/core';
+
 import type { INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+
 import { AppModule } from '../src/app.module';
 
 // End-to-end: boots the real AppModule over real HTTP (Express on Bun)

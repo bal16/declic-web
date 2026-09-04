@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'bun:test';
+
 import { AppService } from './app.service';
 
 describe('AppService', () => {

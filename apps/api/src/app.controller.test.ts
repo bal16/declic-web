@@ -1,9 +1,11 @@
 import 'reflect-metadata';
 import { afterEach, describe, expect, it } from 'bun:test';
-import { Test } from '@nestjs/testing';
+
 import type { INestApplication } from '@nestjs/common';
-import { AppModule } from './app.module';
+import { Test } from '@nestjs/testing';
+
 import { AppController } from './app.controller';
+import { AppModule } from './app.module';
 
 // Proves the NestJS DI graph (decorator metadata included) resolves
 // under the Bun test runner — the foundation every module test builds on.

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  DEFAULT_API_URL,
-  getApiUrl,
-  getBetterAuthUrl,
-} from './env';
+
+import { DEFAULT_API_URL, getApiUrl, getBetterAuthUrl } from './env';
 
 describe('web env', () => {
   it('falls back to the local API default', () => {
@@ -21,8 +18,8 @@ describe('web env', () => {
   });
 
   it('better-auth falls back to the API url', () => {
-    expect(
-      getBetterAuthUrl({ VITE_API_URL: 'https://api.example.com' }),
-    ).toBe('https://api.example.com');
+    expect(getBetterAuthUrl({ VITE_API_URL: 'https://api.example.com' })).toBe(
+      'https://api.example.com',
+    );
   });
 });

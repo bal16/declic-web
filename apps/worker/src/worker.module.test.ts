@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'bun:test';
+
 import { Test } from '@nestjs/testing';
+
 import { WorkerModule } from './worker.module';
 
 // Proves the worker DI graph compiles under the Bun test runner.

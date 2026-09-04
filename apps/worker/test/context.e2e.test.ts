@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { describe, expect, it } from 'bun:test';
+
 import { NestFactory } from '@nestjs/core';
+
 import { WorkerModule } from '../src/worker.module';
 
 // End-to-end: boots the FULL worker module graph exactly like production

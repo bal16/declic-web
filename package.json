@@ -2,7 +2,6 @@
   "name": "declic",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "bun@1.4.0",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -14,6 +13,16 @@
     "test:watch": "bun run --filter \"@declic/*\" test:watch",
     "test:coverage": "bun run --filter \"@declic/*\" test:coverage",
     "test:e2e": "bun run --filter \"@declic/*\" test:e2e",
-    "typecheck": "bun run --filter \"@declic/*\" typecheck"
-  }
+    "typecheck": "bun run --filter \"@declic/*\" typecheck",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "lefthook": "2.1.12",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0"
+  },
+  "packageManager": "bun@1.4.0"
 }

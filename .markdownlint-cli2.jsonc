@@ -26,15 +26,24 @@
     // MD028 - blank line inside blockquote dimatikan
     // Muncul di docs/db-schema.md:163 antara dua blockquote `> Seeds ...` dan `> system_settings ...`
     // Marksman tidak nge-lint ini, jadi dimatikan biar tidak bentrok IDE vs Neovim
-    "MD028": false
+    "MD028": false,
   },
 
   // markdownlint-cli2 specific (bukan markdownlint biasa)
   "globs": ["**/*.md", "**/*.markdown"],
-  "ignores": ["**/node_modules/**", ".git/**", ".next/**", "dist/**", "build/**", "coverage/**", "apps/**/node_modules/**", "packages/**/node_modules/**"],
+  "ignores": [
+    "**/node_modules/**",
+    ".git/**",
+    ".next/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "apps/**/node_modules/**",
+    "packages/**/node_modules/**",
+  ],
 
   // Auto-fix untuk rule yang fixable saat :Conform atau markdownlint-cli2 --fix
   "fix": {
-    "MD013": false
-  }
+    "MD013": false,
+  },
 }

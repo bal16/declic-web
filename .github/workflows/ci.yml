@@ -23,7 +23,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.0"
+          bun-version: '1.4.0'
 
       - name: Install (frozen lockfile)
         run: bun install --frozen-lockfile
@@ -42,6 +42,12 @@ jobs:
 
       - name: Build workspaces
         run: bun run --filter "@declic/*" build || echo "::notice::build not defined in all workspaces yet — skipping"
+
+      - name: Lint (oxlint, check mode)
+        run: bun run lint
+
+      - name: Format check (oxfmt)
+        run: bun run format:check
 
   # Protects the public mirror: apps/web must never reference server secrets
   # or server-side code paths (see ADR-001, docs/adr/ADR-001-monorepo-mirror.md).

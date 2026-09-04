@@ -1,0 +1,14 @@
+# Pre-commit hooks (Lefthook). Staged-only: fast (<5s), never touches
+# unrelated files. Install once per clone: bunx lefthook install
+pre-commit:
+  parallel: true
+  commands:
+    oxlint:
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      # Re-stage auto-fixes so they land in the same commit.
+      stage_fixed: true
+      run: bunx oxlint --fix {staged_files}
+    oxfmt:
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css}'
+      stage_fixed: true
+      run: bunx oxfmt {staged_files}
