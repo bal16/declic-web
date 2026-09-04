@@ -38,14 +38,14 @@ declic/                              # bal16/declic (private monorepo)
 │   │                                #   /post/$postId (+ lightbox mask), /og/$postId,
 │   │                                #   /dashboard/*, /admin/* (PRD-FE.md §2)
 │   ├── api/                         # NestJS API + Better Auth — @declic/api
-│   │   ├── package.json             # (planned)
-│   │   ├── Dockerfile               # (planned) root-context image
+│   │   ├── package.json
+│   │   ├── Dockerfile               # root-context image (`docker build -f apps/api/Dockerfile .`)
 │   │   └── src/modules/…            # auth, users, exhibitions, posts/photo-items,
 │   │                                #   curation, moderation, engagement, storage,
 │   │                                #   queue, feature-flags, site-settings, audit
 │   └── worker/                      # BullMQ consumer + Bun.Image — @declic/worker
-│       ├── package.json             # (planned)
-│       ├── Dockerfile               # (planned) root-context image
+│       ├── package.json
+│       ├── Dockerfile               # root-context image (`docker build -f apps/worker/Dockerfile .`)
 │       └── src/…                    # image-processing processor (PRD-Worker.md §3)
 ├── packages/
 │   ├── contracts/                   # (planned) @declic/contracts — Zod DTOs, Phase/Status
