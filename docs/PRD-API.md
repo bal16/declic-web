@@ -581,9 +581,31 @@ Allows photographer to reorder frames inside a SERIES before moderation: `{ "ord
 5. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key, curated: true }` to regenerate `blurhash` + 3 derivatives (same pipeline as `PRD-Worker.md`).
 6. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.replace', target_id:itemId, payload:{ postId, old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }` for revert.
 
-**Revert:** `POST /api/admin/photo-items/:itemId/revert` (optional) restores `payload.old_s3_key` from latest `photo_item.replace` audit and re-enqueues worker. Not required for `1.0` launch but schema-ready.
-
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — derivatives are regenerated async; gallery shows old derivatives until worker completes (then new cover if `item_order=0`).
+
+#### `POST /api/admin/photo-items/:itemId/revert` (ADMIN, cuid2) — **IN for 1.0**
+
+**Access:** `ADMIN` only. **Blocked when parent exhibition is `ARCHIVED`** (`403 ARCHIVED`). Single-level undo of the **latest** replace: restores the frame to exactly the state captured in the newest `photo_item.replace` audit for that item.
+
+**API Actions (transactional):**
+
+1. Fetch the latest `admin_audit_logs` row with `action='photo_item.replace'` and `target_id=:itemId`. If none (frame `source` is still `ORIGINAL`) → `409 {code:"NOTHING_TO_REVERT"}`.
+2. If the frame is mid-processing (`photo_items.blurhash IS NULL`, i.e. a replace/revert job for it has not completed) → `409 {code:"FRAME_PROCESSING"}` — wait for the worker instead of stacking regenerations.
+3. Verify the audited `old_s3_key` still exists in MinIO (HEAD). If the original file is gone → `409 {code:"ORIGINAL_MISSING"}` (audit keeps the key, but recovery needs ops intervention).
+4. `UPDATE photo_items SET original_s3_key=:old_s3_key, source=:old_source, exif_metadata=:old_exif_metadata, blurhash=NULL, updated_at=now() WHERE id=:itemId`. Note: this restores the state *before the latest replace only* — a replace→replace chain reverts one level, not to the photographer's original (repeat the call to walk further back; each revert writes its own audit row, so the chain stays traceable).
+5. Delete current `photo_derivatives` for that `photo_item_id` (avoid stale CDN).
+6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key: old_s3_key, curated: false, revert: true }` (same worker pipeline; `revert:true` is audit/logging signal only).
+7. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.revert', target_id:itemId, payload:{ postId, restored_s3_key: old_s3_key, restored_source: old_source, from_audit_id } }`.
+
+**Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — same async semantics as replace.
+
+#### `DELETE /api/posts/:id` (owner photographer or ADMIN, cuid2) — **withdraw, IN for 1.0**
+
+**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed **only while `posts.status` is `PENDING`** — withdrawing an approved/published work is a curation decision, not an author action (anything else → `409 {code:"WITHDRAW_CLOSED"}`).
+
+**Effect (soft-delete, engagement kept):** `UPDATE posts SET deleted_at=now(), updated_at=now() WHERE id=:id`. Likes/comments rows are **kept** but hidden: every public query already filters `deleted_at IS NULL` (and `status`), so engagement vanishes from the gallery while the audit trail survives. No new MinIO deletes — originals stay in `raw-uploads/` (same non-destructive posture as Option C).
+
+**Response `204 No Content`.**
 
 ### 4.5 Exhibitions (Multi-pameran, root = latest)
 
@@ -602,6 +624,8 @@ Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that exhibiti
 #### `POST /api/exhibitions` (ADMIN)
 
 Create exhibition: `{ title, slug, description, location, poster_s3_key, start_date, end_date, phase }` → `id=cuid2`. Slug unique.
+
+> Poster upload (decided 1.0): **no dedicated poster endpoint** — `poster_s3_key` must be a key previously uploaded via `POST /api/posts/upload-url` (same allowlist/size rules, same `raw-uploads/` bucket). Reuses one presigned flow instead of a second one.
 
 #### `PATCH /api/admin/exhibitions/:id` (ADMIN, cuid2)
 

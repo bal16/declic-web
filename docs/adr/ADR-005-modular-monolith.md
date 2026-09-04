@@ -116,17 +116,24 @@ be merged into one writer.
 * **Shared everything via `common/`** — rejected: `common/` becomes a
   dumping ground; facades keep blast radius per feature.
 
-## 4. Open questions (block module scaffolding, not this ADR)
+## 4. Open questions (resolved 1–3; 4 still blocks polish, not structure)
 
-1. Photographer withdraw: is `DELETE /api/posts/:id` (owner-only, pending
-   works) in 1.0, and does it hard-delete or soft-delete engagement rows?
-2. Poster upload: reuse the posts presigned flow or a dedicated
-   exhibitions poster endpoint?
-3. Curator revert (`POST /api/admin/photo-items/:itemId/revert`): in or
-   out for 1.0?
-4. Define `DRAFT` vs `PRE_EVENT`, exact opaque cursor schema, global
-   error shape, `GET /api/admin/audit-logs` query contract, and upload
-   throttling — or explicitly defer each past 1.0.
+1. Photographer withdraw — **decided IN for 1.0:** `DELETE /api/posts/:id`,
+   owner-or-admin, `PENDING`-only (`409 WITHDRAW_CLOSED` otherwise),
+   soft-delete via `deleted_at`, engagement rows kept but hidden
+   (see `PRD-API.md` §4.4).
+2. Poster upload — **decided:** reuse `POST /api/posts/upload-url`, no
+   dedicated endpoint (see `PRD-API.md` §4.5).
+3. Curator revert — **decided IN for 1.0:**
+   `POST /api/admin/photo-items/:itemId/revert` as single-level undo of
+   the latest replace, with `FRAME_PROCESSING` / `ORIGINAL_MISSING` /
+   `NOTHING_TO_REVERT` guards and its own `photo_item.revert` audit row
+   (see `PRD-API.md` §4.4). Implementation waits for the foundation chain
+   (DB → posts module → replace endpoint → worker); the contract above is
+   the build target.
+4. Still open — define `DRAFT` vs `PRE_EVENT`, exact opaque cursor schema,
+   global error shape, `GET /api/admin/audit-logs` query contract, and
+   upload throttling — or explicitly defer each past 1.0.
 
 ## 5. Verification
 
