@@ -6,6 +6,8 @@
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
     "test": "bun test src/",
+    "test:watch": "bun test --watch src/",
+    "test:coverage": "bun test --coverage src/",
     "test:e2e": "bun test test/",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
