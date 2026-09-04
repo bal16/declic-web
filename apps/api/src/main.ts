@@ -4,11 +4,14 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { AppModule } from './app.module';
 import { setupDocs } from './docs';
+import { PinoNestLogger, requestLoggingMiddleware } from './logger';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['log', 'error', 'warn'],
-  });
+  // bufferLogs: hold early boot logs until pino takes over below.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const logger = new PinoNestLogger('Bootstrap');
+  app.useLogger(logger);
+  app.use(requestLoggingMiddleware);
   // All PRD endpoints live under /api; the liveness probe stays at /health.
   app.setGlobalPrefix('api', { exclude: ['health'] });
 
@@ -20,7 +23,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
-  console.log(`@declic/api listening on :${port}`);
+  logger.log(`listening on :${port}`);
 }
 
 void bootstrap();
