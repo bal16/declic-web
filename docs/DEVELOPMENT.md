@@ -140,6 +140,13 @@ Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, si
 bun run --filter @declic/web dev        # TanStack Start (Vite) dev server (:3000)
 bun run --filter @declic/api dev        # NestJS API watch mode (PORT=3001)
 bun run --filter @declic/worker dev     # worker watch mode (exits 0 until BullMQ lands)
+```
+
+`dev` scripts load the workspace-root `.env` explicitly (`bun --env-file
+../../.env`) — NestJS `ConfigModule` on its own only reads `.env` from the
+process cwd, which is wrong when running inside `apps/*`. `start` scripts
+intentionally load nothing: production env comes from the environment
+(Docker/host), never from a file.
 bun run --filter "@declic/*" test       # unit tests (src/)
 bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build output first)
 bun run --filter "@declic/*" build      # per-app builds

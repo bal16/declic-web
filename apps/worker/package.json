@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_ENV=development bun --watch src/main.ts",
+    "dev": "NODE_ENV=development bun --watch --env-file ../../.env src/main.ts",
     "start": "NODE_ENV=production bun src/main.ts",
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
