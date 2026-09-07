@@ -30,5 +30,14 @@
   },
   "[css]": {
     "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  // Markdown is intentionally formatter-less in this repo: oxfmt ignores
+  // docs/** and no markdown formatter runs in CI. Keep it that way locally
+  // too — otherwise yzhang.markdown-all-in-one reformats tables on save
+  // and produces phantom diffs (e.g. docs/docker-compose.md realignment).
+  // The extension stays useful for TOC/shortcuts; only its formatter is off.
+  // Lint still comes from davidanson.vscode-markdownlint (.markdownlint.jsonc).
+  "[markdown]": {
+    "editor.formatOnSave": false
   }
 }
