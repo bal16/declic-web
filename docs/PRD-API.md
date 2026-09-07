@@ -363,394 +363,59 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
 | `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
 | `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |
+| `EDIT_CLOSED` | 409 | `PATCH /posts/:id` or frame-reorder outside `PENDING` |
+| `ROLE_CHANGE_DENIED` | 409 | `PATCH /admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
 
 All `{code:"..."}` references elsewhere in this document point to this table.
 
 ### 4.1 Ingestion & Work Upload (SINGLE & SERIES)
 
-#### `POST /api/posts/upload-url`
-
-**Access:** Authenticated (`PHOTOGRAPHER`, `ADMIN`). Validates **target exhibition** `phase != ARCHIVED` (via `exhibition_id` body or latest exhibition). No flag check (presign is cheap; flag is enforced at `POST /api/posts`).
-
-**Request Body (batch for SERIES):**
-
-```json
-{
-  "files": [
-    { "filename": "diptych_01.jpg", "contentType": "image/jpeg", "fileSizeBytes": 15420000 },
-    { "filename": "diptych_02.jpg", "contentType": "image/jpeg", "fileSizeBytes": 12100000 }
-  ]
-}
-```
-
-> For SINGLE, send `files` with one element. Backwards compat: single-object body `{filename, contentType, fileSizeBytes}` is also accepted.
-
-**API Validation:** Each `contentType` within allowlist (`image/jpeg`, `image/png`, `image/webp`, `image/avif`), each `fileSizeBytes <= 50MB`, batch size `1..N` where `N <= feature_flags.max_series_size`.
-
-**Response `200 OK`:**
-
-```json
-{
-  "uploads": [
-    { "uploadUrl": "https://minio.domain.com/raw-uploads/cuid-1.jpg?X-Amz-Signature=...", "s3Key": "raw-uploads/cuid-1.jpg", "expiresIn": 900 },
-    { "uploadUrl": "https://minio.domain.com/raw-uploads/cuid-2.jpg?X-Amz-Signature=...", "s3Key": "raw-uploads/cuid-2.jpg", "expiresIn": 900 }
-  ]
-}
-```
-
-**Storage note:** `storage` module generates Presigned PUT URLs via MinIO SDK (`S3_ENDPOINT`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE`). `s3Key` incorporates `cuid2` for uniqueness.
-
-#### `POST /api/posts`
-
-**Access:** Authenticated (`PHOTOGRAPHER`, `ADMIN`). Checks `FeatureFlagGuard('series_enabled')` if `type===SERIES`.
-
-**Request Body (SINGLE, defaults to latest exhibition):**
-
-```json
-{
-  "exhibitionId": "cuid-exhibition",
-  "type": "SINGLE",
-  "title": "Sunset in Kota Lama",
-  "caption": "Taken in the late afternoon before the exhibition.",
-  "items": [
-    {
-      "s3Key": "raw-uploads/cuid-1.jpg",
-      "exifMetadata": {
-        "make": "Sony",
-        "model": "ILCE-7M4",
-        "fNumber": 2.8,
-        "exposureTime": "1/500",
-        "iso": 100,
-        "focalLength": "35mm"
-      }
-    }
-  ]
-}
-```
-
-**Request Body (SERIES):**
-
-```json
-{
-  "exhibitionId": "cuid-exhibition",
-  "type": "SERIES",
-  "title": "Morning Market — Triptych",
-  "caption": "Three moments from the same morning.",
-  "items": [
-    { "s3Key": "raw-uploads/cuid-1.jpg", "exifMetadata": { "make": "Sony", "fNumber": 4 } },
-    { "s3Key": "raw-uploads/cuid-2.jpg", "exifMetadata": { "fNumber": 5.6 } },
-    { "s3Key": "raw-uploads/cuid-3.jpg", "exifMetadata": {} }
-  ]
-}
-```
-
-> `exhibitionId` optional — defaults to latest exhibition (`phase IN ('PRE_EVENT','LIVE')` ordered by `start_date DESC`). If latest is `ARCHIVED`, must specify explicit active exhibition or error. `item_order` is implicit by array index (0-based). IDs for new `posts` and `photo_items` are generated in app via `createId()` (cuid2) — not `gen_random_uuid()`.
-
-**API Actions (transactional, scoped to exhibition):**
-
-1. Resolve `exhibition_id` (provided or latest). If `exhibitions.phase === 'ARCHIVED'` → `403` (see Errors). If `type===SERIES` and `feature_flags.series_enabled===false` → `403 FEATURE_DISABLED`.
-2. Validate `1 <= items.length <= feature_flags.max_series_size`.
-3. Verify each `s3Key` exists in MinIO (HEAD) — optional but recommended.
-4. Insert `posts` (`id=cuid2`, `exhibition_id`, `status='PROCESSING'`, `type`, `title`, `caption`, `photographer_id`).
-5. Insert `photo_items` rows (`id=cuid2` per row, `post_id`, `item_order`, `original_s3_key`, `exif_metadata`).
-6. Push **one BullMQ job per photo_item** to `image-processing`:
-
-```json
-[
-  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg" },
-  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg" }
-]
-```
-
-> Post status transitions to `PENDING` only after **all** its photo_items finish processing (see [[PRD-Worker]] §3.3).
-
-**Response `201 Created`:** newly created `post` (cuid2 ids) with nested `items`.
-
-**Errors:**
-
-- `403 Forbidden` if target `exhibitions.phase === 'ARCHIVED'` (or legacy `event_phase == ARCHIVED`) → `"Exhibition has been archived, new uploads are closed"`.
-- `403 FEATURE_DISABLED` if `type===SERIES` and `series_enabled===false` → `"SERIES creation is temporarily disabled"`.
+> **Moved to [[series-upload]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `POST /api/posts/upload-url`, `POST /api/posts`, `PATCH /api/posts/:id` (new), `PATCH /api/posts/:id/items/reorder`.
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.2 Gallery & Discovery (Public Read API)
 
-#### `GET /api/posts`
-
-**Access:** Public (no auth). If a session exists, additional field `isLiked` is included. **Scoped to an exhibition** — defaults to latest published exhibition (see exhibitions). Respects `feature_flags` only for filtering — when `series_enabled=false`, existing SERIES still returned (creation is blocked, not reading).
-
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `exhibition_id` | `cuid2` | latest exhibition | Filter by exhibition (`cuid2`); omit to get latest (`start_date DESC`) |
-| `exhibition_slug` | `string` | — | Alternative to `exhibition_id` (e.g. `declic-2026`) |
-| `sort` | `enum` | `curated` | `curated` (by `posts.display_order`), `most_liked` (by `likes_count`), `recent` (by `posts.created_at` — **not** `id`) |
-| `search` | `string` | — | Substring match on `posts.title` or `users.name` |
-| `cursor` | `string` | — | Opaque cursor, `base64url(JSON)` per §4.0 Cursor schema — **never raw cuid2 sort** |
-| `limit` | `integer` | `20` | `1..50` |
-| `type` | `enum` | — | Filter `SINGLE` or `SERIES` (optional) |
-
-**Response `200 OK`:**
-
-```json
-{
-  "data": [
-    {
-      "id": "cuid-post",
-      "type": "SERIES",
-      "title": "Morning Market — Triptych",
-      "caption": "...",
-      "status": "PUBLISHED",
-      "photographer": {
-        "id": "uuid-user",
-        "name": "Budi Santoso",
-        "image": "https://lh3.googleusercontent.com/..."
-      },
-      "items": [
-        {
-          "id": "cuid-item-1",
-          "itemOrder": 0,
-          "blurhash": "L6PZf_e-00_w~qj[f6j[00fQ_3fQ",
-          "exifMetadata": {},
-          "derivatives": {
-            "thumbnail": "https://cdn.domain.com/derivatives/cuid-1/thumb.webp",
-            "web": "https://cdn.domain.com/derivatives/cuid-1/web.webp",
-            "lightbox": "https://cdn.domain.com/derivatives/cuid-1/lightbox.webp"
-          }
-        }
-      ],
-      "likesCount": 42,
-      "commentsCount": 7,
-      "isLiked": false
-    }
-  ],
-  "nextCursor": "eyJjcmVhdGVkX2F0Ijoi..."
-}
-```
-
-**Performance:** `< 50ms` (composite index `(exhibition_id, status)` + `likes_count`/`comments_count` cache + CDN cache headers). Only `status = PUBLISHED AND deleted_at IS NULL` **within the requested exhibition** appears in the public gallery (except for Admin). Cover for SERIES is `items[0]`. Root `/` omits `exhibition_id` → backend resolves to latest exhibition (`phase IN ('LIVE','ARCHIVED') ORDER BY start_date DESC LIMIT 1`).
-
-#### `GET /api/posts/mine`
-
-**Access:** `PHOTOGRAPHER` (own data), `ADMIN` (all data). Returns all statuses owned by the user, with nested `items` (cuid2 ids).
-
-#### `GET /api/posts/:id` (cuid2)
-
-Single work detail — public if `PUBLISHED`, owner/admin can access any status. Includes all `photo_items` ordered by `item_order` with their derivatives.
-
-**Alias:** `GET /api/photos/:id` → `GET /api/posts/:id`.
+> **Moved to [[gallery-discovery]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `GET /api/posts`, `GET /api/posts/mine`, `GET /api/posts/:id` (+ `/photos` alias).
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.3 Engagement (Likes & Comments on works)
 
-#### `POST /api/posts/:id/like` & `DELETE /api/posts/:id/like` (cuid2 post id)
-
-- **Idempotent** — repeated `POST` does not duplicate (composite PK on `likes(user_id, post_id)`), `DELETE` on a not-yet-liked work still returns `204`.
-- Atomically maintains `posts.likes_count` within same transaction.
-- Supports Optimistic UI — frontend may update count before response.
-- **Frozen when parent exhibition is `ARCHIVED`:** `POST/DELETE /like` → `403 {code:"ARCHIVED", message:"This exhibition is archived, likes are frozen"}` (read of `likesCount` remains). Previous “still allowed” is deprecated v1.3.
-
-**Alias:** `/api/photos/:id/like`.
-
-#### `POST /api/posts/:id/comments`
-
-**Body:** `{ "content": "Amazing composition!", "parentId": "cuid-parent-optional" }`
-
-- **Frozen when parent exhibition is `ARCHIVED`:** `POST /comments` → `403 ARCHIVED` (reads remain).
-- If `feature_flags.threaded_comments_enabled===false` and `parentId` is sent → `400 {code:"FEATURE_DISABLED"}` or server silently stores `parent_id=NULL` (recommend `400`).
-- Otherwise, stores `parent_id` (cuid2) nullable. Increments `posts.comments_count` atomically if `is_hidden=false` and exhibition not archived.
-
-#### `GET /api/posts/:id/comments`
-
-List comments with `is_hidden = false AND deleted_at IS NULL` for public; Admin sees all (including hidden). For v1, returned flat sorted by `created_at` (not `id`); `parent_id` is included but clients render flat unless threading flag is on.
+> **Moved to [[engagement]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `POST/DELETE /api/posts/:id/like`, `POST/GET /api/posts/:id/comments`.
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.4 Curation & Moderation (Admin API)
 
-#### `PATCH /api/admin/curate/reorder`
-
-**Access:** `ADMIN`. Orders **works**, not frames. Uses cuid2 `postId`.
-
-**Request Body (Fractional Indexing / LexoRank):**
-
-```json
-{
-  "postId": "cuid-post-A",
-  "prevDisplayOrder": "0|hzzzzz:",
-  "nextDisplayOrder": "0|i00003:"
-}
-```
-
-**API Action:** Calculate a new LexoRank string between `prevDisplayOrder` and `nextDisplayOrder`, then `UPDATE posts SET display_order = :newRank WHERE id = :postId` atomically (O(1), no full table rebalance). Legacy field `photoId` is accepted as alias for `postId`.
-
-#### `PATCH /api/admin/posts/:id/moderate` (cuid2)
-
-**Access:** `ADMIN`.
-
-**Request Body:**
-
-```json
-{
-  "action": "APPROVE",
-  "rejectionReason": "Resolution does not meet requirements."
-}
-```
-
-`action`: `"APPROVE" | "REJECT"`
-
-**API Actions:**
-
-- `APPROVE` → `posts.status = APPROVED`, set initial `display_order` at the very bottom (LexoRank max + 1) for the whole work.
-- `REJECT` → `posts.status = REJECTED`, `rejection_reason` is required — whole work is rejected (no per-frame moderation in v1).
-- Other transitions: `PUBLISHED` / `UNPUBLISHED` handled via separate endpoint or same field (per final workflow).
-- **Audit:** Insert into `admin_audit_logs` (`id=cuid2`, `target_id=cuid-post`).
-
-**Alias:** `PATCH /api/admin/photos/:id/moderate`.
-
-#### `DELETE /api/admin/comments/:id` (cuid2)
-
-Soft moderation — `UPDATE comments SET is_hidden = true`. `posts.comments_count` is decremented if the comment was previously counted. `id` is cuid2.
-
-#### `PATCH /api/posts/:id/items/reorder` (optional, for pending works, cuid2 ids)
-
-Allows photographer to reorder frames inside a SERIES before moderation: `{ "orderedItemIds": ["cuid-2","cuid-1","cuid-3"] }` → updates `photo_items.item_order`.
-
-#### `POST /api/admin/posts/:postId/frames/:itemId/replace` (ADMIN, cuid2) — **Option C**
-
-**Access:** `ADMIN` only. **Blocked when parent exhibition is `ARCHIVED`** (`403 ARCHIVED`). Non-destructive curator replacement for color consistency etc.
-
-**Request Body:**
-
-```json
-{
-  "s3Key": "raw-uploads/cuid-curated-replacement.jpg",
-  "exifMetadata": { "make": "Sony", "fNumber": 8 }
-}
-```
-
-> `s3Key` must have been uploaded via `POST /api/posts/upload-url` (admin presigned URL, same allowlist, same `raw-uploads/` bucket). Original file at old `photo_items.original_s3_key` is **not deleted**.
-
-**API Actions (transactional):**
-
-1. Verify `s3Key` exists in MinIO (HEAD).
-2. Fetch old `photo_items` row; capture `old_s3_key`, `old_source`, `old_exif_metadata`.
-3. `UPDATE photo_items SET original_s3_key=:s3Key, source='CURATED', exif_metadata=COALESCE(:exifMetadata, exif_metadata), blurhash=NULL, updated_at=now() WHERE id=:itemId`.
-4. Delete old `photo_derivatives` for that `photo_item_id` (or keep until worker overwrites — recommend delete to avoid stale CDN).
-5. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key, curated: true }` to regenerate `blurhash` + 3 derivatives (same pipeline as [[PRD-Worker]]).
-6. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.replace', target_id:itemId, payload:{ postId, old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }` for revert.
-
-**Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — derivatives are regenerated async; gallery shows old derivatives until worker completes (then new cover if `item_order=0`).
-
-#### `POST /api/admin/photo-items/:itemId/revert` (ADMIN, cuid2) — **IN for 1.0**
-
-**Access:** `ADMIN` only. **Blocked when parent exhibition is `ARCHIVED`** (`403 ARCHIVED`). Single-level undo of the **latest** replace: restores the frame to exactly the state captured in the newest `photo_item.replace` audit for that item.
-
-**API Actions (transactional):**
-
-1. Fetch the latest `admin_audit_logs` row with `action='photo_item.replace'` and `target_id=:itemId`. If none (frame `source` is still `ORIGINAL`) → `409 {code:"NOTHING_TO_REVERT"}`.
-2. If the frame is mid-processing (`photo_items.blurhash IS NULL`, i.e. a replace/revert job for it has not completed) → `409 {code:"FRAME_PROCESSING"}` — wait for the worker instead of stacking regenerations.
-3. Verify the audited `old_s3_key` still exists in MinIO (HEAD). If the original file is gone → `409 {code:"ORIGINAL_MISSING"}` (audit keeps the key, but recovery needs ops intervention).
-4. `UPDATE photo_items SET original_s3_key=:old_s3_key, source=:old_source, exif_metadata=:old_exif_metadata, blurhash=NULL, updated_at=now() WHERE id=:itemId`. Note: this restores the state *before the latest replace only* — a replace→replace chain reverts one level, not to the photographer's original (repeat the call to walk further back; each revert writes its own audit row, so the chain stays traceable).
-5. Delete current `photo_derivatives` for that `photo_item_id` (avoid stale CDN).
-6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key: old_s3_key, curated: false, revert: true }` (same worker pipeline; `revert:true` is audit/logging signal only).
-7. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.revert', target_id:itemId, payload:{ postId, restored_s3_key: old_s3_key, restored_source: old_source, from_audit_id } }`.
-
-**Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — same async semantics as replace. History is viewable via `GET /api/admin/audit-logs?target_id=:itemId&action=photo_item.replace` (see §4.7).
-
-#### `DELETE /api/posts/:id` (owner photographer or ADMIN, cuid2) — **withdraw, IN for 1.0**
-
-**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed while `posts.status IN (PENDING, REJECTED)` — a rejected work will never publish, so the author may discard it; withdrawing an approved/published work is a curation decision, not an author action (anything else, incl. `APPROVED`/`PUBLISHED`/`PROCESSING` mid-flight, → `409 {code:"WITHDRAW_CLOSED"}`).
-
-**Effect (soft-delete, engagement kept):** `UPDATE posts SET deleted_at=now(), updated_at=now() WHERE id=:id`. Likes/comments rows are **kept** but hidden: every public query already filters `deleted_at IS NULL` (and `status`), so engagement vanishes from the gallery while the audit trail survives. No new MinIO deletes — originals stay in `raw-uploads/` (same non-destructive posture as Option C).
-
-**Response `204 No Content`.**
+> **Moved to [[curation-moderation]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`. Frame-level curation lives in [[curator-replace-revert]]; author retraction in [[withdraw-work]].
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.5 Exhibitions (Multi-pameran, root = latest)
 
-#### `GET /api/exhibitions` (public)
-
-List exhibitions ordered by `start_date DESC`. Query `?phase=LIVE|ARCHIVED` optional. Root `/` uses first `LIVE` (fallback latest `ARCHIVED`) as `exhibition_id` default.
-
-#### `GET /api/exhibitions/:slug` (public, cuid2 or slug)
-
-Detail exhibition with `postsCount` (published only for public; all for ADMIN). Includes `poster` url.
-
-#### `GET /api/exhibitions/:id/posts` (public)
-
-Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that exhibition.
-
-#### `POST /api/exhibitions` (ADMIN)
-
-Create exhibition: `{ title, slug, description, location, poster_s3_key, start_date, end_date, phase }` → `id=cuid2`. Slug unique.
-
-> Poster upload (decided 1.0): **no dedicated poster endpoint** — `poster_s3_key` must be a key previously uploaded via `POST /api/posts/upload-url` (same allowlist/size rules, same `raw-uploads/` bucket). Reuses one presigned flow instead of a second one. Example: `PATCH /api/admin/exhibitions/:id { "poster_s3_key": "raw-uploads/cuid-poster.jpg" }` → `200` with updated exhibition.
-
-#### `PATCH /api/admin/exhibitions/:id` (ADMIN, cuid2)
-
-Update `title`/`slug`/`description`/`location`/`poster_s3_key`/`start_date`/`end_date`/`phase`. Phase change audited (`admin_audit_logs.action=exhibition.phase_change`). Manual `ARCHIVED` triggers same freeze logic as cron.
-
-**Scheduler (BullMQ cron):** Queue `exhibition-scheduler` runs **hourly** (configurable `0 * * * *`):
-
-```typescript
-// apps/api/src/modules/exhibitions/exhibition.scheduler.ts
-@Cron('0 * * * *')
-async handle() {
-  const toArchive = await db.select().from(exhibitions)
-    .where(and(eq(exhibitions.phase,'LIVE'), lte(exhibitions.end_date, new Date())));
-  for (const ex of toArchive) {
-    await db.update(exhibitions).set({ phase:'ARCHIVED', updated_at: new Date() }).where(eq(exhibitions.id, ex.id));
-    await db.insert(admin_audit_logs).values({ id:createId(), admin_id:null, action:'exhibition.phase_change', target_id: ex.id, payload:{from:'LIVE', to:'ARCHIVED', via:'cron'}});
-    // no mirror — phase lives only in exhibitions table
-  }
-}
-```
+> **Moved to [[exhibition-lifecycle]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `GET /api/exhibitions`, `GET /api/exhibitions/:slug`, `GET /api/exhibitions/:id/posts`, `POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`, plus `exhibition-scheduler` cron.
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.6 Feature Flags & Site Settings
 
-#### `GET /api/feature-flags` (public, filtered)
-
-Returns array `[{key, enabled, updated_at}]` (e.g. `series_enabled`, `threaded_comments_enabled`; no secrets). Frontend uses `series_enabled` to hide SERIES toggle. Audit of curated replacements via `GET /api/admin/audit-logs?target_id=:itemId` (see §4.7, admin only). Legacy `GET /api/system/settings` is **deleted**.
-
-#### `PATCH /api/admin/feature-flags/:key` (ADMIN only, row-per-flag)
-
-Manages one flag at a time. Example:
-
-```http
-PATCH /api/admin/feature-flags/series_enabled
-{ "enabled": false }
-
-PATCH /api/admin/feature-flags/threaded_comments_enabled
-{ "enabled": true }
-```
-
-- Validates `key` exists; new flag requires `INSERT` (scalable, no migration).
-- Invalidates cache (10s TTL) immediately; `updated_at` + `updated_by` auto-set.
-- Audits to `admin_audit_logs` (`action: feature_flag.toggle`, `payload: {key, before, after}`).
-
-#### `GET /api/site-settings` (public, filtered)
-
-Returns `{ site_title, site_description, max_series_size, maintenance_mode, contact_email, instagram_url }` (public fields only). `max_series_size` is read here (not from `feature_flags`).
-
-#### `PATCH /api/admin/site-settings` (ADMIN only, singleton `id=1`)
-
-Manages global limits/content. Example:
-
-```json
-{
-  "max_series_size": 8,
-  "site_title": "Déclic — Pameran UKM CLIC UNNES 2026",
-  "maintenance_mode": false
-}
-```
-
-- `CHECK max_series_size BETWEEN 1 AND 20`. **Grandfathering:** existing `SERIES` with 10 frames remain valid when limit is later lowered to 5 — only new `POST /api/posts` are validated against the new value.
-- Invalidates cache immediately; audits to `admin_audit_logs` (`action: site_settings.update`).
-- `system_settings` does not exist — do not use `PATCH /api/admin/system/settings`.
+> **Moved to [[feature-flags-site-settings]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `GET /api/feature-flags`, `PATCH /api/admin/feature-flags/:key`, `GET /api/site-settings`, `PATCH /api/admin/site-settings`.
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.7 Audit Logs (ADMIN, read-only)
 
-#### `GET /api/admin/audit-logs` (ADMIN only, cuid2 ids)
-
-Read-only trail over `admin_audit_logs`. Query params: `target_id` (cuid2, e.g. frame for replace/revert chain), `action` (e.g. `photo_item.replace`, `photo_item.revert`, `post.withdraw`, `exhibition.phase_change`, `feature_flag.toggle`), `limit` (default `20`, max `50`), `cursor` (same §4.0 schema, `ORDER BY created_at, id`). Response: `{ data: [{id, admin_id, action, target_id, payload, created_at}], nextCursor }`. Powers the revert-history UI and phase-change trail; retention unbounded for 1.0.
-
----
+> **Moved to [[curation-moderation]]** — single source of truth lives there; this section is an index pointer only.
+>
+> Endpoints: `GET /api/admin/audit-logs` — defined once in [[curation-moderation]] §5 (Audit trail).
+> Contracts (cursor, errors, guards): §4.0 above.
 
 ## 5. Non-Functional Requirements
 
