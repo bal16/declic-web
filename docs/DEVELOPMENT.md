@@ -21,12 +21,12 @@ status: living
 
 Four GitHub repos. You only ever push to the first one:
 
-| Repo | Visibility | Purpose |
-|---|---|---|
-| `bal16/declic` | Private | Monorepo source of truth. All development and PRs happen here. |
-| `bal16/declic-web` | Public | Read-only mirror for the web app. Deploy target: TBD (Vercel explicitly out). Portfolio-safe (no server secrets). |
-| `bal16/declic-api` | Private | Read-only mirror for the API. Deploy target: TBD (Docker image available). |
-| `bal16/declic-worker` | Private | Read-only mirror for the worker. Deploy target: TBD (Docker image available). |
+| Repo                  | Visibility | Purpose                                                                                                           |
+| --------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| `bal16/declic`        | Private    | Monorepo source of truth. All development and PRs happen here.                                                    |
+| `bal16/declic-web`    | Public     | Read-only mirror for the web app. Deploy target: TBD (Vercel explicitly out). Portfolio-safe (no server secrets). |
+| `bal16/declic-api`    | Private    | Read-only mirror for the API. Deploy target: TBD (Docker image available).                                        |
+| `bal16/declic-worker` | Private    | Read-only mirror for the worker. Deploy target: TBD (Docker image available).                                     |
 
 Production images are published to GHCR on release tags (`ghcr.io/bal16/declic-<app>:vX.Y.Z`, see §8).
 
