@@ -257,6 +257,20 @@ podman build -f apps/web/Dockerfile -t declic-web:local .
 
 All three have been built and boot-tested under podman 6 (api `/health` → ok, worker context ready, web serves SSR HTML with 200). Base image is `docker.io/oven/bun:1.4` (fully qualified — bare short-names fail podman resolution without `registries.conf`). Or pull release images from GHCR instead of building. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into images.
 
+### 9.1.1 Prod-like runs via compose (prebuilt apps)
+
+`docker-compose.prod.yml` overrides the three apps for fully-built runs: `profiles: ["prod"]`, `build:` (root context) + `image:` (GHCR `:latest` default), dev bind-mounts and dev commands cleared via `!reset` (compose merge concatenates — verified against podman-compose), `NODE_ENV=production`, and no secret defaults (fail fast). Web `VITE_*` values bake at build time (`apps/web/Dockerfile` `ARG`, defaults suit localhost).
+
+```bash
+cp .env.prod.example .env.prod  # fill in, never commit
+# pull GHCR (or local cache), no build:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile prod up -d
+# build from source automatically, then run:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile prod up -d --build
+```
+
+`--profile apps` is the dev-container mode and must never be combined with the prod file (profiles union — the merge only happens when both files are passed, so keep invocations separate).
+
 The worker needs no inbound ports; scale it horizontally (replicas, not per-instance concurrency) rather than raising concurrency for 10–50 MB uploads. Graceful shutdown (`enableShutdownHooks`) is a known follow-up — `podman stop` currently falls back to SIGKILL.
 
 ### 9.2 Per-app destinations (TBD)

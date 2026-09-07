@@ -25,12 +25,15 @@ same images (`apps/*/Dockerfile`, see [[DEVELOPMENT]] §9).
 | `worker`     | `oven/bun:1.4`       | —                         | redis, minio healthy                  |
 | `web`        | `oven/bun:1.4`       | `3000`                    | `api`                                 |
 
-Two modes (`api`/`worker`/`web` carry `profiles: ["apps"]`).
+Three modes (`api`/`worker`/`web` carry `profiles: ["apps"]`).
 Run from the repo root (`cp .env.example .env` once):
 
 ```bash
-docker compose up -d                 # infra only (daily dev)
-docker compose --profile apps up -d  # infra + apps in containers
+docker compose up -d                 # 1. infra only (daily dev)
+docker compose --profile apps up -d  # 2. infra + apps in dev containers
+# 3. infra + prebuilt apps (see DEVELOPMENT §9.1.1):
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile prod up -d          # pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod --profile prod up -d --build  # auto-build
 ```
 
 Root `docker-compose.yml` is materialized from this spec (see
