@@ -9,7 +9,7 @@ updated: 2026-09-01
 ---
 # PRD: Déclic — Pameran Online UKM CLIC
 
-**Version:** 0.4-draft (2026-09-01)  
+**Version:** 0.4-draft (2026-09-01)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
 **Status:** Draft
 **Owner:** TBD
@@ -171,18 +171,18 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 
 ```text
                          ┌─────────────────┐
-                         │   CDN / proxy    │  ← serves images + static assets,
-                         │  (Cloudflare or  │     absorbs traffic spikes
-                         │  Nginx/Caddy)    │
-                         └────────┬─────────┘
+                         │   CDN / proxy   │  ← serves images + static assets,
+                         │  (Cloudflare or │     absorbs traffic spikes
+                         │  Nginx/Caddy)   │
+                         └────────┬────────┘
                                   │
-   ┌──────────────┐      ┌───────▼────────┐      ┌──────────────────────┐
-    │ TanStack web  │◄────►│  NestJS API     │◄────►│   PostgreSQL          │
+   ┌───────────────┐      ┌───────▼─────────┐      ┌───────────────────────┐
+   │ TanStack web  │◄────►│  NestJS API     │◄────►│   PostgreSQL          │
    │  (public +    │      │  (Bun 1.4)      │      │  (exhibitions, posts, │
    │  photographer │      │                 │      │   photo_items, users, │
    │  + admin UI)  │      │  + Better Auth  │      │   likes, comments)    │
-   └──────────────┘      │  (OAuth mounted  │      │   sessions, order)    │
-                          │   here)          │      └──────────────────────┘
+   └───────────────┘      │  (OAuth mounted │      │   sessions, order)    │
+                          │   here)         │      └───────────────────────┘
                           └───────┬─────────┘
                                   │
                          ┌─────────▼─────────┐

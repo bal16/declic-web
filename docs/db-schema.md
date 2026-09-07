@@ -10,12 +10,16 @@ updated: 2026-09-01
 ---
 # DB Schema — Déclic
 
-**Version:** 0.4-draft (2026-09-01)  
+**Version:** 0.4-draft (2026-09-01)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Source of truth:** [[PRD-API]] §2 (Database Schema & Data Model)  
+**Source of truth:** [[PRD-API]] §2 (Database Schema & Data Model)
 **Last updated:** 2026-09-01
 
-> Root `/` always shows the **latest published exhibition** (`exhibitions` ordered by `start_date DESC`). A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`). Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`. **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `feature_flags.id=1`. Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (1-row, `id=1`)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
+> Root `/` always shows the **latest published exhibition** (`exhibitions` ordered by `start_date DESC`).
+> A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`).
+> Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`.
+> **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `feature_flags.id=1`.
+> Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (1-row, `id=1`)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
 
 ---
 
