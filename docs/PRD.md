@@ -97,12 +97,14 @@ and indefinitely afterward (as a lower-traffic archive).
 
 | Role | Description | Key capabilities |
 |---|---|---|
-| **Visitor** | Any member of the public | Browse photos, like/react, comment (requires login) |
+| **Viewer** | Logged-in public (default role) | Browse photos, like/react, comment |
 | **Photographer** | Contributor with an account | Upload photos, view own submission status, edit/withdraw pending submissions |
-| **Admin** | Curator | Approve/reject submissions, arrange display order/layout, moderate comments |
+| **Curator** | Artwork manager | Approve/reject submissions, arrange display order/layout, replace/revert frames, moderate comments, read audit trail |
+| **Admin** | Platform owner (all powers) | Everything a curator can do, plus exhibitions CRUD, user role management, feature flags, site settings |
 
+Anonymous visitors (no session) can browse public exhibitions only.
 All roles authenticate via OAuth (Google or GitHub) — there is no
-email/password flow. Visitors must log in to like or comment, but can browse
+email/password flow. Viewers must log in to like or comment, but can browse
 without an account.
 
 ---
@@ -121,7 +123,7 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 
 ## 4. Functional Requirements
 
-### 4.1 Visitor
+### 4.1 Viewer
 
 - Browse the **latest exhibition at `/`** (grid/gallery view, individual work view) — a **SERIES** appears as one card (cover frame) in the grid; detail/lightbox shows a carousel of its frames. Browse older exhibitions at `/archive` and `/exhibition/[slug]`.
 - Like/react to a published **work** (requires login) — one like per work, not per frame. **Frozen when its exhibition is `ARCHIVED`** (read-only archive, shows frozen notice).
@@ -142,13 +144,20 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 ### 4.3 Admin
 
 - Log in via Google or GitHub OAuth (same auth system, elevated role).
+- Everything a curator can do (see §4.4), plus:
 - Manage **exhibitions** at `/admin/exhibitions` — create/edit `title`/`slug`/`start_date`/`end_date`/`location`/`poster`, manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`), slug unique. Creation auto-generates `cuid2` id.
+- Manage **users** at `/admin/users` — role elevation (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), self/last-admin guards.
+- Toggle **feature flags** and **site settings** at `/admin/settings`.
+- Manage the pre-event → archive transition — scheduled via `end_date` cron; manual override allowed. Replacements are **blocked when `ARCHIVED`**.
+
+### 4.4 Curator
+
+- Log in via Google or GitHub OAuth (same auth system, elevated role).
 - Review pending **works** per exhibition; approve or reject each **work** (status on `posts`; rejection reason shared for the whole work).
 - Arrange the display order/layout of approved **works** per exhibition (ordering is on `posts.display_order`; frames inside a SERIES keep `photo_items.item_order`).
-- **Curator replacement (non-destructive, Option C)** — admin/curator may upload a **curated replacement** for any frame (`photo_items`) while `exhibitions.phase != ARCHIVED` (e.g. color consistency). Original `original_s3_key` is kept via audit log (`admin_audit_logs` payload `old_s3_key`), `photo_items.source` flips `ORIGINAL` → `CURATED`, `blurhash` + derivatives are regenerated via the same worker pipeline. Original file stays in `raw-uploads/` (not deleted) for archive honesty. Revert possible via audit.
+- **Curator replacement (non-destructive, Option C)** — curator may upload a **curated replacement** for any frame (`photo_items`) while `exhibitions.phase != ARCHIVED` (e.g. color consistency). Original `original_s3_key` is kept via audit log (`admin_audit_logs` payload `old_s3_key`), `photo_items.source` flips `ORIGINAL` → `CURATED`, `blurhash` + derivatives are regenerated via the same worker pipeline. Original file stays in `raw-uploads/` (not deleted) for archive honesty. Revert possible via audit.
 - Moderate (remove) inappropriate comments (per work thread; `is_hidden` + optional `parent_id`).
-- Audit trail for admin actions (`admin_audit_logs`) including `feature_flag.toggle`, `exhibition.phase_change`, and `photo_item.replace`.
-- Manage the pre-event → archive transition — scheduled via `end_date` cron; manual override allowed. Replacements are **blocked when `ARCHIVED`**.
+- Read the audit trail (`admin_audit_logs`) including `feature_flag.toggle`, `exhibition.phase_change`, and `photo_item.replace`.
 
 ---
 

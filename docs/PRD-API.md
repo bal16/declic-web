@@ -79,11 +79,11 @@ src/
 | `name` | `varchar(255)` | NOT NULL | Full name |
 | `email` | `varchar(255)` | NOT NULL, UNIQUE | OAuth email |
 | `image` | `text` | NULLABLE | Avatar URL |
-| `role` | `enum` | NOT NULL, DEFAULT `'VISITOR'` | `'VISITOR'`, `'PHOTOGRAPHER'`, `'ADMIN'` |
+| `role` | `enum` | NOT NULL, DEFAULT `'VIEWER'` | `'VIEWER'`, `'PHOTOGRAPHER'`, `'CURATOR'`, `'ADMIN'` |
 | `created_at` | `timestamp` | DEFAULT `now()` | Registration time |
 | `updated_at` | `timestamp` | NULLABLE | Last profile update (Better Auth adapter) |
 
-> `role` defaults to `VISITOR` — elevation to `PHOTOGRAPHER`/`ADMIN` is done manually by Admin or via seed. `users` ids are **not** switched to cuid2 — keep Better Auth compatibility.
+> `role` defaults to `VIEWER` — elevation to `PHOTOGRAPHER`/`CURATOR`/`ADMIN` is done by an Admin via `PATCH /api/admin/users/:id/role` (see [[auth-rbac]]). No seed admin — the first admin is a one-off direct DB edit. `users` ids are **not** switched to cuid2 — keep Better Auth compatibility.
 
 ### 2.2 `exhibitions` — cuid2
 
@@ -280,17 +280,23 @@ GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 
 ### 3.2 Role Guard Matrix
 
-| Endpoint Group | Visitor | Photographer | Admin |
-|---|---|---|---|
-| Public Gallery (`GET /exhibitions`, `GET /posts`) | Allowed | Allowed | Allowed |
-| Interactions (`POST /posts/:id/likes`, `POST /posts/:id/comments`) | Authenticated | Authenticated (blocked when exhibition `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) |
-| Upload (`POST /posts/presigned-url`, `POST /posts`) | Blocked | Allowed (only exhibition `PRE_EVENT`/`LIVE` + `series_enabled` flag) | Allowed |
-| Exhibitions (`POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`) | Blocked | Blocked | Allowed |
-| Contributor Dashboard (`GET /posts/mine`) | Blocked | Own Data Only | All Data |
-| Moderation (`PATCH /admin/posts/:id/moderate`) | Blocked | Blocked | Allowed |
-| Curation Layout (`PATCH /admin/curate/reorder`) | Blocked | Blocked | Allowed (orders works) |
-| Comment Moderation (`DELETE /admin/comments/:id`) | Blocked | Blocked | Allowed |
-| Feature Flags (`PATCH /api/admin/feature-flags`) | Blocked | Blocked | Allowed |
+| Endpoint Group | Anon | Viewer | Photographer | Curator | Admin |
+|---|---|---|---|---|---|
+| Public Gallery (`GET /exhibitions`, `GET /posts`) | Allowed | Allowed | Allowed | Allowed | Allowed |
+| Interactions (`POST /posts/:id/likes`, `POST /posts/:id/comments`) | Blocked | Authenticated (blocked when exhibition `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) |
+| Upload (`POST /posts/presigned-url`, `POST /posts`) | Blocked | Blocked | Allowed (only exhibition `PRE_EVENT`/`LIVE` + `series_enabled` flag) | Blocked | Allowed |
+| Exhibitions (`POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`) | Blocked | Blocked | Blocked | Blocked | Allowed |
+| Contributor Dashboard (`GET /posts/mine`) | Blocked | Blocked | Own Data Only | Blocked | All Data |
+| Moderation (`PATCH /admin/posts/:id/moderate`) | Blocked | Blocked | Blocked | Allowed | Allowed |
+| Curation Layout (`PATCH /admin/curate/reorder`) | Blocked | Blocked | Blocked | Allowed (orders works) | Allowed |
+| Curator Replace/Revert (`POST .../replace`, `POST .../revert`) | Blocked | Blocked | Blocked | Allowed | Allowed |
+| Comment Moderation (`DELETE /admin/comments/:id`) | Blocked | Blocked | Blocked | Allowed | Allowed |
+| User Management (`GET /api/admin/users`, `PATCH /api/admin/users/:id/role`) | Blocked | Blocked | Blocked | Blocked | Allowed |
+| Feature Flags (`PATCH /api/admin/feature-flags`) | Blocked | Blocked | Blocked | Blocked | Allowed |
+| Site Settings (`PATCH /api/admin/site-settings`) | Blocked | Blocked | Blocked | Blocked | Allowed |
+| Audit Trail (`GET /api/admin/audit-logs`) | Blocked | Blocked | Blocked | Allowed (read) | Allowed |
+
+Union is manual — `ADMIN` is listed explicitly everywhere (no implicit superset in `RolesGuard`). Role literals live in one map (`common/auth/role-matrix.ts`, see [[auth-rbac]] §3.1); endpoints reference permission keys.
 
 Implementation: `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` (checks `exhibitions.phase != ARCHIVED` for the target exhibition, or latest if not specified) → `FeatureFlagGuard` (checks `feature_flags.series_enabled` etc.).
 
@@ -410,7 +416,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 > Endpoints: `GET /api/feature-flags`, `PATCH /api/admin/feature-flags/:key`, `GET /api/site-settings`, `PATCH /api/admin/site-settings`.
 > Contracts (cursor, errors, guards): §4.0 above.
 
-### 4.7 Audit Logs (ADMIN, read-only)
+### 4.7 Audit Logs (ADMIN + CURATOR, read-only)
 
 > **Moved to [[curation-moderation]]** — single source of truth lives there; this section is an index pointer only.
 >

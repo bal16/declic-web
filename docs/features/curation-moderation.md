@@ -23,7 +23,7 @@ scope), [[curator-replace-revert]] (frame-level curation)
 
 ## 1. User stories
 
-- As a curator (ADMIN), I arrange the public order of works per
+- As a curator (CURATOR), I arrange the public order of works per
   exhibition by drag-and-drop (O(1) update, no full rebalance).
 - As a curator, I approve or reject whole works (SERIES moderated as
   one unit) with a required reason on reject.
@@ -32,7 +32,7 @@ scope), [[curator-replace-revert]] (frame-level curation)
 
 ## 2. API — `PATCH /api/admin/curate/reorder`
 
-**Access:** `ADMIN`. Orders **works**, not frames. Uses cuid2 `postId`.
+**Access:** `ADMIN`, `CURATOR`. Orders **works**, not frames. Uses cuid2 `postId`.
 
 **Request Body (Fractional Indexing / LexoRank):**
 
@@ -52,7 +52,7 @@ table rebalance). Legacy field `photoId` accepted as alias for
 
 ## 3. API — `PATCH /api/admin/posts/:id/moderate` (cuid2)
 
-**Access:** `ADMIN`.
+**Access:** `ADMIN`, `CURATOR`.
 
 **Request Body:**
 
@@ -80,13 +80,15 @@ table rebalance). Legacy field `photoId` accepted as alias for
 
 ## 4. API — `DELETE /api/admin/comments/:id` (cuid2)
 
+**Access:** `ADMIN`, `CURATOR`.
+
 Soft moderation (verb kept as idempotent hide) — `UPDATE comments SET is_hidden = true`.
 Idempotent: hiding an already-hidden comment → `204`, no double decrement.
 `posts.comments_count` decremented only if the comment was previously
 counted (`is_hidden=false AND deleted_at IS NULL`). Admin reads still
 include hidden rows. Audited (`action='comment.hide'`).
 
-## 5. API — `GET /api/admin/audit-logs` (ADMIN, read-only)
+## 5. API — `GET /api/admin/audit-logs` (ADMIN + CURATOR, read-only)
 
 Read-only trail over `admin_audit_logs`. Query params: `target_id`
 (cuid2, e.g. frame for replace/revert chain), `action` (e.g.

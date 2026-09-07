@@ -44,7 +44,7 @@ erDiagram
         string name
         string email UK
         string image
-        string role "VISITOR PHOTOGRAPHER ADMIN"
+        string role "VIEWER PHOTOGRAPHER CURATOR ADMIN"
         datetime created_at
         datetime updated_at "nullable"
     }

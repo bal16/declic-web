@@ -14,7 +14,7 @@ updated: 2026-09-04
 **Version:** 0.4-draft (2026-09-01)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
 **Main Stack:** TanStack Start (TanStack Router + file-based routes, Vite), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr  
-**Target:** Web Client (Visitor, Photographer, Admin)  
+**Target:** Web Client (Viewer, Photographer, Curator, Admin)  
 **Status:** Draft
 **Last updated:** 2026-09-04
 
@@ -28,13 +28,14 @@ updated: 2026-09-04
 
 This document defines the technical specifications and user interface (UI) design for the Déclic web application.
 
-The web app serves **three user types** within a **single unified TanStack Start app** (TanStack Router file-based routes, SSR + streaming) with access separation based on **Role-Based Access Control (RBAC)** and **Session Guard** (`beforeLoad` on layout routes):
+The web app serves **four roles** within a **single unified TanStack Start app** (TanStack Router file-based routes, SSR + streaming) with access separation based on **Role-Based Access Control (RBAC)** and **Session Guard** (`beforeLoad` on layout routes):
 
 | Role | Frontend Access | Guard |
 |---|---|---|
-| **Visitor** | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions) | Public, Auth Wall for actions |
+| **Viewer** (default, incl. anon browsing) | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions) | Public, Auth Wall for actions |
 | **Photographer** | Personal dashboard, upload SINGLE/SERIES works, edit Pending works (reorder frames) | `SessionGuard` + `Role=PHOTOGRAPHER` |
-| **Admin/Curator** | Moderation per work, curation canvas (order works), comment moderation | `SessionGuard` + `Role=ADMIN` |
+| **Curator** | Moderation per work, curation canvas (order works), frame replace/revert, comment moderation, audit read | `SessionGuard` + `Role=CURATOR` |
+| **Admin** | Everything a curator can do, plus exhibitions CRUD, user management, settings | `SessionGuard` + `Role=ADMIN` |
 
 A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N frames). Likes/comments/curation attach to the **work**; derivatives/blurhash/exif are per **frame**. Gallery grid shows a work as one card (cover = first frame).
 
@@ -44,7 +45,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 ## 2. Route Map & Page Architecture (Sitemap)
 
-### 2.1 Public Area (Visitor)
+### 2.1 Public Area (Viewer)
 
 | Route | Description |
 |---|---|
@@ -73,10 +74,10 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 | Route | Description | Guard |
 |---|---|---|
 | `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[exhibition-lifecycle]] §3). | `ADMIN` |
-| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN` |
-| `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN` |
-| `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN` |
-| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VISITOR`/`PHOTOGRAPHER`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [[auth-rbac]] §7. | `ADMIN` |
+| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
+| `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
+| `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
+| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [[auth-rbac]] §7. | `ADMIN` |
 | `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Two flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [[feature-flags-site-settings]] §6. | `ADMIN` |
 
 > All routes under `/dashboard/*` and `/admin/*` are protected by an **Auth Guard** (Middleware + HOC) that verifies the Better Auth session and `role` before rendering.
@@ -317,7 +318,8 @@ const { data: session, isPending } = useSession();
 // apps/web/src/routes/_authed.tsx (layout route, TanStack Router)
 // beforeLoad checks the Better Auth session + role for all child routes:
 // - /dashboard/*  → requires session + role PHOTOGRAPHER|ADMIN
-// - /admin/*      → requires session + role ADMIN
+// - /admin/moderation, /admin/curate, /admin/comments → role ADMIN|CURATOR
+// - /admin/exhibitions, /admin/users, /admin/settings → role ADMIN
 // - If not logged in → redirect to /login or show Auth Wall modal
 // - If insufficient role → 403 page
 ```
