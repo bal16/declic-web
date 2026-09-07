@@ -10,6 +10,12 @@ name: declic
 #   ./apps/api     -> NestJS API
 #   ./apps/worker  -> image-processing worker (Bun.Image + BullMQ)
 # Copy .env.example to .env before running `docker compose up`
+#
+# Two modes (api/worker/web carry `profiles: ["apps"]`):
+#   docker compose up -d                 -> infra only (postgres, redis, minio)
+#   docker compose --profile apps up -d  -> infra + apps in containers
+# Root docker-compose.yml is materialized from this spec — change here,
+# then copy over. Keep the two files identical except this header.
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -89,6 +95,7 @@ services:
 
   # ── NestJS API (Bun) ───────────────────────────────────────────
   api:
+    profiles: ["apps"]
     image: oven/bun:1.4
     restart: unless-stopped
     working_dir: /app
@@ -126,6 +133,7 @@ services:
 
   # ── Image-processing worker (NestJS + @nestjs/bullmq + Bun.Image) ──
   worker:
+    profiles: ["apps"]
     image: oven/bun:1.4
     restart: unless-stopped
     working_dir: /app
@@ -152,6 +160,7 @@ services:
 
   # ── TanStack Start frontend (Bun + Vite) ──────────────────────────
   web:
+    profiles: ["apps"]
     image: oven/bun:1.4
     restart: unless-stopped
     working_dir: /app

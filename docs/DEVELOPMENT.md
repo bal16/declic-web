@@ -86,7 +86,7 @@ declic/                              # bal16/declic (private monorepo)
     ├── DEVELOPMENT.md               # this file
     ├── PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md
     └── db-schema.md / seed.ts / docker-compose.yml / env.example
-    # (next) root docker-compose.yml materialized from the docs/ spec
+├── docker-compose.yml             # root materialization of the docs/ spec (infra default, --profile apps for full stack)
 ```
 
 Each C1 mirror contains its app plus the `packages/*` slice it needs, plus the root build manifest, so a standalone clone builds without the monorepo. Example (`declic-api` mirror):
@@ -138,9 +138,23 @@ bun run lint && bun run format:check && bun run --filter "@declic/*" typecheck
 
 Notes: remote is HTTPS (via `gh auth`), not SSH. `bun run --filter "@declic/*" build` runs each workspace's `build` script and silently skips workspaces that do not define one (`contracts/db/tsconfig` have no build step).
 
-### 5.2 Full-stack dev via Compose (not yet materialized)
+### 5.2 Infra via Compose, apps on host (default) or full-stack in containers
 
-The target stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml`, but no root `docker-compose.yml` exists yet. Until it lands, run each app directly (§5.3) with `cp .env.example .env`. The compose file, when written, must use image builds with root context (`podman build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
+The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml` and materialized at root `docker-compose.yml` (keep the two identical except the header — spec is source of truth). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
+
+```bash
+cp .env.example .env          # once
+docker compose up -d          # postgres + redis + minio (+ one-off minio-init)
+bun run --filter @declic/api dev   # apps on host, ports free (§5.3)
+```
+
+Full-stack in containers (e.g. web e2e needing build output):
+
+```bash
+docker compose --profile apps up -d
+```
+
+Image builds (when needed) use root context (`podman build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
 
 Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, site settings, and the demo exhibition. `docs/seed.ts` is the current source of truth.
 
