@@ -10,7 +10,7 @@ status: living
 
 # Déclic Docs — Map of Content
 
-Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Marksman `file-stem` style, see `.marksman.toml`). Code and infra specs (`seed.ts`, `docker-compose.yml`, `env.example`) stay plain paths — they are not notes.
+Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Marksman `file-stem` style, see `.marksman.toml`). Non-markdown sources (`.yml`, `.ts`, extensionless) are readable via companion notes below — never edit the fenced mirror, edit the source and re-sync.
 
 ## Product
 
@@ -36,6 +36,14 @@ Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Ma
 ## Ops
 
 - [[DEVELOPMENT]] — repo map, env, dev loop, mirrors, releases, troubleshooting.
+
+## Infra companions (Obsidian-readable mirrors, auto-synced)
+
+| Note | Source of truth | Sync |
+|---|---|---|
+| [[docker-compose]] | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
+| [[seeds]] | `docs/seed.ts` | same |
+| [[env]] | `docs/env.example` | same |
 
 ## Conventions used in these notes
 
