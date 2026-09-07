@@ -20,3 +20,7 @@ lcov.info
 
 # OS / editor
 .DS_Store
+
+# Obsidian vault config (local-only: workspace layout, appearance, plugins)
+.obsidian/
+docs/.obsidian/
