@@ -1,16 +1,25 @@
+---
+aliases:
+  - ADR-002
+tags:
+  - declic
+  - adr
+status: accepted
+updated: 2026-09-04
+---
 # ADR-002: Tag-Driven Releases (Single Version, rc-Only, Deploy Deferred)
 
 **Status:** Accepted
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** `../DEVELOPMENT.md`, `../../.github/workflows/release.yml`, `../../scripts/check-coverage.ts`, `ADR-001-monorepo-mirror.md`
+**Related:** [[DEVELOPMENT]], `../../.github/workflows/release.yml`, `../../scripts/check-coverage.ts`, [[ADR-001-monorepo-mirror|ADR-001]]
 
 ---
 
 ## 1. Context
 
-The monorepo (ADR-001) ships three runtimes with one shared contract surface,
+The monorepo ([[ADR-001-monorepo-mirror|ADR-001]]) ships three runtimes with one shared contract surface,
 so versioning them independently would create meaningless version skew. At the
 same time, deploy targets (where web/api/worker will run in production) are
 undecided — the project is still in development. The release pipeline must
@@ -27,7 +36,7 @@ deploy step empty.
   when enabled they will be registry-only (`:main-<sha>` images), never Git
   tags, so tags keep their meaning ("this may be deployed").
 * **MAJOR stays `0` until the first exhibition** (`v1.0.0` at launch, per
-  `PRD.md` app-version note). `MINOR` rises per feature/exhibition
+  [[PRD]] app-version note). `MINOR` rises per feature/exhibition
   milestone, `PATCH` for fixes.
 * **Tag hygiene:** always annotated (`git tag -a`), never moved or reused.
 * **Release behavior** (`.github/workflows/release.yml`, trigger `push`
@@ -112,7 +121,7 @@ Facts and burn rate at the time of writing:
 
 ## Cross references
 
-* Repo layout and mirror flow: `../DEVELOPMENT.md`
+* Repo layout and mirror flow: [[DEVELOPMENT]]
 * Workflow: `../../.github/workflows/release.yml`
 * Coverage gate: `../../scripts/check-coverage.ts`
-* Product versioning note: `../PRD.md` (0.x → 1.0.0 at first exhibition)
+* Product versioning note: [[PRD]] (0.x → 1.0.0 at first exhibition)

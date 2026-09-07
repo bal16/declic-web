@@ -1,8 +1,18 @@
+---
+aliases:
+  - Database Schema
+tags:
+  - declic
+  - schema
+  - database
+status: draft
+updated: 2026-09-01
+---
 # DB Schema — Déclic
 
 **Version:** 0.4-draft (2026-09-01)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Source of truth:** `docs/PRD-API.md` §2 (Database Schema & Data Model)  
+**Source of truth:** [[PRD-API]] §2 (Database Schema & Data Model)  
 **Last updated:** 2026-09-01
 
 > Root `/` always shows the **latest published exhibition** (`exhibitions` ordered by `start_date DESC`). A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`). Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`. **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `feature_flags.id=1`. Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (1-row, `id=1`)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
@@ -197,7 +207,7 @@ erDiagram
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
 - **FKs:** `likes.post_id` and `comments.post_id` on works; `photo_derivatives.photo_item_id` per frame.
 - **Threading reserved:** `comments.parent_id` exists but `threaded_comments_enabled=false` in v1 so UI is flat.
-- **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `photo_item.replace` (with `old_s3_key`), `photo_item.revert`, `post.withdraw`, `feature_flag.toggle`, `site_settings.update`. Read via `GET /api/admin/audit-logs` (see `PRD-API.md` §4.7).
+- **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `photo_item.replace` (with `old_s3_key`), `photo_item.revert`, `post.withdraw`, `feature_flag.toggle`, `site_settings.update`. Read via `GET /api/admin/audit-logs` (see [[PRD-API]] §4.7).
 - **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
 - **DRAFT phase:** `exhibitions.phase='DRAFT'` is invisible-to-public (excluded by default from `GET /api/exhibitions` and all public gallery queries; ADMIN bypass via `?phase=DRAFT`).
 - **IDs:** `users` untouched (Better Auth); domain tables `text` cuid2 app-generated, cursor pagination via `created_at` plus `id` opaque, never raw cuid2 sort.
@@ -209,7 +219,7 @@ erDiagram
 
 ## 3. Cross References
 
-- `PRD-API.md` §2 — textual schema spec (authoritative), §2.2 `exhibitions`, §4.5 exhibitions endpoints + scheduler, §2.9 feature flags.
-- `PRD.md` §1, §3, §4, §6, §8.4 — latest at root, per-exhibition lifecycle, ARCHIVED freeze, cron.
-- `PRD-FE.md` §2 to §3, §6 — latest vs archive routes, exhibition-gated upload and frozen notice.
-- `PRD-Worker.md` §1 to §4 — per-frame processing, post aggregation, flag-aware ingestion, scheduler note.
+- [[PRD-API]] §2 — textual schema spec (authoritative), §2.2 `exhibitions`, §4.5 exhibitions endpoints + scheduler, §2.9 feature flags.
+- [[PRD]] §1, §3, §4, §6, §8.4 — latest at root, per-exhibition lifecycle, ARCHIVED freeze, cron.
+- [[PRD-FE]] §2 to §3, §6 — latest vs archive routes, exhibition-gated upload and frozen notice.
+- [[PRD-Worker]] §1 to §4 — per-frame processing, post aggregation, flag-aware ingestion, scheduler note.

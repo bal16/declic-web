@@ -1,10 +1,19 @@
+---
+aliases:
+  - ADR-004
+tags:
+  - declic
+  - adr
+status: accepted
+updated: 2026-09-04
+---
 # ADR-004: Structured Logging via Direct Pino (No nestjs-pino on Bun)
 
 **Status:** Accepted
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** `../PRD-Worker.md` §4.3, `../../apps/api/src/logger.ts`, `../../apps/worker/src/logger.ts`
+**Related:** [[PRD-Worker]] §4.3, `../../apps/api/src/logger.ts`, `../../apps/worker/src/logger.ts`
 
 ---
 
@@ -89,5 +98,5 @@ coverage gate passing, lint/format clean.
 
 * API logger + middleware: `../../apps/api/src/logger.ts`
 * Worker logger: `../../apps/worker/src/logger.ts`
-* Observability targets: `../PRD-Worker.md` §4.3
+* Observability targets: [[PRD-Worker]] §4.3
 * Env: `../../.env.example` (`LOG_LEVEL`)

@@ -1,3 +1,14 @@
+---
+aliases:
+  - Backend API PRD
+  - API PRD
+tags:
+  - declic
+  - prd
+  - api
+status: draft
+updated: 2026-09-01
+---
 # PRD Backend API: Déclic — Core REST API Server & Authentication System
 
 **Version:** 0.4-draft (2026-09-01)  
@@ -7,7 +18,7 @@
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> This document is the technical specification for the **Backend API** of the Déclic platform. For the asynchronous image processing pipeline, see `PRD-Worker.md`. For the canonical DB diagram, see `db-schema.md`. This version (0.4-draft) introduces **SERIES** (`posts` + `photo_items`), **runtime feature flags** (kill-switch), **cuid2** for domain tables, **multi-exhibition** (`exhibitions` + `posts.exhibition_id`, root = latest) and **ARCHIVED freeze** (likes/comments read-only) plus **BullMQ cron** `exhibition-scheduler`.
+> [!abstract] This document is the technical specification for the **Backend API** of the Déclic platform. For the asynchronous image processing pipeline, see [[PRD-Worker]]. For the canonical DB diagram, see [[db-schema]]. This version (0.4-draft) introduces **SERIES** (`posts` + `photo_items`), **runtime feature flags** (kill-switch), **cuid2** for domain tables, **multi-exhibition** (`exhibitions` + `posts.exhibition_id`, root = latest) and **ARCHIVED freeze** (likes/comments read-only) plus **BullMQ cron** `exhibition-scheduler`.
 
 ---
 
@@ -19,7 +30,7 @@ An **exhibition** (`exhibitions`) groups works and has its own lifecycle (`PRE_E
 
 ### 1.1 NestJS Module Architecture
 
-```
+```text
 src/
 ├── modules/
 │   ├── auth/          # Better Auth mount, OAuth handler, SessionGuard, RolesGuard
@@ -53,7 +64,7 @@ src/
 
 ## 2. Database Schema & Data Model (PostgreSQL)
 
-> Canonical Mermaid: `db-schema.md` §1. This section is the textual spec.
+> Canonical Mermaid: [[db-schema]] §1. This section is the textual spec.
 
 **ID generation rule:**
 
@@ -261,7 +272,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
 Related env:
 
-```
+```text
 BETTER_AUTH_SECRET, BETTER_AUTH_URL
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
@@ -451,7 +462,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 ]
 ```
 
-> Post status transitions to `PENDING` only after **all** its photo_items finish processing (see `PRD-Worker.md` §3.3).
+> Post status transitions to `PENDING` only after **all** its photo_items finish processing (see [[PRD-Worker]] §3.3).
 
 **Response `201 Created`:** newly created `post` (cuid2 ids) with nested `items`.
 
@@ -622,7 +633,7 @@ Allows photographer to reorder frames inside a SERIES before moderation: `{ "ord
 2. Fetch old `photo_items` row; capture `old_s3_key`, `old_source`, `old_exif_metadata`.
 3. `UPDATE photo_items SET original_s3_key=:s3Key, source='CURATED', exif_metadata=COALESCE(:exifMetadata, exif_metadata), blurhash=NULL, updated_at=now() WHERE id=:itemId`.
 4. Delete old `photo_derivatives` for that `photo_item_id` (or keep until worker overwrites — recommend delete to avoid stale CDN).
-5. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key, curated: true }` to regenerate `blurhash` + 3 derivatives (same pipeline as `PRD-Worker.md`).
+5. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key, curated: true }` to regenerate `blurhash` + 3 derivatives (same pipeline as [[PRD-Worker]]).
 6. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.replace', target_id:itemId, payload:{ postId, old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }` for revert.
 
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — derivatives are regenerated async; gallery shows old derivatives until worker completes (then new cover if `item_order=0`).
@@ -761,7 +772,7 @@ Read-only trail over `admin_audit_logs`. Query params: `target_id` (cuid2, e.g. 
 
 ## 6. Cross References
 
-- **General PRD:** `PRD.md` — vision, users & roles, lifecycle, system architecture (now with SERIES + feature flags).
-- **Worker Pipeline:** `PRD-Worker.md` — BullMQ consumer per `photo_item` (`cuid2`), `Bun.Image` derivatives, retry/DLQ, post-level aggregation.
-- **DB Schema:** `db-schema.md` — canonical Mermaid ER diagram (`posts` + `photo_items`, cuid2 for domain tables).
+- **General PRD:** [[PRD]] — vision, users & roles, lifecycle, system architecture (now with SERIES + feature flags).
+- **Worker Pipeline:** [[PRD-Worker]] — BullMQ consumer per `photo_item` (`cuid2`), `Bun.Image` derivatives, retry/DLQ, post-level aggregation.
+- **DB Schema:** [[db-schema]] — canonical Mermaid ER diagram (`posts` + `photo_items`, cuid2 for domain tables).
 - **Local Infra:** `docker-compose.yml` + `env.example` — Postgres, Redis, MinIO, API, Worker, Web.

@@ -1,9 +1,19 @@
+---
+aliases:
+  - Dev Guide
+  - Deployment Guide
+tags:
+  - declic
+  - guide
+  - devops
+status: living
+---
 # Development & Deployment Guide (Monorepo + C1 Mirrors)
 
 **Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
-**Repo decision:** `adr/ADR-001-monorepo-mirror.md` (source of truth `bal16/declic`, read-only mirrors per app)
-**Release decision:** `adr/ADR-002-release-tagging.md` (single `vX.Y.Z` tag, rc-only, deploy deferred)
-**Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** `db-schema.md` · **Seeds:** `seed.ts`
+**Repo decision:** [[ADR-001-monorepo-mirror|ADR-001]] (source of truth `bal16/declic`, read-only mirrors per app)
+**Release decision:** [[ADR-002-release-tagging|ADR-002]] (single `vX.Y.Z` tag, rc-only, deploy deferred)
+**Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** [[db-schema]] · **Seeds:** `seed.ts`
 
 ---
 
@@ -149,12 +159,13 @@ cwd, which is wrong when running inside `apps/*`), web via Vite
 (Vite defaults to `apps/web/.env`). Only `VITE_*` vars reach the browser.
 `start` scripts intentionally load nothing: production env comes from the
 environment (Docker/host), never from a file.
+
+```bash
 bun run --filter "@declic/*" test       # unit tests (src/)
 bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build output first)
 bun run --filter "@declic/*" build      # per-app builds
 bun run coverage                        # coverage gate: >=90% lines per app (§8)
 bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
-
 ```
 
 Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `packages/*` plus the affected apps — no version bumps or pointer commits.

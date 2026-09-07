@@ -1,3 +1,14 @@
+---
+aliases:
+  - Frontend PRD
+  - Web PRD
+tags:
+  - declic
+  - prd
+  - frontend
+status: draft
+updated: 2026-09-04
+---
 # PRD Frontend: Déclic — Web Application
 
 **Version:** 0.4-draft (2026-09-01)  
@@ -9,7 +20,7 @@
 
 > **Framework change (2026-09-04):** web moves from Next.js App Router to **TanStack Start**. Route paths stay the same (`/`, `/post/$postId`, …); only the routing mechanism changes (file-based `$param` routes + route masking for the lightbox instead of intercepting `@modal/(.)` routes, server route + Satori for OG images instead of `next/og`, plain `<img>` + CDN instead of `<Image />`, `beforeLoad` guards instead of middleware). API/worker contracts are unaffected.
 >
-> This document is the technical specification for the **Frontend Web** of the Déclic platform. For API and image pipeline specifications, see `PRD-API.md` and `PRD-Worker.md`. For general product context, see `PRD.md`. This version reflects **multi-exhibition** (root `/` = latest exhibition, `/archive` + `/exhibition/$slug`), **SERIES** (`SINGLE`/`SERIES` with `photo_items`), **ARCHIVED freeze** (likes/comments read-only), **runtime feature flags**, and **cuid2** ids.
+> [!abstract] This document is the technical specification for the **Frontend Web** of the Déclic platform. For API and image pipeline specifications, see [[PRD-API]] and [[PRD-Worker]]. For general product context, see [[PRD]]. This version reflects **multi-exhibition** (root `/` = latest exhibition, `/archive` + `/exhibition/$slug`), **SERIES** (`SINGLE`/`SERIES` with `photo_items`), **ARCHIVED freeze** (likes/comments read-only), **runtime feature flags**, and **cuid2** ids.
 
 ---
 
@@ -61,7 +72,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see `PRD-API.md` §4.5). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[PRD-API]] §4.5). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN` |
@@ -146,7 +157,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 
 #### Direct MinIO Upload via Presigned URLs (batch)
 
-```
+```text
 [Browser] --(1) POST /api/posts/upload-url {files: [{filename, contentType, fileSizeBytes} x N]}--> [NestJS API]
 [Browser] <--(2) {uploads: [{uploadUrl, s3Key} x N]}---------------------------------------- [NestJS API]
 [Browser] --(3) PUT uploadUrl (each file, parallel with progress)--------------------------> [MinIO] x N
@@ -160,7 +171,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 
 **Flow (non-destructive, blocked when `exhibitions.phase === 'ARCHIVED'`):**
 
-```
+```text
 [Admin] --(1) POST /api/posts/upload-url (curated file)--> [API] -- presigned URL
 [Admin] --(2) PUT curated file --> [MinIO] raw-uploads/cuid-curated.jpg
 [Admin] --(3) POST /api/admin/posts/:postId/frames/:itemId/replace {s3Key}--> [API]
@@ -320,8 +331,8 @@ const { data: session, isPending } = useSession();
 
 ## 7. Cross References
 
-- **General PRD:** `PRD.md` — vision, multi-exhibition (latest at `/`), SERIES works, per-exhibition lifecycle + `ARCHIVED` freeze + cron, system architecture.
-- **Backend API:** `PRD-API.md` — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibition_id`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
-- **Image Worker:** `PRD-Worker.md` — `image-processing` per `photo_item` (`cuid2`), aggregation to `posts.status`, scheduler note (no worker change for exhibitions).
-- **DB Schema:** `db-schema.md` — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
+- **General PRD:** [[PRD]] — vision, multi-exhibition (latest at `/`), SERIES works, per-exhibition lifecycle + `ARCHIVED` freeze + cron, system architecture.
+- **Backend API:** [[PRD-API]] — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibition_id`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
+- **Image Worker:** [[PRD-Worker]] — `image-processing` per `photo_item` (`cuid2`), aggregation to `posts.status`, scheduler note (no worker change for exhibitions).
+- **DB Schema:** [[db-schema]] — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
 - **Local Infra:** `docker-compose.yml` + `env.example` — services `web` (TanStack Start), `api` (NestJS), `worker`, `postgres`, `redis`, `minio`.

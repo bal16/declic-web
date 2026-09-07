@@ -1,17 +1,26 @@
+---
+aliases:
+  - ADR-005
+tags:
+  - declic
+  - adr
+status: accepted
+updated: 2026-09-07
+---
 # ADR-005: Modular Monolith Boundaries for `apps/api`
 
 **Status:** Accepted
 **Date:** 2026-09-07
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** `../PRD-API.md` §1–§2/§4, `../PRD-Worker.md` §1–§3, `../db-schema.md`, `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, `ADR-001-monorepo-mirror.md`, `ADR-003-zod-dto-strategy.md`
+**Related:** [[PRD-API]] §1–§2/§4, [[PRD-Worker]] §1–§3, [[db-schema]], `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-003-zod-dto-strategy|ADR-003]]
 
 ---
 
 ## 1. Context
 
-`apps/api` is a single NestJS deployable (ADR-001) with 12 planned
-feature modules (`PRD-API.md` §1.1: auth, users, exhibitions,
+`apps/api` is a single NestJS deployable ([[ADR-001-monorepo-mirror|ADR-001]]) with 12 planned
+feature modules ([[PRD-API]] §1.1: auth, users, exhibitions,
 posts/photo-items, curation, moderation, engagement, storage, queue,
 feature-flags, site-settings, audit) plus `common/`. Today only
 `app.module.ts` (global config + health) and the `modules/examples/`
@@ -85,7 +94,7 @@ curated }`); `users` ids stay Better Auth-managed.
 
 ### Rule 4 — Shared kernel only
 
-`packages/contracts` (pure Zod DTOs, ADR-003) + `packages/db`
+`packages/contracts` (pure Zod DTOs, [[ADR-003-zod-dto-strategy|ADR-003]]) + `packages/db`
 (schema) + `common/` are the only shared code. DTO wrappers stay
 one line each co-located with their module (`*.dto.ts` via
 `createZodDto`).
@@ -121,7 +130,7 @@ Split posts/engagement/moderation into separate deployables now.
 
 * Pros: independent deploys, strongest isolation.
 * Cons: one-person team pays service-discovery, distributed-tx,
-  and multi-repo coordination tax (the exact cost ADR-001 rejected);
+  and multi-repo coordination tax (the exact cost [[ADR-001-monorepo-mirror|ADR-001]] rejected);
   single Postgres/Redis means distribution without independence.
   Revisit only if a module gets its own team or load profile —
   Rule 1–3 boundaries make that cut mechanical.
@@ -129,7 +138,7 @@ Split posts/engagement/moderation into separate deployables now.
 ### C. This ADR (modular monolith) — accepted
 
 One deployable, enforced boundaries, event seam. Keeps Bun/NestJS
-DX and ADR-001 release flow (`vX.Y.Z` single tag) unchanged while
+DX and [[ADR-001-monorepo-mirror|ADR-001]] release flow (`vX.Y.Z` single tag) unchanged while
 preserving a later split path.
 
 ## 4. Consequences
@@ -154,16 +163,16 @@ preserving a later split path.
 * Unit test per module covers facade contract; one integration
   test traces `PostCreatedEvent` → queued job → `FrameReadyEvent`
   → `PENDING` without importing internals across modules.
-* `bun run coverage` stays ≥90% lines per app (ADR-002 gate).
+* `bun run coverage` stays ≥90% lines per app ([[ADR-002-release-tagging|ADR-002]] gate).
 
 ---
 
 ## Cross references
 
-* Module list + responsibilities: `../PRD-API.md` §1.1
-* Schema + ownership targets: `../db-schema.md`, `../seed.ts`
-* Queue payload + worker contract: `../PRD-Worker.md` §1–§3
-* DTO strategy for `dto.ts` files: `ADR-003-zod-dto-strategy.md`
-* Repo/release context: `ADR-001-monorepo-mirror.md`, `ADR-002-release-tagging.md`
+* Module list + responsibilities: [[PRD-API]] §1.1
+* Schema + ownership targets: [[db-schema]], `../seed.ts`
+* Queue payload + worker contract: [[PRD-Worker]] §1–§3
+* DTO strategy for `dto.ts` files: [[ADR-003-zod-dto-strategy|ADR-003]]
+* Repo/release context: [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-002-release-tagging|ADR-002]]
 * Living module template: `../../apps/api/src/modules/examples/`
 * App composition root: `../../apps/api/src/app.module.ts`

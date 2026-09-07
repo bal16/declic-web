@@ -1,3 +1,14 @@
+---
+aliases:
+  - Worker PRD
+  - Image Worker PRD
+tags:
+  - declic
+  - prd
+  - worker
+status: draft
+updated: 2026-09-01
+---
 # PRD Image Worker: Déclic — Asynchronous Image Processing Pipeline
 
 **Version:** 0.4-draft (2026-09-01)  
@@ -7,7 +18,7 @@
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> This document complements `PRD-API.md`. The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see `db-schema.md`; for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see `PRD-API.md` §2.2/§2.8/§3.3/§4.5. Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
+> [!abstract] This document complements [[PRD-API]]. The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [[db-schema]]; for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [[PRD-API]] §2.2/§2.8/§3.3/§4.5. Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
 
 ---
 
@@ -27,7 +38,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 
 ### 1.2 Flow Diagram (per photo_item)
 
-```
+```text
 [ BullMQ Queue: image-processing ]  (Producer: NestJS API  →  POST /api/posts, one job per photo_item)
               │
               ▼
@@ -76,7 +87,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 
 **MinIO bucket layout (cuid2 s3Key):**
 
-```
+```text
 s3://pameran-foto/
 ├── raw-uploads/{cuid}-original.jpg          # original, one per photo_item (private)
 └── derivatives/{photoItemId}/               # cuid2 folder
@@ -274,7 +285,7 @@ Photographers often upload 10–50MB+ files in batches/series right before the e
 
 Env used by the worker (see `docker-compose.yml`):
 
-```
+```text
 DATABASE_URL=postgres://...@postgres:5432/...
 REDIS_URL=redis://redis:6379
 S3_ENDPOINT=http://minio:9000
@@ -306,7 +317,7 @@ worker:
 
 ## 6. Cross References
 
-- **General PRD:** `PRD.md` — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
-- **Backend API:** `PRD-API.md` — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.
-- **DB Schema:** `db-schema.md` — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
+- **General PRD:** [[PRD]] — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
+- **Backend API:** [[PRD-API]] — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.
+- **DB Schema:** [[db-schema]] — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
 - **Local Infra:** `docker-compose.yml` + `env.example`.
