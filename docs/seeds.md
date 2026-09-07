@@ -90,6 +90,6 @@ export const exhibitionsSeed = [
 // await db.insert(exhibitions).values(exhibitionsSeed).onConflictDoNothing({ target: exhibitions.slug });
 
 // Caching: both tables are tiny (2 + 1 rows) — cache in-memory 10s TTL + invalidate on PATCH.
-// See PRD-API §2.9 / §4.6 and db-schema §1 for cache + invalidation details.
+// See PRD-API §2.9, features/feature-flags-site-settings.md §5 and db-schema §1 for cache + invalidation details.
 ```
 <!-- sync:seed end -->
