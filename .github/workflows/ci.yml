@@ -46,6 +46,9 @@ jobs:
       - name: Lint (oxlint, check mode)
         run: bun run lint
 
+      - name: Module boundaries (ADR-005)
+        run: bun scripts/check-boundaries.ts
+
       - name: Format check (oxfmt)
         run: bun run format:check
 
