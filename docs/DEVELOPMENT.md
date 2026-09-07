@@ -118,7 +118,7 @@ cp .env.example .env
 |---|---|---|
 | `POSTGRES_USER/PASSWORD/DB`, `DATABASE_URL` | postgres, api, worker | `DATABASE_URL` points at the `postgres` service name inside Compose |
 | `REDIS_URL` | api, worker | Points at the `redis` service name inside Compose |
-| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | minio | Dev defaults `minioadmin/minioadmin`, bucket `pameran-foto` |
+| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | minio | Dev defaults `minioadmin/minioadmin`, bucket `declic` |
 | `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for MinIO; endpoint is localhost outside Compose |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | api | URL is `http://localhost:3001` in dev |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | api | Empty = OAuth login disabled, rest of app still runs |

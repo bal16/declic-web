@@ -88,7 +88,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 **MinIO bucket layout (cuid2 s3Key):**
 
 ```text
-s3://pameran-foto/
+s3://declic/
 ├── raw-uploads/{cuid}-original.jpg          # original, one per photo_item (private)
 └── derivatives/{photoItemId}/               # cuid2 folder
     ├── thumb.webp
@@ -291,7 +291,7 @@ REDIS_URL=redis://redis:6379
 S3_ENDPOINT=http://minio:9000
 S3_ACCESS_KEY=minioadmin
 S3_SECRET_KEY=minioadmin
-S3_BUCKET=pameran-foto
+S3_BUCKET=declic
 S3_FORCE_PATH_STYLE=true
 ```
 

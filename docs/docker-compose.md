@@ -15,15 +15,15 @@ Local dev stack for Déclic: Postgres + Redis + MinIO plus the three
 Bun services (`api`, `worker`, `web`). Production parity comes from the
 same images (`apps/*/Dockerfile`, see [[DEVELOPMENT]] §9).
 
-| Service | Image | Ports | Depends on |
-|---|---|---|---|
-| `postgres` | `postgres:16-alpine` | `5432` | — (healthy: `pg_isready`) |
-| `redis` | `redis:7-alpine` | `6379` | — (healthy: `ping`) |
-| `minio` | `minio/minio` | `9000` S3, `9001` console | — |
-| `minio-init` | `minio/mc` | — | `minio` healthy (creates bucket once) |
-| `api` | `oven/bun:1.4` | `3001` | postgres, redis, minio healthy |
-| `worker` | `oven/bun:1.4` | — | redis, minio healthy |
-| `web` | `oven/bun:1.4` | `3000` | `api` |
+| Service      | Image                | Ports                     | Depends on                            |
+| ------------ | -------------------- | ------------------------- | ------------------------------------- |
+| `postgres`   | `postgres:16-alpine` | `5432`                    | — (healthy: `pg_isready`)             |
+| `redis`      | `redis:7-alpine`     | `6379`                    | — (healthy: `ping`)                   |
+| `minio`      | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | `9000` S3, `9001` console | —                                     |
+| `minio-init` | `minio/mc:RELEASE.2025-08-13T08-35-41Z`    | —                         | `minio` healthy (creates bucket once) |
+| `api`        | `oven/bun:1.4`       | `3001`                    | postgres, redis, minio healthy        |
+| `worker`     | `oven/bun:1.4`       | —                         | redis, minio healthy                  |
+| `web`        | `oven/bun:1.4`       | `3000`                    | `api`                                 |
 
 Run: `cp .env.example .env && docker compose up` (root compose file is
 materialized from this spec — see [[DEVELOPMENT]] §5.2). Env values come
@@ -34,10 +34,10 @@ from [[env]].
 
 <!-- sync:compose start -->
 ```yaml
-name: pameran-foto
+name: declic
 
 # ─────────────────────────────────────────────────────────────
-# Development compose file for "Pameran Foto"
+# Development compose file for "Déclic"
 # Runtime  : Bun (all JS services)
 # Stack    : TanStack Start (web) + NestJS (api) + BullMQ worker
 #            + PostgreSQL + Redis + MinIO (S3-compatible)
@@ -55,20 +55,20 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-pameranfoto}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pameranfoto}
-      POSTGRES_DB: ${POSTGRES_DB:-pameranfoto_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-declic}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-declic}
+      POSTGRES_DB: ${POSTGRES_DB:-declic_dev}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pameranfoto}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-declic}"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # ── Queue / cache (BullMQ backend) ─────────────────────────────
   redis:
@@ -84,11 +84,11 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # ── Object storage (S3-compatible, dev/prod parity) ───────────
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -105,23 +105,23 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # One-off: auto-create the app's bucket on first startup
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
         mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
-        mc mb --ignore-existing local/${S3_BUCKET:-pameran-foto};
-        mc anonymous set download local/${S3_BUCKET:-pameran-foto}/public;
+        mc mb --ignore-existing local/${S3_BUCKET:-declic};
+        mc anonymous set download local/${S3_BUCKET:-declic}/public;
         exit 0;
       "
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # ── NestJS API (Bun) ───────────────────────────────────────────
   api:
@@ -134,12 +134,12 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3001
-      DATABASE_URL: postgres://${POSTGRES_USER:-pameranfoto}:${POSTGRES_PASSWORD:-pameranfoto}@postgres:5432/${POSTGRES_DB:-pameranfoto_dev}
+      DATABASE_URL: postgres://${POSTGRES_USER:-declic}:${POSTGRES_PASSWORD:-declic}@postgres:5432/${POSTGRES_DB:-declic_dev}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-pameran-foto}
+      S3_BUCKET: ${S3_BUCKET:-declic}
       S3_FORCE_PATH_STYLE: "true"
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-change-me}
       BETTER_AUTH_URL: http://localhost:3001
@@ -158,7 +158,7 @@ services:
       minio:
         condition: service_healthy
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # ── Image-processing worker (NestJS + @nestjs/bullmq + Bun.Image) ──
   worker:
@@ -168,12 +168,12 @@ services:
     command: sh -c "bun install && bun run start:dev"
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgres://${POSTGRES_USER:-pameranfoto}:${POSTGRES_PASSWORD:-pameranfoto}@postgres:5432/${POSTGRES_DB:-pameranfoto_dev}
+      DATABASE_URL: postgres://${POSTGRES_USER:-declic}:${POSTGRES_PASSWORD:-declic}@postgres:5432/${POSTGRES_DB:-declic_dev}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-pameran-foto}
+      S3_BUCKET: ${S3_BUCKET:-declic}
       S3_FORCE_PATH_STYLE: "true"
     volumes:
       - ./apps/worker:/app
@@ -184,7 +184,7 @@ services:
       minio:
         condition: service_healthy
     networks:
-      - pameran-foto-net
+      - declic-net
 
   # ── TanStack Start frontend (Bun + Vite) ──────────────────────────
   web:
@@ -204,10 +204,10 @@ services:
     depends_on:
       - api
     networks:
-      - pameran-foto-net
+      - declic-net
 
 networks:
-  pameran-foto-net:
+  declic-net:
     driver: bridge
 
 volumes:

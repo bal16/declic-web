@@ -29,14 +29,14 @@ Never commit real secrets (see `.gitignore`).
 # Copy this file to .env before running `docker compose up`
 
 # Postgres
-POSTGRES_USER=pameranfoto
-POSTGRES_PASSWORD=pameranfoto
-POSTGRES_DB=pameranfoto_dev
+POSTGRES_USER=declic
+POSTGRES_PASSWORD=declic
+POSTGRES_DB=declic_dev
 
 # MinIO (S3-compatible)
 MINIO_ROOT_USER=minioadmin
 MINIO_ROOT_PASSWORD=minioadmin
-S3_BUCKET=pameran-foto
+S3_BUCKET=declic
 
 # Better Auth (mounted on the NestJS API — OAuth-only: Google + GitHub)
 BETTER_AUTH_SECRET=12430e12-d3a9-40d4-bdfa-58a9d1b4e76f

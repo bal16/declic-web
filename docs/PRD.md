@@ -320,7 +320,7 @@ and Firefox already block third-party cookies by default, with a growing
 share of Chrome users doing the same.
 
 **Decision:** Web and API **must** be deployed under the same registrable
-top-level domain (e.g. `app.pameranfoto.com` and `api.pameranfoto.com`), so
+top-level domain (e.g. `app.declic.example` and `api.declic.example`), so
 the session cookie is treated as first-party. This must be configured
 explicitly via Better Auth's `trustedOrigins` and CORS settings on the API.
 If a same-domain deployment isn't possible for some reason, a reverse-proxy
