@@ -3,6 +3,7 @@ node_modules/
 
 # Local env (never commit real secrets)
 .env
+.env.prod
 .env*.local
 
 # Build outputs

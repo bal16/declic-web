@@ -21,6 +21,11 @@ RUN bun install --frozen-lockfile
 COPY apps/web ./apps/web
 COPY packages ./packages
 WORKDIR /srv/declic/apps/web
+# VITE_* are baked into the client bundle at build time (not runtime env).
+# docker-compose.prod.yml passes them as build args; defaults suit local
+# prod-like runs, staging/deploy export real values before building.
+ARG VITE_API_URL=http://localhost:3001
+ARG VITE_BETTER_AUTH_URL=http://localhost:3001
 RUN bun run build
 
 FROM docker.io/oven/bun:1.4 AS runner

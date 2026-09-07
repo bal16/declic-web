@@ -1,0 +1,53 @@
+# ═════════════════════════════════════════════════════════════
+# Prod-like override for "Déclic" — prebuilt apps, no dev mounts.
+# Usage (from repo root, after `cp .env.prod.example .env.prod`):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d          # pull GHCR (or local cache)
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --build  # build from source, then run
+# Apps gain profile `prod` (union with base `apps` is harmless: merge only
+# happens when both files are passed, and documented invocations never mix
+# --profile apps with this file). Plain `up` stays infra-only.
+# Secrets come from .env.prod / host environment — this file bakes none.
+# Web VITE_* values are baked at BUILD time (see apps/web/Dockerfile ARG).
+# ═════════════════════════════════════════════════════════════
+
+services:
+
+  # ── NestJS API (prebuilt) ──────────────────────────────────────
+  api:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: ${API_IMAGE:-ghcr.io/bal16/declic-api:latest}
+    command: !reset [] # image CMD (dev sh-command cleared)
+    volumes: !reset [] # dev bind-mounts cleared (merge concatenates, so reset is required)
+    environment:
+      NODE_ENV: production
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required for prod-like runs}
+
+  # ── Image-processing worker (prebuilt) ─────────────────────────
+  worker:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    image: ${WORKER_IMAGE:-ghcr.io/bal16/declic-worker:latest}
+    command: !reset [] # image CMD (dev sh-command cleared)
+    volumes: !reset [] # dev bind-mounts cleared (merge concatenates, so reset is required)
+    environment:
+      NODE_ENV: production
+
+  # ── TanStack Start frontend (prebuilt) ─────────────────────────
+  web:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+        VITE_BETTER_AUTH_URL: ${VITE_BETTER_AUTH_URL:-http://localhost:3001}
+    image: ${WEB_IMAGE:-ghcr.io/bal16/declic-web:latest}
+    command: !reset [] # image CMD (dev sh-command cleared)
+    volumes: !reset [] # dev bind-mounts cleared (merge concatenates, so reset is required)
+    environment:
+      NODE_ENV: production
