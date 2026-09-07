@@ -10,5 +10,11 @@ pre-commit:
       run: bunx oxlint --fix {staged_files}
     oxfmt:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css}'
+      # Mirror .oxfmtrc.jsonc ignores: oxfmt errors ("no target file",
+      # exit 2) when EVERY staged file is ignored, which aborts the
+      # commit. Excluding here keeps hook invocation consistent with
+      # what oxfmt would actually format.
+      exclude:
+        - 'docs/**'
       stage_fixed: true
       run: bunx oxfmt {staged_files}
