@@ -193,12 +193,13 @@ erDiagram
 - **Phase lifecycle per exhibition:** `PRE_EVENT` to `LIVE` to `ARCHIVED` via BullMQ `exhibition-scheduler` (hourly) when `end_date <= now()`. `system_settings` deleted — phase lives only in `exhibitions.phase`.
 - **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /posts` + `POST /likes` + `POST /comments` → `403` (read-only). Curation reorder + `photo_item.replace` blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.
-- **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED`; revert via audit optional.
+- **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED`; single-level revert via `POST /api/admin/photo-items/:itemId/revert` (IN for 1.0).
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
 - **FKs:** `likes.post_id` and `comments.post_id` on works; `photo_derivatives.photo_item_id` per frame.
 - **Threading reserved:** `comments.parent_id` exists but `threaded_comments_enabled=false` in v1 so UI is flat.
-- **Audit log:** `admin_audit_logs` now also logs `exhibition.phase_change` and `photo_item.replace` (with `old_s3_key`).
-- **Soft delete:** `posts.deleted_at` and `comments.deleted_at` nullable; public gallery filters `deleted_at IS NULL`.
+- **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `photo_item.replace` (with `old_s3_key`), `photo_item.revert`, `post.withdraw`, `feature_flag.toggle`, `site_settings.update`. Read via `GET /api/admin/audit-logs` (see `PRD-API.md` §4.7).
+- **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
+- **DRAFT phase:** `exhibitions.phase='DRAFT'` is invisible-to-public (excluded by default from `GET /api/exhibitions` and all public gallery queries; ADMIN bypass via `?phase=DRAFT`).
 - **IDs:** `users` untouched (Better Auth); domain tables `text` cuid2 app-generated, cursor pagination via `created_at` plus `id` opaque, never raw cuid2 sort.
 - **Feature flags:** `feature_flags` row-per-flag (`key PK`, `enabled bool`) — scalable, add flag via `INSERT` without migration; kill-switch for `series_enabled` and `threaded_comments_enabled`.
 - **Site settings:** `site_settings` singleton `id=1` holds `max_series_size` (global limit, `CHECK 1..20`, grandfathering), `site_title`, `maintenance_mode`; seed `id=1`.

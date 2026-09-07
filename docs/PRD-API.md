@@ -93,6 +93,8 @@ src/
 
 Indexes: `slug` UNIQUE, `phase`, `start_date DESC` (for `latest`), `end_date`. Root `/` resolves to `SELECT * FROM exhibitions WHERE phase IN ('LIVE','PUBLISHED') ORDER BY start_date DESC LIMIT 1` or `ARCHIVED` latest if none LIVE; `/archive` lists `ARCHIVED` ordered by `start_date DESC`.
 
+**Phase lifecycle:** `DRAFT` → `PRE_EVENT` → `LIVE` → `ARCHIVED`. `DRAFT` is **invisible-to-public**: excluded by default from `GET /api/exhibitions` and from every public gallery query (only `ADMIN` may pass `?phase=DRAFT`); used to prepare the next exhibition while the current one is `LIVE` without leaking. `PRE_EVENT` opens submissions, `LIVE` is the public spike window, `ARCHIVED` is the cron-driven read-only freeze (see PRD §8.4).
+
 > `system_settings` is deleted. Phase lives only in `exhibitions.phase` (per exhibition, see §2.2).
 
 ### 2.3 `posts` (Works — SINGLE or SERIES) — cuid2
@@ -311,6 +313,48 @@ Auth: Better Auth session cookie or `Authorization: Bearer <token>` (mobile).
 Canonical resource: `/api/posts`. Alias `/api/photos` → `/api/posts` (deprecated).  
 All cuid2 ids are `text` (e.g. `k8x9p2...`), opaque strings — never sort by `id`.
 
+### 4.0 Cross-Cutting Contracts
+
+#### Cursor schema (base64url JSON, self-contained, stateless)
+
+Every paginated `GET` (`/posts`, `/posts/mine`, `/posts/:id/comments`, `/admin/audit-logs`) uses the same cursor: `base64url(JSON)` encoding of the sort key + tiebreaker `id` (cuid2 is only a tiebreaker, never a sort key). No server-side token store, no Redis read per page — safe under event spikes.
+
+| `sort` | Cursor JSON payload | SQL ordering |
+|---|---|---|
+| `curated` | `{"display_order": "0\|i00003:", "id": "cuid-post"}` | `ORDER BY display_order, id` |
+| `recent` | `{"created_at": "2026-09-01T00:00:00.000Z", "id": "cuid-post"}` | `ORDER BY created_at DESC, id` |
+| `most_liked` | `{"likes_count": 42, "id": "cuid-post"}` | `ORDER BY likes_count DESC, id` |
+| `comments` / `audit-logs` | `{"created_at": "...", "id": "cuid-x"}` | `ORDER BY created_at, id` |
+
+Rules: `base64url` (not standard base64 — URL-safe, no padding); FE treats the cursor as opaque (may decode for debug, must never construct by hand); invalid/malformed cursor → `400 {code:"VALIDATION_ERROR"}`. Contract schema lives in `packages/contracts` (shared Zod, FE+API single source) when implemented.
+
+#### Error contract (`{code, message, details?}`)
+
+All error responses share one shape (HTTP status carries the class, `code` carries the branch):
+
+```json
+{ "code": "ARCHIVED", "message": "This exhibition is archived, likes are frozen", "details": null }
+```
+
+`details` is optional — populated only for `VALIDATION_ERROR` (Zod field errors array). `ZodValidationPipe` output is mapped into this shape, never raw Zod JSON.
+
+Canonical codes (FE branches on `code`, never on `message` text):
+
+| Code | HTTP | Meaning |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | Body/query/cursor/DTO validation failed (`details` = field errors) |
+| `UNAUTHENTICATED` | 401 | No/invalid session or bearer token |
+| `FORBIDDEN` | 403 | RBAC deny (role insufficient) |
+| `FEATURE_DISABLED` | 403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`) |
+| `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder/replace/revert blocked) |
+| `NOT_FOUND` | 404 | Unknown `id`/`slug` |
+| `WITHDRAW_CLOSED` | 409 | `DELETE /posts/:id` outside `PENDING`/`REJECTED` |
+| `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
+| `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
+| `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |
+
+All `{code:"..."}` references elsewhere in this document point to this table.
+
 ### 4.1 Ingestion & Work Upload (SINGLE & SERIES)
 
 #### `POST /api/posts/upload-url`
@@ -430,7 +474,7 @@ All cuid2 ids are `text` (e.g. `k8x9p2...`), opaque strings — never sort by `i
 | `exhibition_slug` | `string` | — | Alternative to `exhibition_id` (e.g. `declic-2026`) |
 | `sort` | `enum` | `curated` | `curated` (by `posts.display_order`), `most_liked` (by `likes_count`), `recent` (by `posts.created_at` — **not** `id`) |
 | `search` | `string` | — | Substring match on `posts.title` or `users.name` |
-| `cursor` | `string` | — | Opaque cursor (base64 of `created_at` + `id`) — **never raw cuid2 sort** |
+| `cursor` | `string` | — | Opaque cursor, `base64url(JSON)` per §4.0 Cursor schema — **never raw cuid2 sort** |
 | `limit` | `integer` | `20` | `1..50` |
 | `type` | `enum` | — | Filter `SINGLE` or `SERIES` (optional) |
 
@@ -597,11 +641,11 @@ Allows photographer to reorder frames inside a SERIES before moderation: `{ "ord
 6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId, s3Key: old_s3_key, curated: false, revert: true }` (same worker pipeline; `revert:true` is audit/logging signal only).
 7. Insert `admin_audit_logs` `{ id:cuid2, admin_id, action:'photo_item.revert', target_id:itemId, payload:{ postId, restored_s3_key: old_s3_key, restored_source: old_source, from_audit_id } }`.
 
-**Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — same async semantics as replace.
+**Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` — same async semantics as replace. History is viewable via `GET /api/admin/audit-logs?target_id=:itemId&action=photo_item.replace` (see §4.7).
 
 #### `DELETE /api/posts/:id` (owner photographer or ADMIN, cuid2) — **withdraw, IN for 1.0**
 
-**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed **only while `posts.status` is `PENDING`** — withdrawing an approved/published work is a curation decision, not an author action (anything else → `409 {code:"WITHDRAW_CLOSED"}`).
+**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed while `posts.status IN (PENDING, REJECTED)` — a rejected work will never publish, so the author may discard it; withdrawing an approved/published work is a curation decision, not an author action (anything else, incl. `APPROVED`/`PUBLISHED`/`PROCESSING` mid-flight, → `409 {code:"WITHDRAW_CLOSED"}`).
 
 **Effect (soft-delete, engagement kept):** `UPDATE posts SET deleted_at=now(), updated_at=now() WHERE id=:id`. Likes/comments rows are **kept** but hidden: every public query already filters `deleted_at IS NULL` (and `status`), so engagement vanishes from the gallery while the audit trail survives. No new MinIO deletes — originals stay in `raw-uploads/` (same non-destructive posture as Option C).
 
@@ -625,7 +669,7 @@ Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that exhibiti
 
 Create exhibition: `{ title, slug, description, location, poster_s3_key, start_date, end_date, phase }` → `id=cuid2`. Slug unique.
 
-> Poster upload (decided 1.0): **no dedicated poster endpoint** — `poster_s3_key` must be a key previously uploaded via `POST /api/posts/upload-url` (same allowlist/size rules, same `raw-uploads/` bucket). Reuses one presigned flow instead of a second one.
+> Poster upload (decided 1.0): **no dedicated poster endpoint** — `poster_s3_key` must be a key previously uploaded via `POST /api/posts/upload-url` (same allowlist/size rules, same `raw-uploads/` bucket). Reuses one presigned flow instead of a second one. Example: `PATCH /api/admin/exhibitions/:id { "poster_s3_key": "raw-uploads/cuid-poster.jpg" }` → `200` with updated exhibition.
 
 #### `PATCH /api/admin/exhibitions/:id` (ADMIN, cuid2)
 
@@ -651,7 +695,7 @@ async handle() {
 
 #### `GET /api/feature-flags` (public, filtered)
 
-Returns array `[{key, enabled, updated_at}]` (e.g. `series_enabled`, `threaded_comments_enabled`; no secrets). Frontend uses `series_enabled` to hide SERIES toggle. Audit of curated replacements via `GET /api/admin/audit-logs?target_id=:itemId` (admin only). Legacy `GET /api/system/settings` is **deleted**.
+Returns array `[{key, enabled, updated_at}]` (e.g. `series_enabled`, `threaded_comments_enabled`; no secrets). Frontend uses `series_enabled` to hide SERIES toggle. Audit of curated replacements via `GET /api/admin/audit-logs?target_id=:itemId` (see §4.7, admin only). Legacy `GET /api/system/settings` is **deleted**.
 
 #### `PATCH /api/admin/feature-flags/:key` (ADMIN only, row-per-flag)
 
@@ -688,6 +732,12 @@ Manages global limits/content. Example:
 - `CHECK max_series_size BETWEEN 1 AND 20`. **Grandfathering:** existing `SERIES` with 10 frames remain valid when limit is later lowered to 5 — only new `POST /api/posts` are validated against the new value.
 - Invalidates cache immediately; audits to `admin_audit_logs` (`action: site_settings.update`).
 - `system_settings` does not exist — do not use `PATCH /api/admin/system/settings`.
+
+### 4.7 Audit Logs (ADMIN, read-only)
+
+#### `GET /api/admin/audit-logs` (ADMIN only, cuid2 ids)
+
+Read-only trail over `admin_audit_logs`. Query params: `target_id` (cuid2, e.g. frame for replace/revert chain), `action` (e.g. `photo_item.replace`, `photo_item.revert`, `post.withdraw`, `exhibition.phase_change`, `feature_flag.toggle`), `limit` (default `20`, max `50`), `cursor` (same §4.0 schema, `ORDER BY created_at, id`). Response: `{ data: [{id, admin_id, action, target_id, payload, created_at}], nextCursor }`. Powers the revert-history UI and phase-change trail; retention unbounded for 1.0.
 
 ---
 

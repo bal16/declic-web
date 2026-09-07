@@ -49,7 +49,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 | Route | Description | Guard |
 |---|---|---|
-| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING`, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
+| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING`, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Each `PENDING`/`REJECTED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 WITHDRAW_CLOSED` toast). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
 | `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch MinIO Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from flags. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
 | `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (and exhibition not `ARCHIVED`). | Owner only |
 
@@ -61,7 +61,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition, poster upload via Presigned URL. | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see `PRD-API.md` §4.5). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN` |
@@ -170,7 +170,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 ```
 
 - UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (gold) on replaced frames; tooltip shows `audit` time.
-- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. Revert: admin can pick `Revert` → `POST /api/admin/photo-items/:itemId/revert` (optional v1.1).
+- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (one level) → `POST /api/admin/photo-items/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?target_id=:itemId` rendered as a mini timeline under the frame.
 - Disabled when exhibition `ARCHIVED` with banner `"Archived — replacements frozen"`.
 
 ### 3.3 Admin Visual Layout Editor (`/admin/curate`)
