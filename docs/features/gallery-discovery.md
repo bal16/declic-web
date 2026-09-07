@@ -140,7 +140,7 @@ Relies on composite `(exhibition_id, status)` index (see
 
 ## 9. Acceptance checklist
 
-- [ ] Public gallery `< 50ms` p95, `/` = latest exhibition
-- [ ] Cursor walk `curated` stable across reorder mid-pagination
+- [ ] Public gallery `< 50ms` p95, `/` = latest `LIVE` (fallback `ARCHIVED`; empty-state when neither: "Pameran berikutnya sedang disiapkan.")
+- [ ] Stale `curated` cursor → never 500; skips/duplicates across a mid-pagination reorder tolerated, FE refetches after admin reorder
 - [ ] Shared `/post/$postId` unfurls with cover + title on WhatsApp
 - [ ] `ARCHIVED` gallery readable, engagement frozen

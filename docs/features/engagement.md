@@ -35,9 +35,12 @@ interactions), [[db-schema]] (`likes`, `comments`),
   returns `204`.
 - Atomically maintains `posts.likes_count` within same transaction.
 - Supports Optimistic UI — frontend may update count before response.
-- **Frozen when parent exhibition is `ARCHIVED`:** `POST/DELETE /like`
+- **Frozen when parent exhibition is `ARCHIVED`:** `POST /like`
   → `403 {code:"ARCHIVED", message:"This exhibition is archived, likes
-  are frozen"}` (read of `likesCount` remains).
+  are frozen"}`. **`DELETE /like` (unlike) stays open** → `204`
+  (decrements `posts.likes_count` in the same transaction — the sole
+  write exception to the freeze; removing your own like adds no data).
+  Read of `likesCount` remains.
 
 **Alias:** `/api/photos/:id/like` (deprecated).
 
@@ -64,7 +67,8 @@ sees all (including hidden). Flat sorted by `created_at` (not `id`);
 
 Summary (full UI spec: [[PRD-FE]] §3.1): Like button with optimistic
 update + rollback (`TanStack Query onMutate`); comment thread with Auth
-Wall for guests; both disabled with frozen tooltip when `ARCHIVED`;
+Wall for guests; like/comment creation disabled with frozen tooltip
+when `ARCHIVED`, **unlike stays enabled** (removing your own like);
 INP `< 150ms`.
 
 ## 6. Worker
@@ -93,5 +97,5 @@ tables.
 
 - [ ] Double `POST` like → 1 row, count +1
 - [ ] `DELETE` unliked → `204`
-- [ ] `ARCHIVED`: like/comment → `403 ARCHIVED`, reads ok
+- [ ] `ARCHIVED`: `POST` like/comment → `403 ARCHIVED`; `DELETE` like → `204`; reads ok
 - [ ] `parentId` with flag off → `400 FEATURE_DISABLED`

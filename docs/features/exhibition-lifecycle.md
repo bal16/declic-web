@@ -132,6 +132,10 @@ No image work. Scheduler lives in API (shares Redis). Note in
 
 - No `LIVE` exhibition (gap between shows) → `/` falls back to latest
   `ARCHIVED` with banner; uploads require explicit `exhibitionId`.
+- No `LIVE` nor `ARCHIVED` (only `DRAFT`/`PRE_EVENT`) → `/` returns
+  `200` empty-state "Pameran berikutnya sedang disiapkan." (never falls
+  back to `DRAFT`); photographers with a session see a dashboard nudge
+  when a `PRE_EVENT` exhibition is open.
 - `end_date` moved forward while `LIVE` → next cron run archives.
 - Slug collision on create → `400 VALIDATION_ERROR` (unique).
 - Two exhibitions `LIVE` simultaneously → allowed by schema; `/`
@@ -145,6 +149,7 @@ No image work. Scheduler lives in API (shares Redis). Note in
 ## 11. Acceptance checklist
 
 - [ ] `/` shows latest `LIVE`; after cron, shows next/archived + banner
+- [ ] No `LIVE`/`ARCHIVED` → `/` empty-state "Pameran berikutnya sedang disiapkan."
 - [ ] Cron flips `LIVE`→`ARCHIVED` at `end_date` + audit row
 - [ ] `ARCHIVED`: upload/like/comment/reorder/replace → `403 ARCHIVED`
 - [ ] `DRAFT` invisible publicly, visible to ADMIN with `?phase=DRAFT`

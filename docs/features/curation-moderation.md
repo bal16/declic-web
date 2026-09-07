@@ -80,9 +80,11 @@ table rebalance). Legacy field `photoId` accepted as alias for
 
 ## 4. API — `DELETE /api/admin/comments/:id` (cuid2)
 
-Soft moderation — `UPDATE comments SET is_hidden = true`.
-`posts.comments_count` decremented if the comment was previously
-counted. Audited (`action='comment.hide'`).
+Soft moderation (verb kept as idempotent hide) — `UPDATE comments SET is_hidden = true`.
+Idempotent: hiding an already-hidden comment → `204`, no double decrement.
+`posts.comments_count` decremented only if the comment was previously
+counted (`is_hidden=false AND deleted_at IS NULL`). Admin reads still
+include hidden rows. Audited (`action='comment.hide'`).
 
 ## 5. API — `GET /api/admin/audit-logs` (ADMIN, read-only)
 

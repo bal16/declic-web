@@ -90,9 +90,12 @@ current value. Audits (`action: site_settings.update`).
 - Upload form hides SERIES toggle when `series_enabled=false` (+
   `FEATURE_DISABLED` toast path); `max_series_size` drives the drop
   limit (see [[series-upload]] §6).
-- No admin UI for flags in 1.0 beyond direct `PATCH`? **Decision:**
-  minimal toggles live on a future `/admin/settings` page (post-1.0);
-  1.0 toggles via API client. Document, do not build UI now.
+- **`/admin/settings` (IN for 1.0, minimal):** two toggles
+  (`series_enabled`, `threaded_comments_enabled`) + one number input
+  (`max_series_size` 1–20) over the existing `PATCH` endpoints;
+  `TanStack Query` `staleTime: 10_000`; error mapping
+  (`FEATURE_DISABLED`/`VALIDATION_ERROR` toasts); link to the audit
+  trail (`GET /api/admin/audit-logs?action=feature_flag.toggle`). No new API.
 
 ## 7. Worker
 
@@ -112,9 +115,9 @@ drain with the values at enqueue).
 
 ## 10. Out of scope (post-1.0)
 
-- `/admin/settings` UI; per-exhibition limits; flag targeting/rollout
-  percentages; `maintenance_mode` enforcement middleware (column exists,
-  behavior deferred).
+- per-exhibition limits; flag targeting/rollout
+  percentages; `maintenance_mode` enforcement middleware (`maintenance_mode`
+  is banner-only in 1.0, see §4).
 
 ## 11. Acceptance checklist
 
@@ -122,3 +125,4 @@ drain with the values at enqueue).
 - [ ] Lower limit `10`→`5` → old 10-frame SERIES still valid
 - [ ] Toggle invalidates cache immediately (no 10s wait)
 - [ ] `GET` endpoints carry CDN cache headers
+- [ ] `/admin/settings` toggles round-trip via `PATCH` + audit rows appear

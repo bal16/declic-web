@@ -79,8 +79,9 @@ Auth user id, **not** cuid2).
   (counted in the same tx).
 - No-op (same role) → `200`, no audit row.
 - Effect: `UPDATE users SET role=:role WHERE id=:id` + audit
-  `user.role_change` (`payload:{before,after}`). Role takes effect on
-  the target's next session refresh (documented; no forced revoke 1.0).
+  `user.role_change` (`payload:{before,after}`). Role takes effect
+  immediately (`RolesGuard` reads `users.role` from DB per request;
+  no forced session revoke in 1.0).
 
 **Response `200 OK`:** updated user (public fields).
 
@@ -89,11 +90,16 @@ Auth user id, **not** cuid2).
 The first admin is created by **direct DB edit** (`UPDATE users SET
 role='ADMIN' WHERE email='...'`). This is the *only* role change
 allowed outside the API. No seed admin, no invite flow in 1.0.
+Launch runbook: collect photographer emails → each logs in once via
+OAuth (creating `VISITOR` rows) → admin bulk-promotes to
+`PHOTOGRAPHER` from `/admin/users` (or a one-off script over the same
+`PATCH` endpoint).
 
 ## 7. Frontend (`/admin/users`, NEW for 1.0)
 
 Summary (route to be added in [[PRD-FE]] §2.3): searchable table
-(`GET /api/admin/users`) + per-row role dropdown → `PATCH` → toast +
+(`GET /api/admin/users`) + per-row role dropdown + bulk-select promote
+(checkbox → one promote action for launch onboarding) → `PATCH` → toast +
 refetch; own row's dropdown disabled (tooltip "You cannot change your
 own role"); `last_admin` demotion attempt surfaces the `409` message.
 Requires `ADMIN` (route guard + API guard).

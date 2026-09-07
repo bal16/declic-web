@@ -231,7 +231,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | `site_title` | `text` | NOT NULL, DEFAULT `'Déclic — Pameran UKM CLIC UNNES'` | Global site title |
 | `site_description` | `text` | DEFAULT `'Momen yang diabadikan'` | |
 | `max_series_size` | `integer` | NOT NULL, DEFAULT `10`, CHECK `max_series_size BETWEEN 1 AND 20` | Max `photo_items` per `posts` — **global wide setting, not a flag** |
-| `maintenance_mode` | `boolean` | NOT NULL, DEFAULT `false` | Site-wide maintenance banner |
+| `maintenance_mode` | `boolean` | NOT NULL, DEFAULT `false` | Banner-only in 1.0: FE reads `GET /api/site-settings` and shows a banner; blocks no writes (enforcement middleware out of scope) |
 | `contact_email` | `text` | NULLABLE | |
 | `instagram_url` | `text` | NULLABLE | |
 | `updated_at` | `timestamp` | DEFAULT `now()` | |
@@ -422,7 +422,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 | Aspect | Requirement |
 |---|---|
 | **Response Time** | `GET /api/posts` < 50ms (composite index `(exhibition_id, status)` + `likes_count`/`comments_count` cache + CDN); `GET /api/exhibitions` < 50ms |
-| **Archive Phase Rule** | If **exhibition** `phase === 'ARCHIVED'`: `POST /api/posts/upload-url` + `POST /api/posts` → `403`; **`POST /likes` + `POST /comments` → `403 ARCHIVED` (frozen, reads remain)**. Cron auto `LIVE` → `ARCHIVED` at `end_date`. |
+| **Archive Phase Rule** | If **exhibition** `phase === 'ARCHIVED'`: `POST /api/posts/upload-url` + `POST /api/posts` → `403`; **`POST /likes` + `POST /comments` → `403 ARCHIVED` (frozen, reads remain; `DELETE /like` stays `204`)**. Cron auto `LIVE` → `ARCHIVED` at `end_date`. |
 | **Feature Flags** | Row-per-flag `feature_flags(key, enabled)` (cache 10s TTL); `series_enabled=false` blocks **new** SERIES creation (`403 FEATURE_DISABLED`) but not reading existing; `threaded_comments_enabled` gates `parentId`; add flag via `INSERT`, no migration |
 | **Site Settings** | Singleton `site_settings(id=1, max_series_size CHECK 1..20, site_title, maintenance_mode)` — `GET /api/site-settings` public, `PATCH /api/admin/site-settings` admin; **grandfathering** old SERIES when limit lowered |
 | **Optimistic Updates** | `POST/DELETE /posts/:id/like` idempotent — safe for retry & optimistic UI |
