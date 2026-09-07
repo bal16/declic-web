@@ -20,8 +20,7 @@ updated: 2026-09-07
 
 ## 1. User stories
 
-- As a photographer, I can withdraw my work while it is `PENDING` or
-  `REJECTED` so my dashboard stays clean (confirm dialog, no undo).
+- As a photographer, I can withdraw my work while it is `PENDING`, `REJECTED`, `PROCESSING`, or `FAILED_PROCESSING` so my dashboard stays clean (confirm dialog, no undo).
 - As a photographer, I am told *why not* when withdrawing an
   `APPROVED`/`PUBLISHED` work (`409 WITHDRAW_CLOSED` toast — curation
   territory, contact admin instead).
@@ -36,8 +35,8 @@ depth; status gate already implies it).
 
 | Precondition | Result |
 |---|---|
-| `status IN (PENDING, REJECTED)` | `204`, `deleted_at=now()` |
-| else (`APPROVED`/`PUBLISHED`/`PROCESSING`) | `409 {code:"WITHDRAW_CLOSED"}` |
+| `status IN (PENDING, REJECTED, PROCESSING, FAILED_PROCESSING)` | `204`, `deleted_at=now()` (for `PROCESSING`: BullMQ jobs cancelled best-effort via `job.remove()`; in-flight jobs complete harmlessly, aggregation skips `deleted_at IS NOT NULL`) |
+| `APPROVED`/`PUBLISHED` | `409 {code:"WITHDRAW_CLOSED"}` |
 | unknown `id` | `404 {code:"NOT_FOUND"}` |
 | repeat call | `204` (idempotent) |
 
@@ -68,8 +67,7 @@ no new columns, no migration.
 
 ## 6. Edge cases
 
-- Withdraw during worker mid-flight → `409 WITHDRAW_CLOSED`
-  (`PROCESSING` not withdrawable); photographer retries after `PENDING`.
+- Withdraw during worker mid-flight → **allowed** (`PROCESSING` withdrawable, jobs cancelled best-effort); `FAILED_PROCESSING` offers Retry or withdraw + re-upload.
 - Withdraw in `ARCHIVED` exhibition → unreachable in practice (works are
   `PUBLISHED` by then) but guarded → `403 {code:"ARCHIVED"}`.
 - `GET /api/posts/mine` excludes withdrawn (owner sees clean list).
@@ -84,6 +82,7 @@ no new columns, no migration.
 
 - [ ] `DELETE` PENDING → `204`, gone from `/dashboard` + public gallery
 - [ ] `DELETE` REJECTED → `204`
+- [ ] `DELETE` PROCESSING/FAILED_PROCESSING → `204` (jobs cancelled best-effort)
 - [ ] `DELETE` PUBLISHED → `409 WITHDRAW_CLOSED` + toast copy
 - [ ] Double `DELETE` → `204` both times
 - [ ] `GET /api/admin/audit-logs?action=post.withdraw` shows the row

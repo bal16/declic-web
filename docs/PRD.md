@@ -109,7 +109,7 @@ without an account.
 
 ## 3. Timeline & Lifecycle (per exhibition)
 
-Each `exhibitions` row has its own lifecycle; **root `/` always renders the latest `PUBLISHED`/`LIVE` exhibition** (by `start_date DESC`). Lifecycle is stored in `exhibitions.phase` (`PRE_EVENT` → `LIVE` → `ARCHIVED`).
+Each `exhibitions` row has its own lifecycle; **root `/` always renders the latest `LIVE` exhibition** (by `start_date DESC`, fallback latest `ARCHIVED` when no `LIVE`). Lifecycle is stored in `exhibitions.phase` (`DRAFT` → `PRE_EVENT` → `LIVE` → `ARCHIVED`). `DRAFT` is invisible-to-public; `PRE_EVENT` is closed for public gallery (dashboard/upload/curation only) — public visibility starts at `LIVE`.
 
 1. **PRE_EVENT** — photographers submit works (SINGLE/SERIES), admin curates, upload rush. `POST /api/posts/upload-url` + `POST /api/posts` allowed.
 2. **LIVE** — physical opening + online gallery live. Traffic spike 10–50×. Submissions still allowed until `end_date`.
@@ -200,7 +200,7 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
                          └───────────────────┘
 ```
 
-Work model: `exhibitions` (phase, start/end, slug, poster) → `posts` (exhibition_id, type SINGLE|SERIES, status, display_order) → `photo_items` (item_order, original_s3_key, blurhash, exif) → `photo_derivatives` (per frame). Root `/` = latest `PUBLISHED` exhibition.
+Work model: `exhibitions` (phase, start/end, slug, poster) → `posts` (exhibition_id, type SINGLE|SERIES, status, display_order) → `photo_items` (item_order, original_s3_key, blurhash, exif) → `photo_derivatives` (per frame). Root `/` = latest `LIVE` exhibition (fallback latest `ARCHIVED`); `PRE_EVENT`/`DRAFT` never resolve as root.
 
 Roles are enforced at the API layer based on the authenticated session, not
 just in the frontend UI. Runtime feature flags (`feature_flags` table `id=1`: `series_enabled`, `threaded_comments_enabled`, `max_series_size`) provide a **kill-switch without deploy** — e.g. disabling new `SERIES` creation while keeping existing SERIES readable.
@@ -286,8 +286,7 @@ remains the single source of truth for every image size shown publicly.
 
 ### 8.2 Moderation workflow state machine
 
-Every **work (post)** moves through: `draft → pending review → approved / rejected →
-published`. Series is moderated as one unit — frames cannot be approved individually. Admin can also reorder published **works** independently of the
+Every **work (post)** moves through: `PROCESSING` → `PENDING` → `APPROVED` / `REJECTED` (→ `UNPUBLISHED` as admin hide during `LIVE`). `APPROVED` is staging — publicly visible only when parent `exhibitions.phase IN ('LIVE','ARCHIVED')` (an `APPROVED` work in `PRE_EVENT` stays hidden until `LIVE`; no bulk status update on phase change). Series is moderated as one unit — frames cannot be approved individually. Admin can also reorder published **works** independently of the
 approval step (`posts.display_order`; intra-series order is `photo_items.item_order`). **Curator replacement** (Option C) is allowed on any `photo_items` of a work while its exhibition is not `ARCHIVED` — non-destructive, audited, derivatives regenerated (`photo_items.source` `ORIGINAL` → `CURATED`). Open question: what happens to likes/comments if an already
 published **work** is later un-published (soft delete vs hard removal of
 engagement data) — **decided v1.2:** `ARCHIVED` freeze + soft `UNPUBLISHED` keeps engagement rows but hidden from public (`status` filter). Denormalized `likes_count`/`comments_count` on `posts` are kept as optional cache (updated via transaction/trigger) to keep `GET /api/posts` <50ms; source of truth remains `likes`/`comments` tables.
@@ -305,7 +304,7 @@ ever reaching the app/API tier for read-heavy traffic.
 
 What changes at `ARCHIVED`:
 
-- **Gallery stays visible** — at `/archive` and `/exhibition/[slug]` (permanent read-only archive). Root `/` automatically shows the next latest `PUBLISHED`/`LIVE` exhibition.
+- **Gallery stays visible** — at `/archive` and `/exhibition/[slug]` (permanent read-only archive). Root `/` automatically shows the latest `LIVE` exhibition (fallback latest `ARCHIVED` when no `LIVE`).
 - **Submissions freeze:** `POST /api/posts/upload-url` + `POST /api/posts` → `403` (`Exhibition has been archived, new uploads are closed`).
 - **Engagement freezes:** `POST /likes` + `POST /comments` → `403 FEATURE_DISABLED` (`Exhibition has been archived, likes and comments are frozen`). Reads remain.
 - **Curation:** admin can still reorder? **No** — archive is read-only; reorder blocked via `EventPhaseGuard` for that exhibition.

@@ -63,16 +63,16 @@ table rebalance). Legacy field `photoId` accepted as alias for
 }
 ```
 
-`action`: `"APPROVE" | "REJECT"`
+`action`: `"APPROVE" | "REJECT" | "UNPUBLISH"`
 
 **API Actions:**
 
 - `APPROVE` → `posts.status = APPROVED`, set initial `display_order`
-  at the very bottom (LexoRank max + 1) for the whole work.
+  at the very bottom (LexoRank max + 1) for the whole work. `APPROVED` is **staging**: visible publicly only when parent `exhibitions.phase IN ('LIVE','ARCHIVED')` (phase-gated, no bulk update on `PRE_EVENT` → `LIVE`).
 - `REJECT` → `posts.status = REJECTED`, `rejection_reason` is required
   — whole work rejected (no per-frame moderation in v1).
-- Other transitions: `PUBLISHED` / `UNPUBLISHED` handled via separate
-  endpoint or same field (per final workflow).
+- `UNPUBLISH` (admin hide during `LIVE`) → `posts.status = UNPUBLISHED` via same endpoint (`action: "UNPUBLISH"`, no reason required). Public gallery excludes `UNPUBLISHED`. Re-publish via `APPROVE` again (idempotent).
+- `PUBLISHED` is a legacy alias of `APPROVED` + `LIVE` (gallery treats both as visible); new writes use `APPROVED`/`UNPUBLISHED` only.
 - **Audit:** Insert into `admin_audit_logs` (`id=cuid2`,
   `target_id=cuid-post`, `action='post.moderate'`).
 

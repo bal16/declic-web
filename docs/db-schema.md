@@ -15,7 +15,7 @@ updated: 2026-09-01
 **Source of truth:** [[PRD-API]] §2 (Database Schema & Data Model)
 **Last updated:** 2026-09-01
 
-> Root `/` always shows the **latest published exhibition** (`exhibitions` ordered by `start_date DESC`).
+> Root `/` always shows the **latest `LIVE` exhibition** (fallback latest `ARCHIVED`; `DRAFT`/`PRE_EVENT` never public, ordered by `start_date DESC`).
 > A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`).
 > Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`.
 > **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `feature_flags.id=1`.
@@ -71,7 +71,7 @@ erDiagram
         string title
         string caption
         string type "SINGLE or SERIES"
-        string status "PROCESSING PENDING APPROVED REJECTED PUBLISHED UNPUBLISHED"
+        string status "PROCESSING PENDING APPROVED REJECTED PUBLISHED UNPUBLISHED FAILED_PROCESSING"
         string rejection_reason
         string display_order "LexoRank per exhibition"
         int likes_count "denormalized cache"
@@ -203,7 +203,7 @@ erDiagram
 
 ## 2. Notes on Accepted Decisions
 
-- **Multi-exhibition:** `exhibitions` is the top-level container (`slug`, `phase`, `start_date`, `end_date`, `location`, `poster`). Root `/` = latest `PUBLISHED`/`LIVE` `exhibitions` by `start_date DESC`; older at `/archive` and `/exhibition/[slug]`. `posts.exhibition_id` FK, `NOT NULL`.
+- **Multi-exhibition:** `exhibitions` is the top-level container (`slug`, `phase`, `start_date`, `end_date`, `location`, `poster`). Root `/` = latest `LIVE` `exhibitions` by `start_date DESC` (fallback latest `ARCHIVED` when no `LIVE`; `DRAFT`/`PRE_EVENT` never public); older at `/archive` and `/exhibition/[slug]`. `posts.exhibition_id` FK, `NOT NULL`.
 - **Phase lifecycle per exhibition:** `PRE_EVENT` to `LIVE` to `ARCHIVED` via BullMQ `exhibition-scheduler` (hourly) when `end_date <= now()`. `system_settings` deleted — phase lives only in `exhibitions.phase`.
 - **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /posts` + `POST /likes` + `POST /comments` → `403` (read-only). Curation reorder + `photo_item.replace` blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.

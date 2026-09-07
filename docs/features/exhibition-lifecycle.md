@@ -37,8 +37,8 @@ updated: 2026-09-07
 - `DRAFT`: **invisible-to-public** — excluded by default from
   `GET /api/exhibitions` and all public gallery queries; ADMIN bypass
   via `?phase=DRAFT`. Prepare the next show while the current is `LIVE`.
-- `PRE_EVENT`: submissions open, curation begins.
-- `LIVE`: public spike window; submissions still allowed until `end_date`.
+- `PRE_EVENT`: **closed for public gallery** — submissions open, curation begins; public grid/lightbox do not render this exhibition (root `/` skips it). Photographer dashboard + upload allowed.
+- `LIVE`: public spike window; submissions still allowed until `end_date`. Root `/` resolves to latest `LIVE` (fallback latest `ARCHIVED` when no `LIVE`).
 - `ARCHIVED`: cron-driven read-only freeze (see §5).
 
 ## 3. API — exhibitions CRUD
@@ -46,7 +46,7 @@ updated: 2026-09-07
 ### `GET /api/exhibitions` (public)
 
 List ordered by `start_date DESC`. `?phase=LIVE|ARCHIVED` optional
-(`DRAFT` excluded by default). Root `/` uses first `LIVE` (fallback
+(`DRAFT` excluded by default; `PRE_EVENT` excluded from public gallery — root `/` never resolves to `DRAFT`/`PRE_EVENT`). Root `/` uses latest `LIVE` (fallback
 latest `ARCHIVED`) as `exhibition_id` default.
 
 #### `GET /api/exhibitions/:slug` (public, cuid2 or slug)

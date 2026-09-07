@@ -157,11 +157,8 @@ incorporates `cuid2` for uniqueness.
 
 ## 4. API — `PATCH /api/posts/:id` (NEW for 1.0, photographer edit)
 
-**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed **only
-while `posts.status === 'PENDING'`** (editing approved/published works
-is a curation decision → `409 {code:"WITHDRAW_CLOSED"}` reused? No —
-dedicated code: editing a non-pending work → `409
-{code:"EDIT_CLOSED"}`). Blocked when parent exhibition is `ARCHIVED`
+**Access:** work owner (`photographer_id`) or `ADMIN`. Allowed **while `posts.status IN ('PENDING', 'FAILED_PROCESSING')`** (editing approved/published works
+is a curation decision → `409 {code:"EDIT_CLOSED"}`). Title/caption edit on `FAILED_PROCESSING` does not re-enqueue worker jobs. Blocked when parent exhibition is `ARCHIVED`
 (`403 {code:"ARCHIVED"}`).
 
 **Request Body (all optional, at least one required):**
@@ -223,7 +220,8 @@ stay valid when lowered).
 - `exhibitionId` omitted and latest is `ARCHIVED` → `403 ARCHIVED`
   with message naming the exhibition.
 - Duplicate `s3Key` across items → `400 VALIDATION_ERROR`.
-- Edit/reorder on `PROCESSING` work → `409` (wait for `PENDING`).
+- Edit/reorder on `PROCESSING` work → `409` (wait for `PENDING` or `FAILED_PROCESSING`; title edit opens at `FAILED_PROCESSING`, reorder stays `PENDING`-only).
+- `FAILED_PROCESSING` (after 3 worker attempts) → dashboard shows Retry (re-enqueue frames with `blurhash IS NULL`) + title edit + withdraw; reorder stays blocked until `PENDING`.
 
 ## 10. Out of scope (post-1.0)
 

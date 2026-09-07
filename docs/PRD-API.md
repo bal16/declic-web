@@ -102,7 +102,7 @@ src/
 | `created_at` | `timestamp` | DEFAULT `now()` | Creation time |
 | `updated_at` | `timestamp` | DEFAULT `now()` | Last update |
 
-Indexes: `slug` UNIQUE, `phase`, `start_date DESC` (for `latest`), `end_date`. Root `/` resolves to `SELECT * FROM exhibitions WHERE phase IN ('LIVE','PUBLISHED') ORDER BY start_date DESC LIMIT 1` or `ARCHIVED` latest if none LIVE; `/archive` lists `ARCHIVED` ordered by `start_date DESC`.
+Indexes: `slug` UNIQUE, `phase`, `start_date DESC` (for `latest`), `end_date`. Root `/` resolves to latest `LIVE` (`ORDER BY start_date DESC LIMIT 1`), fallback latest `ARCHIVED` when no `LIVE`; `DRAFT`/`PRE_EVENT` never resolve as root (`DRAFT` excluded by default, `PRE_EVENT` closed for public gallery); `/archive` lists `ARCHIVED` ordered by `start_date DESC`.
 
 **Phase lifecycle:** `DRAFT` → `PRE_EVENT` → `LIVE` → `ARCHIVED`. `DRAFT` is **invisible-to-public**: excluded by default from `GET /api/exhibitions` and from every public gallery query (only `ADMIN` may pass `?phase=DRAFT`); used to prepare the next exhibition while the current one is `LIVE` without leaking. `PRE_EVENT` opens submissions, `LIVE` is the public spike window, `ARCHIVED` is the cron-driven read-only freeze (see PRD §8.4).
 
@@ -118,7 +118,7 @@ Indexes: `slug` UNIQUE, `phase`, `start_date DESC` (for `latest`), `end_date`. R
 | `title` | `varchar(255)` | NOT NULL | Work title (shared for SERIES) |
 | `caption` | `text` | NULLABLE | Work narrative (shared) |
 | `type` | `enum` | NOT NULL, DEFAULT `'SINGLE'` | `'SINGLE'`, `'SERIES'` |
-| `status` | `enum` | NOT NULL, DEFAULT `'PROCESSING'` | `'PROCESSING'`, `'PENDING'`, `'APPROVED'`, `'REJECTED'`, `'PUBLISHED'`, `'UNPUBLISHED'` |
+| `status` | `enum` | NOT NULL, DEFAULT `'PROCESSING'` | `'PROCESSING'`, `'PENDING'`, `'APPROVED'`, `'REJECTED'`, `'PUBLISHED'`, `'UNPUBLISHED'`, `'FAILED_PROCESSING'` (terminal failure after 3 worker attempts; retryable, withdrawable) |
 | `rejection_reason` | `text` | NULLABLE | Curator note if rejected (per work) |
 | `display_order` | `varchar(255)` | INDEX | LexoRank / Fractional Index at **work** level |
 | `likes_count` | `integer` | NOT NULL, DEFAULT `0` | Denormalized cache — maintained transactionally; source of truth is `likes` |
@@ -359,11 +359,11 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `FEATURE_DISABLED` | 403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`) |
 | `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder/replace/revert blocked) |
 | `NOT_FOUND` | 404 | Unknown `id`/`slug` |
-| `WITHDRAW_CLOSED` | 409 | `DELETE /posts/:id` outside `PENDING`/`REJECTED` |
+| `WITHDRAW_CLOSED` | 409 | `DELETE /posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`) |
 | `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
 | `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
 | `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |
-| `EDIT_CLOSED` | 409 | `PATCH /posts/:id` or frame-reorder outside `PENDING` |
+| `EDIT_CLOSED` | 409 | `PATCH /posts/:id` outside `PENDING`/`FAILED_PROCESSING`, or frame-reorder outside `PENDING` |
 | `ROLE_CHANGE_DENIED` | 409 | `PATCH /admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
 
 All `{code:"..."}` references elsewhere in this document point to this table.

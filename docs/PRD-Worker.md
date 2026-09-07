@@ -250,11 +250,12 @@ If any frame fails, rollback for that frame only — sibling frames still succee
 }
 ```
 
-**Failure Handling — after 3 consecutive failures for a single frame (e.g. corrupt image file):**
+**Failure Handling — after 3 consecutive failures for a single frame (e.g. corrupt image file, backoff 5s → 25s → 125s ≈ 3 min total):**
 
-1. Mark the **work** as failed: `UPDATE posts SET status = 'FAILED_PROCESSING', updated_at = now() WHERE id = :postId` (or keep `PROCESSING` with a per-item `failed` flag — implementation choice; recommend work-level `FAILED_PROCESSING` so photographer sees actionable state).
+1. Mark the **work** as terminal failure: `UPDATE posts SET status = 'FAILED_PROCESSING', updated_at = now() WHERE id = :postId`. Photographer sees an actionable error state (not an endless spinner).
 2. Error details are logged to an internal log column (`posts.rejection_reason` or a separate `job_logs`/`admin_audit_logs` table).
-3. Admin/photographer receives a notification on the dashboard to **retry the failed frame** (re-enqueue single `photoItemId` job) or **replace/discard** that frame.
+3. Dashboard shows **Retry** (re-enqueue only frames with `blurhash IS NULL`) and **Withdraw/Edit title** remains available (see [[withdraw-work]] §2, [[series-upload]] §4). Sibling frames' derivatives remain valid — no need to reprocess the whole series.
+4. Stuck detector (separate from failure): posts in `PROCESSING` > 10m emit log + metric `posts_stuck_processing` (queue backlog vs genuine failure signal) but do not auto-fail.
 
 > For SERIES, a single failed frame blocks promotion to `PENDING`; other frames' derivatives remain valid — no need to reprocess the whole series.
 

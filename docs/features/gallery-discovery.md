@@ -86,16 +86,14 @@ published exhibition (see [[exhibition-lifecycle]]).
 
 **Performance:** `< 50ms` (composite index `(exhibition_id, status)`
 
-- `likes_count`/`comments_count` cache + CDN). Only `status = PUBLISHED
-AND deleted_at IS NULL` **within the requested exhibition** appears
-publicly (except ADMIN). Cover for SERIES is `items[0]`.
+- `likes_count`/`comments_count` cache + CDN). Publicly visible only `status IN (APPROVED, PUBLISHED) AND deleted_at IS NULL` **within exhibitions with `phase IN ('LIVE','ARCHIVED')`** (`APPROVED` staged in `PRE_EVENT` stays hidden until `LIVE`; `UNPUBLISHED` never public; `PUBLISHED` is a legacy alias of visible `APPROVED`). Cover for SERIES is `items[0]`.
 
 ## 3. API — `GET /api/posts/mine` & `GET /api/posts/:id`
 
 - **`/mine`:** `PHOTOGRAPHER` (own data), `ADMIN` (all data). All
   statuses owned by the user, nested `items` (cuid2 ids). Powers
   `/dashboard` (see [[series-upload]] §6).
-- **`/:id` (cuid2):** public if `PUBLISHED`, owner/admin any status. All
+- **`/:id` (cuid2):** public if `status IN (APPROVED, PUBLISHED)` and parent exhibition `phase IN ('LIVE','ARCHIVED')`, owner/admin any status. All
   `photo_items` ordered by `item_order` with derivatives.
 - **Alias:** `GET /api/photos/:id` → `GET /api/posts/:id` (deprecated).
 
