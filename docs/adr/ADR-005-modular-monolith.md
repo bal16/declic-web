@@ -1,151 +1,169 @@
-# ADR-005: Modular Monolith Boundaries for apps/api (Proposed)
+# ADR-005: Modular Monolith Boundaries for `apps/api`
 
-**Status:** Proposed
-**Date:** 2026-09-04
+**Status:** Accepted
+**Date:** 2026-09-07
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** `../PRD-API.md` §1.1, `../db-schema.md`, `ADR-001-monorepo-mirror.md`, `ADR-003-zod-dto-strategy.md`, `../../apps/api/src/app.module.ts`
+**Related:** `../PRD-API.md` §1–§2/§4, `../PRD-Worker.md` §1–§3, `../db-schema.md`, `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, `ADR-001-monorepo-mirror.md`, `ADR-003-zod-dto-strategy.md`
 
 ---
 
 ## 1. Context
 
-Repo-level architecture is decided: one monorepo source of truth with three
-deployables (`apps/web`, `apps/api`, `apps/worker`) plus shared
-`packages/contracts` and `packages/db`. Code-level architecture inside
-`apps/api` is not decided: today it contains only `AppModule`, health, docs,
-logging, and the temporary `modules/examples/` scaffold. `PRD-API.md` §1.1
-lists twelve modules but states no boundary rules, so without this ADR the
-API will drift into a big ball of mud with cross-module imports and
-competing writers to the same tables.
+`apps/api` is a single NestJS deployable (ADR-001) with 12 planned
+feature modules (`PRD-API.md` §1.1: auth, users, exhibitions,
+posts/photo-items, curation, moderation, engagement, storage, queue,
+feature-flags, site-settings, audit) plus `common/`. Today only
+`app.module.ts` (global config + health) and the `modules/examples/`
+living skeleton exist; `packages/db` has no `src/` yet and no
+event-emitter dependency is installed.
+
+Without boundary rules the module list is a plain monolith: any module
+can deep-import any other module's internals or write to any table,
+and the codebase drifts into spaghetti before 1.0. The team is one
+person, one Postgres, one Redis — microservices would add ops cost
+with no scaling benefit pre-launch. What is needed is a structure
+that keeps one deployable but preserves extractability later.
+
+Q1 scope for 1.0 is confirmed IN: photographer withdraw
+(`DELETE /api/posts/:id`, soft-delete), exhibition poster upload
+(`POST /api/exhibitions/:id/poster-upload-url` + `poster_s3_key`
+via existing PATCH), and curator revert
+(`POST /api/admin/photo-items/:itemId/revert`). All three fit inside
+the module boundaries defined here with no new tables.
 
 ## 2. Decision
 
-Keep `apps/api` one deployable wireframe, but enforce hard module
-boundaries so any module can later move without a rewrite: a **modular
-monolith**, not microservices.
+`apps/api` is a **modular monolith**: one deployable, hard module
+boundaries, extractable later.
 
-### Rule 1 — Public surface per module
+### Rule 1 — No deep cross-module imports
 
-Each module exposes exactly one importable surface:
+Each module exposes exactly one entry point, `public-api.ts`
+(facade service + events it emits). Any file not re-exported from
+`public-api.ts` is internal and off-limits to other modules.
+`common/` (guards, interceptors, filters, decorators) is the only
+code importable from anywhere.
 
-```text
-apps/api/src/modules/<name>/
-├── public-api.ts        # facade services, events, DTO re-exports ONLY
-├── <name>.module.ts
-├── <name>.controller.ts # HTTP only; no business logic
-├── <name>.service.ts    # business logic, private to the module
-└── *.test.ts            # co-located unit tests
-```
-
-Cross-module imports are allowed only from:
-
-* the same module,
-* `apps/api/src/common/` (guards, interceptors, filters, decorators),
-* shared packages (`@declic/contracts`, `@declic/db`) and libraries,
-* `<other-module>/public-api(.ts)` — never deep files.
-
-Forbidden example: `import { XService } from '../curation/x.service'`.
-Allowed: `import { type CurationFacade } from '../curation/public-api'`.
-`modules/examples/` is exempt only until deleted (it is scaffolding, not
-a boundary citizen).
+Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
+`scripts/check-coverage.ts`), failing on imports matching
+`modules/<other-module>/*` except via `public-api`. Wired into
+`ci.yml` alongside the coverage gate.
 
 ### Rule 2 — Table ownership (one writer per table)
 
-| Module | Owns (writes) | Reads (no writes) |
-|---|---|---|
-| `auth` | Better Auth `sessions`, `accounts`, `verification` | `users` session identity |
-| `users` | `users.role`, profile fields | auth session context |
-| `exhibitions` | `exhibitions` rows + slug/phase lifecycle | — |
-| `posts` | `posts`, `photo_items` creation records | `exhibitions.phase`, flags |
-| `worker` (separate app) | `photo_items.blurhash`, `photo_derivatives` rows | job payload `{postId, photoItemId, s3Key, curated}` |
-| `curation` | ordering operations only, via `posts` facade | `posts.display_order` (no raw writes) |
-| `moderation` | status transitions only, via `posts` facade | `posts.status`, `rejection_reason` (no raw writes) |
-| `engagement` | `likes`, `comments` rows | counters via `posts` facade in the same transaction |
-| `feature-flags` | `feature_flags` rows | — |
-| `site-settings` | `site_settings` singleton (`id=1`) | — |
-| `audit` | `admin_audit_logs` (append-only) | events from all modules (never direct calls) |
-| `storage` | no tables (MinIO keys referenced by `posts`/`exhibitions`) | object existence checks |
-| `queue` | no domain tables (BullMQ jobs only) | payloads defined in `@declic/contracts` |
+| Module | Owns (sole writer) |
+|---|---|
+| `exhibitions` | `exhibitions` |
+| `posts` | `posts`, `photo_items`, `photo_derivatives` |
+| `engagement` | `likes`, `comments` (plus `posts.likes_count`/`comments_count` in its own tx) |
+| `feature-flags` | `feature_flags` |
+| `site-settings` | `site_settings` |
+| `audit` | `admin_audit_logs` (append-only; others request via event) |
+| `curation` / `moderation` | **no tables** — operate on `posts` only through the `posts` facade (`setDisplayOrder`, `setStatus`), never raw Drizzle writes |
+| `storage` / `queue` | no tables — MinIO presign / BullMQ enqueue facades |
+| `auth` / `users` | Better Auth-owned tables + `users.role` elevation |
 
-Rationale for facades: `posts.display_order`, `posts.status`,
-`likes_count`, and `comments_count` live on `posts` but change for
-curation, moderation, and engagement reasons. Exactly one code path
-(`posts` facade) writes them, so counters and ordering stay consistent
-under the `ARCHIVED` freeze.
+`packages/db` (Drizzle schema, seeded from `docs/seed.ts`) is shared
+readable schema; **writes** follow the ownership map.
 
-### Rule 3 — Shared kernel only
+### Rule 3 — Async seam is domain events
 
-The only shared code is `packages/contracts` (Zod DTOs), `packages/db`
-(schema), `apps/api/src/common/`, and framework libraries. No
-module-to-module DTO, repository, or helper imports.
+`@nestjs/event-emitter` (to be installed) is the only async
+cross-module channel. Sync cross-module reads go through facades.
 
-### Rule 4 — Enforcement in CI
+| Event | Emitter | Listener | Effect |
+|---|---|---|---|
+| `PostCreatedEvent { postId, photoItemIds[] }` | `posts` | `queue` | enqueue N `image-processing` jobs |
+| `FrameReadyEvent { postId, photoItemId }` | worker callback via `posts` | `posts` | promote `posts.status` to `PENDING` when all siblings ready |
+| `ExhibitionArchivedEvent { exhibitionId }` | `exhibitions` (cron) | `engagement` | freeze likes/comments (`403 ARCHIVED`) |
+| `PhotoItemReplacedEvent { postId, photoItemId, s3Key, curated: true }` | `posts` | `queue` | enqueue 1 replacement job (same pipeline) |
+| `PhotoItemRevertedEvent { postId, photoItemId }` | `posts` | `queue` | enqueue 1 revert job |
 
-Add `scripts/check-boundaries.ts` (same pattern as
-`scripts/check-coverage.ts`): fail on imports matching
-`../<other-module>/` unless the path ends in `/public-api`, and fail on
-cross-module Drizzle table writes outside the ownership map. Run it in
-`ci.yml` and the release `verify` job. Prefer the repo script over an
-oxlint import rule unless the oxlint rule is empirically verified first
-(oxlint nested-config behavior already surprised us once).
+Payloads use cuid2 `text` ids (`{ postId, photoItemId, s3Key,
+curated }`); `users` ids stay Better Auth-managed.
 
-### Event catalog (initial, notifications only — DB stays source of truth)
+### Rule 4 — Shared kernel only
 
-In-process domain events (same deployable): `PostCreated`,
-`PostStatusChanged`, `FramesReordered`, `PostDisplayOrderChanged`,
-`ExhibitionPhaseChanged`, `PhotoItemReplaced`, `CommentHidden`,
-`FeatureFlagToggled`, `SiteSettingsUpdated`. Cross-app seam stays on
-BullMQ payloads (`image-processing` per frame, `exhibition-scheduler`
-cron), typed in `@declic/contracts`. No event sourcing.
+`packages/contracts` (pure Zod DTOs, ADR-003) + `packages/db`
+(schema) + `common/` are the only shared code. DTO wrappers stay
+one line each co-located with their module (`*.dto.ts` via
+`createZodDto`).
 
-### Migration path
+### Rule 5 — Module template + sequencing
 
-A module becomes extractable when it has a facade, owns its tables, and
-communicates only through events/contracts. The known future seam is the
-worker: it already crosses the process boundary via queue payloads, so
-`posts` creation records (API) vs derivative writes (worker) must never
-be merged into one writer.
+Each module ships `*.module.ts`, `public-api.ts`,
+`*.controller.ts`, `*.service.ts`, `dto.ts`, `*.test.ts` —
+mirroring `modules/examples/`, which is deleted when the first real
+module lands (its header already says so).
+
+Landing order: `packages/db` schema first (unblocks all), then
+`storage` + `queue` facades, then `posts`, then
+`engagement`/`curation`/`moderation` (incl. Q1 withdraw/revert),
+then `exhibitions` + poster upload + scheduler, then
+`feature-flags`/`site-settings`/`audit`. The worker consumes the
+queue payload only — it never imports api modules.
 
 ## 3. Alternatives considered
 
-* **Layered monolith without ownership rules** — rejected: reproduces the
-  current risk (competing writers, deep imports) with nicer folder names.
-* **Microservices per PRD module now** — rejected: pre-1.0 ops cost
-  (deploy, auth, transactions across services) with no scaling need yet.
-* **Shared everything via `common/`** — rejected: `common/` becomes a
-  dumping ground; facades keep blast radius per feature.
+### A. Plain monolith with free imports (status quo) — rejected
 
-## 4. Open questions (resolved 1–3; 4 still blocks polish, not structure)
+Keep the §1.1 module list as convention only, no enforcement.
 
-1. Photographer withdraw — **decided IN for 1.0:** `DELETE /api/posts/:id`,
-   owner-or-admin, `PENDING`-only (`409 WITHDRAW_CLOSED` otherwise),
-   soft-delete via `deleted_at`, engagement rows kept but hidden
-   (see `PRD-API.md` §4.4).
-2. Poster upload — **decided:** reuse `POST /api/posts/upload-url`, no
-   dedicated endpoint (see `PRD-API.md` §4.5).
-3. Curator revert — **decided IN for 1.0:**
-   `POST /api/admin/photo-items/:itemId/revert` as single-level undo of
-   the latest replace, with `FRAME_PROCESSING` / `ORIGINAL_MISSING` /
-   `NOTHING_TO_REVERT` guards and its own `photo_item.revert` audit row
-   (see `PRD-API.md` §4.4). Implementation waits for the foundation chain
-   (DB → posts module → replace endpoint → worker); the contract above is
-   the build target.
-4. Still open — define `DRAFT` vs `PRE_EVENT`, exact opaque cursor schema,
-   global error shape, `GET /api/admin/audit-logs` query contract, and
-   upload throttling — or explicitly defer each past 1.0.
+* Pros: zero tooling, fastest first module.
+* Cons: boundaries erode before 1.0; `curation` writing `posts`
+  directly and `engagement` reaching into `exhibitions` become
+  untestable knots; later extraction requires a rewrite, not a cut.
+
+### B. Microservices per domain — rejected
+
+Split posts/engagement/moderation into separate deployables now.
+
+* Pros: independent deploys, strongest isolation.
+* Cons: one-person team pays service-discovery, distributed-tx,
+  and multi-repo coordination tax (the exact cost ADR-001 rejected);
+  single Postgres/Redis means distribution without independence.
+  Revisit only if a module gets its own team or load profile —
+  Rule 1–3 boundaries make that cut mechanical.
+
+### C. This ADR (modular monolith) — accepted
+
+One deployable, enforced boundaries, event seam. Keeps Bun/NestJS
+DX and ADR-001 release flow (`vX.Y.Z` single tag) unchanged while
+preserving a later split path.
+
+## 4. Consequences
+
+* Positive: cross-module changes are explicit (facade or event);
+  Q1 features (withdraw soft-delete, poster upload, revert) land
+  without new tables; worker stays decoupled via queue payload.
+* Negative: new dependency (`@nestjs/event-emitter`); facade
+  discipline slows the first module slightly; boundary-check
+  script needs maintenance as modules land.
+* Guardrails required: `check-boundaries.ts` in CI; code review
+  rejects deep imports even when the gate is bypassed; events
+  catalog kept in this ADR (table in §2, Rule 3).
 
 ## 5. Verification
 
-Docs-only change: `markdownlint-cli2` clean, no app code touched. Code
-enforcement (`scripts/check-boundaries.ts` + CI wiring) is a separate
-implementation step after Q1–Q4 above are resolved.
+* `bun run --filter "@declic/api" typecheck` clean with
+  `@nestjs/event-emitter` installed.
+* `scripts/check-boundaries.ts` green on the tree (only
+  `examples/` + `common/` cross-imports allowed until real
+  modules land).
+* Unit test per module covers facade contract; one integration
+  test traces `PostCreatedEvent` → queued job → `FrameReadyEvent`
+  → `PENDING` without importing internals across modules.
+* `bun run coverage` stays ≥90% lines per app (ADR-002 gate).
 
 ---
 
 ## Cross references
 
-* Module list: `../PRD-API.md` §1.1
-* Schema: `../db-schema.md`
-* Current skeleton: `../../apps/api/src/app.module.ts`
-* DTO strategy: `ADR-003-zod-dto-strategy.md`
+* Module list + responsibilities: `../PRD-API.md` §1.1
+* Schema + ownership targets: `../db-schema.md`, `../seed.ts`
+* Queue payload + worker contract: `../PRD-Worker.md` §1–§3
+* DTO strategy for `dto.ts` files: `ADR-003-zod-dto-strategy.md`
+* Repo/release context: `ADR-001-monorepo-mirror.md`, `ADR-002-release-tagging.md`
+* Living module template: `../../apps/api/src/modules/examples/`
+* App composition root: `../../apps/api/src/app.module.ts`
