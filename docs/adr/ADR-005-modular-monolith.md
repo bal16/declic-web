@@ -36,9 +36,9 @@ that keeps one deployable but preserves extractability later.
 
 Q1 scope for 1.0 is confirmed IN: photographer withdraw
 (`DELETE /api/posts/:id`, soft-delete), exhibition poster upload
-(`POST /api/exhibitions/:id/poster-upload-url` + `poster_s3_key`
+(`POST /api/admin/exhibitions/:id/poster-upload-url` + `poster_s3_key`
 via existing PATCH), and curator revert
-(`POST /api/admin/photo-items/:itemId/revert`). All three fit inside
+(`POST /api/admin/posts/:postId/frames/:itemId/revert`). All three fit inside
 the module boundaries defined here with no new tables.
 
 ## 2. Decision

@@ -190,7 +190,7 @@ erDiagram
 - `site_settings`: `id=1` CHECK; single row.
 - `likes`: composite PK `(user_id, post_id)`; transaction keeps `posts.likes_count` in sync; **frozen** when parent `exhibitions.phase='ARCHIVED'`.
 - `comments`: `post_id` index; `parent_id` gated by `feature_flags.threaded_comments_enabled`; frozen when `ARCHIVED`.
-- `photo_derivatives`: `photo_item_id` index; `poster_s3_key` in `exhibitions` is single image (no derivatives, or reuse same pipeline).
+- `photo_derivatives`: `photo_item_id` index; `poster_s3_key` in `exhibitions` is single image under `posters/` (dedicated ADMIN presign, no derivatives, no worker).
 - All cuid2 ids: `text` PK, no `DEFAULT gen_random_uuid()` — generated in app via `createId()`.
 
 **Better Auth tables (not visualized):** `sessions`, `accounts`, `verification` (`uuid` or `text`, unchanged).
@@ -207,7 +207,7 @@ erDiagram
 - **Phase lifecycle per exhibition:** `PRE_EVENT` to `LIVE` to `ARCHIVED` via BullMQ `exhibition-scheduler` (hourly) when `end_date <= now()`. `system_settings` deleted — phase lives only in `exhibitions.phase`.
 - **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /posts` + `POST /likes` + `POST /comments` → `403` (read-only). Curation reorder + `photo_item.replace` blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.
-- **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED`; single-level revert via `POST /api/admin/photo-items/:itemId/revert` (IN for 1.0).
+- **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED` or frame mid-processing (`FRAME_PROCESSING`); stack-of-single-levels revert via `POST /api/admin/posts/:postId/frames/:itemId/revert` (IN for 1.0, `postId` ↔ `itemId` validated).
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
 - **FKs:** `likes.post_id` and `comments.post_id` on works; `photo_derivatives.photo_item_id` per frame.
 - **Threading reserved:** `comments.parent_id` exists but `threaded_comments_enabled=false` in v1 so UI is flat.

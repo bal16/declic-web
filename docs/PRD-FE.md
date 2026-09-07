@@ -72,7 +72,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[exhibition-lifecycle]] §3). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[exhibition-lifecycle]] §3). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN` |
@@ -182,7 +182,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 ```
 
 - UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (gold) on replaced frames; tooltip shows `audit` time.
-- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (one level) → `POST /api/admin/photo-items/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?target_id=:itemId` rendered as a mini timeline under the frame.
+- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (latest one; repeatable) → `POST /api/admin/posts/:postId/frames/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?target_id=:itemId` rendered as a mini timeline under the frame.
 - Disabled when exhibition `ARCHIVED` with banner `"Archived — replacements frozen"`.
 
 ### 3.3 Admin Visual Layout Editor (`/admin/curate`)

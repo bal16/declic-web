@@ -25,15 +25,17 @@ updated: 2026-09-07
 - As a curator (ADMIN), I can upload a color-corrected replacement for
   any frame so the exhibition has a consistent look — without destroying
   the photographer's original.
-- As a curator, I can undo my latest replacement (one level) when the
-  correction was wrong.
+- As a curator, I can undo my latest replacement when the
+  correction was wrong (each call undoes one replace; repeatable).
 - As a viewer, I see a `CURATED` badge on corrected frames (honesty:
   what I see is not exactly the shutter file).
 
 ## 2. API — `POST /api/admin/posts/:postId/frames/:itemId/replace` (ADMIN, cuid2)
 
 **Access:** `ADMIN` only. **Blocked when parent exhibition is
-`ARCHIVED`** (`403 ARCHIVED`).
+`ARCHIVED`** (`403 ARCHIVED`). **Blocked while the frame is
+mid-processing** (`photo_items.blurhash IS NULL` → `409
+{code:"FRAME_PROCESSING"}` — one regeneration at a time).
 
 **Request Body:**
 
@@ -50,7 +52,8 @@ updated: 2026-09-07
 
 **API Actions (transactional):**
 
-1. Verify `s3Key` exists in MinIO (HEAD).
+1. Validate `photo_items.post_id == :postId` (mismatch → `404 {code:"NOT_FOUND"}`).
+2. Verify `s3Key` exists in MinIO (HEAD).
 2. Fetch old `photo_items` row; capture `old_s3_key`, `old_source`,
    `old_exif_metadata`.
 3. `UPDATE photo_items SET original_s3_key=:s3Key, source='CURATED',
@@ -68,14 +71,16 @@ updated: 2026-09-07
 gallery shows old derivatives until worker completes (then new cover if
 `item_order=0`).
 
-## 3. API — `POST /api/admin/photo-items/:itemId/revert` (ADMIN, cuid2)
+## 3. API — `POST /api/admin/posts/:postId/frames/:itemId/revert` (ADMIN, cuid2)
 
 **Access:** `ADMIN` only. **Blocked when parent exhibition is
-`ARCHIVED`**. Single-level undo of the **latest** replace.
+`ARCHIVED`**. Stack of single-levels: each call undoes exactly the
+**latest** replace (repeatable — call again to walk further back).
 
 **API Actions (transactional):**
 
-1. Fetch the latest `admin_audit_logs` row with
+1. Validate `photo_items.post_id == :postId` (mismatch → `404 {code:"NOT_FOUND"}`).
+2. Fetch the latest `admin_audit_logs` row with
    `action='photo_item.replace'` and `target_id=:itemId`. If none →
    `409 {code:"NOTHING_TO_REVERT"}`.
 2. If frame mid-processing (`photo_items.blurhash IS NULL`) →
@@ -84,8 +89,8 @@ gallery shows old derivatives until worker completes (then new cover if
    `409 {code:"ORIGINAL_MISSING"}`.
 4. `UPDATE photo_items SET original_s3_key=:old_s3_key,
    source=:old_source, exif_metadata=:old_exif_metadata, blurhash=NULL,
-   updated_at=now() WHERE id=:itemId`. One level only — repeat the call
-   to walk further back; each revert writes its own audit row.
+  updated_at=now() WHERE id=:itemId`. Each call undoes one replace;
+  repeat the call to walk further back; each revert writes its own audit row.
 5. Delete current `photo_derivatives` for that `photo_item_id`.
 6. Enqueue **one** job `{ postId, photoItemId: itemId, s3Key: old_s3_key,
    curated: false, revert: true }` (`revert:true` is audit/logging
@@ -142,5 +147,6 @@ files stay in `raw-uploads/`. No new tables.
 - [ ] Revert → restores prior `s3Key`, `photo_item.revert` audit row
 - [ ] Revert with no replace history → `409 NOTHING_TO_REVERT`
 - [ ] Replace while `blurhash IS NULL` → `409 FRAME_PROCESSING`
+- [ ] `postId` ↔ `itemId` mismatch → `404 NOT_FOUND`
 - [ ] Replace/revert in `ARCHIVED` → `403 ARCHIVED`
 - [ ] Original file still in `raw-uploads/` after replace

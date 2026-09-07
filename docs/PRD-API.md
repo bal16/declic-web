@@ -35,7 +35,7 @@ src/
 ├── modules/
 │   ├── auth/          # Better Auth mount, OAuth handler, SessionGuard, RolesGuard
 │   ├── users/         # User profile and role management (Better Auth ids, not cuid2)
-│   ├── exhibitions/   # Exhibitions CRUD, slug, phase, scheduler (exhibition-scheduler cron)
+│   ├── exhibitions/   # Exhibitions CRUD, slug, phase, scheduler (exhibition-scheduler cron), poster presign (`POST /api/admin/exhibitions/:id/poster-upload-url` via storage facade, `posters/` prefix)
 │   ├── posts/         # Posts + photo_items ingestion, public queries, pagination (scoped by exhibition_id)
 │   │   └── photo-items/ # Frames within a post (item_order, original_s3_key, source, blurhash, exif)
 │   ├── curation/      # Layout ordering at post level per exhibition (LexoRank)

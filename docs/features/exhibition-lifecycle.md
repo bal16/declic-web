@@ -64,11 +64,16 @@ exhibition (see [[gallery-discovery]]).
 Create: `{ title, slug, description, location, poster_s3_key,
 start_date, end_date, phase }` → `id=cuid2`. Slug unique.
 
-> Poster upload: **no dedicated endpoint** — `poster_s3_key` must be a
-> key previously uploaded via `POST /api/posts/upload-url` (same
-> allowlist/size rules, same `raw-uploads/` bucket). Example:
-> `PATCH /api/admin/exhibitions/:id { "poster_s3_key":
-> "raw-uploads/cuid-poster.jpg" }` → `200`.
+> Poster upload: **dedicated endpoint** `POST /api/admin/exhibitions/:id/poster-upload-url`
+> (ADMIN-only, `phase != ARCHIVED` on `:id`; `DRAFT`/`PRE_EVENT`/`LIVE` allowed).
+> Body `{ filename, contentType, fileSizeBytes }` (single file, same
+> allowlist/size rules as photos, key prefix `posters/` — never
+> `POST /api/posts/upload-url`, which is photographer-accessible and
+> scoped to `raw-uploads/`). Response `{ uploadUrl, s3Key, expiresIn }`,
+> then `PATCH /api/admin/exhibitions/:id { "poster_s3_key":
+> "posters/cuid-poster.jpg" }` → `200`. Flow: create exhibition first
+> (no poster) → presign with the new `:id` → PUT → PATCH (no
+> circular dependency: no presign before the exhibition exists).
 
 #### `PATCH /api/admin/exhibitions/:id` (ADMIN, cuid2)
 
@@ -108,7 +113,7 @@ Summary (full UI spec: [[PRD-FE]] §2.1/§2.3):
 - `/` resolves latest via `GET /api/exhibitions?limit=1` then gallery;
   exhibition header (title, poster, dates, location); `ARCHIVED` banner
   - disabled engagement when applicable.
-- `/admin/exhibitions`: CRUD + **poster picker** (upload-url reuse →
+- `/admin/exhibitions`: CRUD + **poster picker** (dedicated presign →
   PUT → `PATCH {poster_s3_key}`, instant preview) + manual phase
   override + scheduler status hint.
 
@@ -143,4 +148,4 @@ No image work. Scheduler lives in API (shares Redis). Note in
 - [ ] Cron flips `LIVE`→`ARCHIVED` at `end_date` + audit row
 - [ ] `ARCHIVED`: upload/like/comment/reorder/replace → `403 ARCHIVED`
 - [ ] `DRAFT` invisible publicly, visible to ADMIN with `?phase=DRAFT`
-- [ ] Poster picker round-trips through upload-url reuse
+- [ ] Poster picker round-trips through dedicated presign (`POST /api/admin/exhibitions/:id/poster-upload-url` → PUT `posters/` → `PATCH {poster_s3_key}`)
