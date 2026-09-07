@@ -18,7 +18,7 @@ updated: 2026-09-01
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> [!abstract] This document complements [[PRD-API]]. The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [[db-schema]]; for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [[PRD-API]] §2.2/§2.8/§3.3/§4.5. Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
+> [!abstract] This document complements [[PRD-API]]. The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [[db-schema]]; for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [[PRD-API]] §2.2/§2.8/§3.3 and [[exhibition-lifecycle]]. Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
 
 ---
 

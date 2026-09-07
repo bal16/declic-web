@@ -15,7 +15,7 @@ updated: 2026-09-01
 **Owner:** TBD
 **Last updated:** 2026-09-01
 
-> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED`). See [[PRD-API]] §2.4/§4.4`, [[db-schema]]`PHOTO_ITEMS.source`, [[PRD-FE]] §3.2.1`, [[PRD-Worker]] `curated:true` payload.
+> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED`). See [[PRD-API]] §2.4, [[curator-replace-revert]], [[db-schema]] `PHOTO_ITEMS.source`, [[PRD-FE]] §3.2.1, [[PRD-Worker]] `curated:true` payload.
 
 ---
 

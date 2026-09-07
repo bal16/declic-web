@@ -251,7 +251,7 @@ Web (Vercel explicitly out), api, and worker destinations are undecided — the 
 
 ### 9.3 Domain and cookie constraint (Better Auth)
 
-From `PRD.md` §8.5: web and API must share one registrable domain (for example `app.<domain>` + `api.<domain>`) configured via Better Auth `trustedOrigins` plus API CORS, so the session cookie stays first-party. Fallback if that is impossible: reverse-proxy `/api/*` through the web domain. Native/mobile clients use the `bearer()` token plugin instead of cookies. Settle the production domains before configuring OAuth redirect URIs and CORS.
+From [[PRD]] §8.5: web and API must share one registrable domain (for example `app.<domain>` + `api.<domain>`) configured via Better Auth `trustedOrigins` plus API CORS, so the session cookie stays first-party. Fallback if that is impossible: reverse-proxy `/api/*` through the web domain. Native/mobile clients use the `bearer()` token plugin instead of cookies. Settle the production domains before configuring OAuth redirect URIs and CORS.
 
 ## 10. Troubleshooting
 
@@ -277,6 +277,6 @@ From `PRD.md` §8.5: web and API must share one registrable domain (for example 
 * Repo decision and trade-offs: `adr/ADR-001-monorepo-mirror.md`
 * Release/tag decision, limits analysis: `adr/ADR-002-release-tagging.md`
 * Release workflow + coverage gate: `../../.github/workflows/release.yml`, `../../scripts/check-coverage.ts`
-* Product vision and lifecycle: `PRD.md`
-* API and worker specs: `PRD-API.md`, `PRD-Worker.md`, `PRD-FE.md`
-* Schema and seeds: `db-schema.md`, `seed.ts`
+* Product vision and lifecycle: [[PRD]]
+* API and worker specs: [[PRD-API]], [[PRD-Worker]], [[PRD-FE]]
+* Schema and seeds: [[db-schema]], `seed.ts`

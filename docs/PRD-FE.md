@@ -72,10 +72,11 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[PRD-API]] §4.5). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (no dedicated endpoint):** file picker → `POST /api/posts/upload-url` reuse → PUT to MinIO → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [[exhibition-lifecycle]] §3). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN` |
+| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VISITOR`/`PHOTOGRAPHER`/`ADMIN`) → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [[auth-rbac]] §7. | `ADMIN` |
 
 > All routes under `/dashboard/*` and `/admin/*` are protected by an **Auth Guard** (Middleware + HOC) that verifies the Better Auth session and `role` before rendering.
 

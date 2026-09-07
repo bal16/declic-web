@@ -18,10 +18,14 @@ Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Ma
 
 ## Specs (vertical slices share these contracts — defined once, referenced everywhere)
 
-- [[PRD-API]] — modules, schema text, cursor/error/flag contracts, all endpoints. Status: draft `0.4-draft`.
+- [[PRD-API]] — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
 - [[db-schema]] — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
 - [[PRD-FE]] — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
 - [[PRD-Worker]] — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
+
+## Features (1 file per feature — acceptance index)
+
+- [[features/README]] — status table + template rules (single source for endpoint bodies; `PRD-API` §4.x keeps pointers only).
 
 ## Decisions
 
