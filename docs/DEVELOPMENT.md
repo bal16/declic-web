@@ -206,11 +206,13 @@ Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
 You do not work in mirrors. The flow is:
 
 ```text
-every push to bal16/declic:main (`mirror.yml`, `push` trigger)
+every push to bal16/declic:main touching the C1 slice (`mirror.yml`, `push` + `paths` filter)
   → scripts/mirror.sh builds C1 slices (app + packages slice + manifest)
   → force-push to
     bal16/declic-web:main, bal16/declic-api:main, bal16/declic-worker:main
 ```
+
+Docs-only pushes skip the fan-out (see [[ADR-001-monorepo-mirror|ADR-001]] §6).
 
 * `mirror.yml` also supports manual `workflow_dispatch` (all or one app).
   `ci.yml` stays manual-only.

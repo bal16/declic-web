@@ -87,6 +87,19 @@ Keeps monorepo DX (one PR for a cross-cutting change, one lockfile, `bun --filte
 * A standalone clone of each mirror builds with `bun install && bun run build`.
 * Leak-guard CI is green (no secret or `apps/api|worker` reference inside `apps/web`).
 
+## 6. Addendum — paths-filtered fan-out (2026-09-08)
+
+Push-to-`main` trigger is enabled (mirror repos + deploy keys exist),
+but scoped with a `paths` filter: only changes to the C1 slice
+(`apps/**`, `packages/**`, `package.json`, `bun.lock`, `bunfig.toml`,
+`.gitignore`, `scripts/mirror.sh`) fan out. Docs/planning-only pushes
+skip the mirrors — this saves private-repo Actions minutes and avoids
+empty force-pushes during docs-heavy phases. `workflow_dispatch`
+remains as the escape hatch for on-demand runs. The `paths` list and
+the slice in `scripts/mirror.sh` are two sources of truth by
+Github-Actions design (triggers must be static); they are kept in sync
+via a comment cross-reference in `mirror.yml`.
+
 ---
 
 ## Cross references

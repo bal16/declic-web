@@ -23,6 +23,18 @@ on:
         options: ['', web, api, worker]
   push:
     branches: [main]
+    # Docs-only pushes skip the fan-out (saves private-repo minutes and
+    # avoids empty force-pushes). Keep this list in sync with the C1 slice
+    # in scripts/mirror.sh — an unlisted build-affecting file means a
+    # silently stale mirror. workflow_dispatch below stays as escape hatch.
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'bunfig.toml'
+      - '.gitignore'
+      - 'scripts/mirror.sh'
 
 jobs:
   mirror:
