@@ -140,7 +140,7 @@ Notes: remote is HTTPS (via `gh auth`), not SSH. `bun run --filter "@declic/*" b
 
 ### 5.2 Infra via Compose, apps on host (default) or full-stack in containers
 
-The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml` and materialized at root `docker-compose.yml` (keep the two identical except the header — spec is source of truth). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
+The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
 
 ```bash
 cp .env.example .env          # once

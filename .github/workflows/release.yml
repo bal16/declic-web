@@ -72,6 +72,9 @@ jobs:
       - name: Module boundaries (ADR-005)
         run: bun run boundaries
 
+      - name: Compose sync check (spec materialized to root)
+        run: bun run sync:compose --check
+
       - name: Format check (oxfmt)
         run: bun run format:check
 

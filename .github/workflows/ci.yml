@@ -49,6 +49,9 @@ jobs:
       - name: Module boundaries (ADR-005)
         run: bun scripts/check-boundaries.ts
 
+      - name: Compose sync check (spec materialized to root, dormant until triggers enabled)
+        run: bun run sync:compose --check
+
       - name: Format check (oxfmt)
         run: bun run format:check
 

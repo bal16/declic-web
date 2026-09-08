@@ -16,6 +16,7 @@
     "typecheck": "bun run --filter \"@declic/*\" typecheck",
     "coverage": "bun scripts/check-coverage.ts",
     "boundaries": "bun scripts/check-boundaries.ts",
+    "sync:compose": "bun scripts/sync-compose.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt .",

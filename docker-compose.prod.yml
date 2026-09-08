@@ -18,6 +18,7 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     image: ${API_IMAGE:-ghcr.io/bal16/declic-api:latest}
+    # '!reset' is a compose merge tag (clears the base list) — unknown to plain YAML parsers, valid for compose.
     command: !reset [] # image CMD (dev sh-command cleared)
     volumes: !reset [] # dev bind-mounts cleared (merge concatenates, so reset is required)
     environment:
