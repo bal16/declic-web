@@ -22,6 +22,7 @@
 
 set -euo pipefail
 
+# Step 1: validate the app argument (exactly one of web|api|worker).
 APP="${1:?usage: bash scripts/mirror.sh <web|api|worker>}"
 case "$APP" in
   web|api|worker) ;;
@@ -31,25 +32,27 @@ esac
 BRANCH="mirror-$APP"
 SOURCE_REF="${SOURCE_REF:-main}"
 
+# Step 2: verify the source ref exists before touching any branch.
 git rev-parse --verify --quiet "$SOURCE_REF" >/dev/null \
   || { echo "error: source ref '$SOURCE_REF' not found" >&2; exit 1; }
 
-# The script rewrites branches, so refuse to run with uncommitted work around
+# Step 3: refuse to run with uncommitted work around
 # (git rm would abort on locally modified files, leaving a half-built branch).
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "error: working tree has uncommitted changes — commit or stash first" >&2
   exit 1
 fi
 
-# Return to the original branch when done (no-op on detached HEAD, e.g. CI).
+# Step 4: return to the original branch when done (no-op on detached HEAD, e.g. CI).
 RETURN_TO="$(git branch --show-current || true)"
 if [ -n "$RETURN_TO" ]; then
   trap 'git checkout -q "$RETURN_TO"' EXIT
 fi
 
+# Step 5: rebuild the mirror branch from scratch on top of the source ref.
 git checkout -q -B "$BRANCH" "$SOURCE_REF"
 
-# Drop everything outside the C1 slice (pathspec negation, core git only).
+# Step 6: drop everything outside the C1 slice (pathspec negation, core git only).
 git rm -q -r -- . \
   ":!apps/$APP" \
   ':!packages/contracts' \
@@ -60,6 +63,7 @@ git rm -q -r -- . \
   ':!bun.lock' \
   ':!.gitignore'
 
+# Step 7: stamp the generated read-only README into the slice.
 cat > README-mirror.md <<EOF
 # declic-$APP (read-only mirror)
 
@@ -78,6 +82,7 @@ bun run --filter "@declic/$APP" build
 EOF
 git add README-mirror.md
 
+# Step 8: commit the slice and print the force-push command.
 SOURCE_SHORT="$(git rev-parse --short "$SOURCE_REF")"
 git commit -q -m "mirror: rebuild $APP slice from $SOURCE_REF ($SOURCE_SHORT)"
 

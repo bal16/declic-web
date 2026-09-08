@@ -23,7 +23,13 @@ interface Totals {
   funcsHit: number;
 }
 
+/**
+ * Parse lcov text into hit/found totals, counting DA (line) and
+ * FNDA (function) records directly instead of trusting reporter summaries.
+ */
 export function parseLcov(text: string): Totals {
+  // Step 1: accumulate per-line (DA) and per-function (FNDA) hits.
+  // DA format is `DA:<line>,<hits>`; FNDA is `FNDA:<hits>,<name>`.
   const totals: Totals = {
     linesFound: 0,
     linesHit: 0,
@@ -45,12 +51,15 @@ export function parseLcov(text: string): Totals {
   return totals;
 }
 
+/** Percentage helper: empty files count as fully covered, never NaN. */
 function pct(hit: number, found: number): number {
   if (found === 0) return 100;
   return (hit / found) * 100;
 }
 
+/** CLI entry: parse --min, gate every app, exit non-zero on failure. */
 async function main(): Promise<void> {
+  // Step 1: resolve the minimum threshold (flag wins, default 90).
   const flagIndex = process.argv.indexOf('--min');
   const min =
     flagIndex !== -1 ? Number(process.argv[flagIndex + 1]) : DEFAULT_MIN;
@@ -60,6 +69,7 @@ async function main(): Promise<void> {
   }
 
   let failed = false;
+  // Step 2: run coverage per app and compare against the minimum.
   for (const app of APPS) {
     // Run inside the app dir so coverage/ lands next to the code it covers.
     await $`bun test --coverage --coverage-reporter=lcov --coverage-reporter=text src/`.cwd(
@@ -78,6 +88,7 @@ async function main(): Promise<void> {
     );
   }
 
+  // Step 3: fail the gate when any app fell below the minimum.
   if (failed) {
     console.error(`\ncoverage gate failed: an app is below ${min}% lines`);
     process.exit(1);

@@ -16,6 +16,7 @@
  * Edit the SOURCE file, never the fenced block.
  */
 
+/** One source file mirrored into the fenced block of a companion note. */
 interface Mirror {
   key: string;
   src: string;
@@ -34,14 +35,18 @@ const MIRRORS: Mirror[] = [
   { key: 'env', src: 'docs/env.example', dst: 'docs/env.md', lang: 'bash' },
 ];
 
+/** Wrap source text in a fenced code block for the companion note. */
 function buildBlock(m: Mirror, content: string): string {
   return [`\`\`\`${m.lang}`, content.trimEnd(), '```'].join('\n');
 }
 
+/** CLI entry: sync every mirror, or report staleness with --check. */
 async function main(): Promise<void> {
+  // Step 1: detect check-only mode (CI-friendly, writes nothing).
   const checkOnly = process.argv.includes('--check');
   let stale = false;
 
+  // Step 2: reconcile each mirror source with its companion note.
   for (const m of MIRRORS) {
     const src = (await Bun.file(m.src).text()).replace(/\r\n/g, '\n');
     const dstFile = Bun.file(m.dst);
@@ -76,6 +81,7 @@ async function main(): Promise<void> {
     console.log(`synced: ${m.src} -> ${m.dst}`);
   }
 
+  // Step 3: fail when any mirror was stale in check-only mode.
   if (stale && checkOnly) process.exit(1);
 }
 
