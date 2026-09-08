@@ -12,12 +12,12 @@ updated: 2026-09-07
 
 # Feature: Feature Flags & Site Settings (runtime kill-switches, global limits)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `feature-flags`, `site-settings`, `audit`
-**Related:** [[PRD-API]] §2.9 + §4.6, [[db-schema]] (tables + seeds),
+**Related:** [PRD-API](../PRD-API.md) §2.9 + §4.6, [db-schema](../db-schema.md) (tables + seeds),
 `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`),
-[[series-upload]] (consumes `series_enabled`, `max_series_size`),
-[[engagement]] (consumes `threaded_comments_enabled`)
+[series-upload](./series-upload.md) (consumes `series_enabled`, `max_series_size`),
+[engagement](./engagement.md) (consumes `threaded_comments_enabled`)
 
 ---
 
@@ -42,7 +42,7 @@ updated: 2026-09-07
   `maintenance_mode`, `contact_email`, `instagram_url`, `updated_at`,
   `updated_by`. Seed `id=1` (see `docs/seed.ts`).
 - `system_settings` KV table is **deleted** (phase lives in
-  `exhibitions.phase`; flags/limits live here). See [[db-schema]].
+  `exhibitions.phase`; flags/limits live here). See [db-schema](../db-schema.md).
 
 ## 3. API — flags
 
@@ -108,10 +108,10 @@ current value. Emits `AuditRequestedEvent` (`action: site_settings.update`).
 
 - Upload form hides SERIES toggle when `series_enabled=false` (+
   `FEATURE_DISABLED` toast path); `max_series_size` drives the drop
-  limit (see [[series-upload]] §6).
+  limit (see [series-upload](./series-upload.md) §6).
 - Comment inputs everywhere (gallery, lightbox, `/post/$postId`) are
   disabled with a frozen tooltip when `comments_enabled=false`,
-  reusing the `ARCHIVED` frozen UI (see [[engagement]] §5); reads
+  reusing the `ARCHIVED` frozen UI (see [engagement](./engagement.md) §5); reads
   remain. No new endpoint — status comes from the cached
   `GET /api/feature-flags`.
 - **`/admin/settings` (IN for 1.0, minimal):** three toggles
@@ -130,7 +130,7 @@ drain with the values at enqueue).
 ## 8. Schema touch
 
 `feature_flags` + `site_settings` tables as specified (see
-[[db-schema]]). Seeds in `docs/seed.ts`. No other tables.
+[db-schema](../db-schema.md)). Seeds in `docs/seed.ts`. No other tables.
 
 ## 9. Edge cases
 

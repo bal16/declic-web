@@ -15,7 +15,7 @@ updated: 2026-09-01
 **Owner:** TBD
 **Last updated:** 2026-09-01
 
-> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, revert `POST /api/admin/posts/:postId/frames/:itemId/revert` (stack of single-levels), audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED` or frame mid-processing `FRAME_PROCESSING`). See [[PRD-API]] §2.4, [[curator-replace-revert]], [[db-schema]] `PHOTO_ITEMS.source`, [[PRD-FE]] §3.2.1, [[PRD-Worker]] `curated:true` payload.
+> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, revert `POST /api/admin/posts/:postId/frames/:itemId/revert` (stack of single-levels), audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED` or frame mid-processing `FRAME_PROCESSING`). See [PRD-API](./PRD-API.md) §2.4, [curator-replace-revert](./features/curator-replace-revert.md), [db-schema](./db-schema.md) `PHOTO_ITEMS.source`, [PRD-FE](./PRD-FE.md) §3.2.1, [PRD-Worker](./PRD-Worker.md) `curated:true` payload.
 
 ---
 
@@ -295,7 +295,7 @@ remains the single source of truth for every image size shown publicly.
 
 ### 8.2 Moderation workflow state machine
 
-Every **work (post)** moves through: `PROCESSING` → `PENDING` → `APPROVED` / `REJECTED` (→ `UNPUBLISHED` as admin hide during `LIVE`). `FAILED_PROCESSING` is the terminal worker-failure state (retryable). `PUBLISHED` is a legacy alias of visible `APPROVED` (see [[gallery-discovery]]). `APPROVED` is staging — publicly visible only when parent `exhibitions.phase IN ('LIVE','ARCHIVED')` (an `APPROVED` work in `PRE_EVENT` stays hidden until `LIVE`; no bulk status update on phase change). Series is moderated as one unit — frames cannot be approved individually. Admin can also reorder published **works** independently of the
+Every **work (post)** moves through: `PROCESSING` → `PENDING` → `APPROVED` / `REJECTED` (→ `UNPUBLISHED` as admin hide during `LIVE`). `FAILED_PROCESSING` is the terminal worker-failure state (retryable). `PUBLISHED` is a legacy alias of visible `APPROVED` (see [gallery-discovery](./features/gallery-discovery.md)). `APPROVED` is staging — publicly visible only when parent `exhibitions.phase IN ('LIVE','ARCHIVED')` (an `APPROVED` work in `PRE_EVENT` stays hidden until `LIVE`; no bulk status update on phase change). Series is moderated as one unit — frames cannot be approved individually. Admin can also reorder published **works** independently of the
 approval step (`posts.display_order`; intra-series order is `photo_items.item_order`). **Curator replacement** (Option C) is allowed on any `photo_items` of a work while its exhibition is not `ARCHIVED` — non-destructive, audited, derivatives regenerated (`photo_items.source` `ORIGINAL` → `CURATED`). Open question: what happens to likes/comments if an already
 published **work** is later un-published (soft delete vs hard removal of
 engagement data) — **decided v1.2:** `ARCHIVED` freeze + soft `UNPUBLISHED` keeps engagement rows but hidden from public (`status` filter). Denormalized `likes_count`/`comments_count` on `posts` are kept as optional cache (updated via transaction/trigger) to keep `GET /api/posts` <50ms; source of truth remains `likes`/`comments` tables.

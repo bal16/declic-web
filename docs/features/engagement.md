@@ -12,11 +12,11 @@ updated: 2026-09-07
 
 # Feature: Engagement — Likes & Comments on Works
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner module:** `engagement`
-**Related:** [[PRD-API]] §4.0 (error contract), [[PRD-FE]] §3.1 (lightbox
-interactions), [[db-schema]] (`likes`, `comments`),
-[[exhibition-lifecycle]] §5 (ARCHIVED freeze)
+**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §3.1 (lightbox
+interactions), [db-schema](../db-schema.md) (`likes`, `comments`),
+[exhibition-lifecycle](./exhibition-lifecycle.md) §5 (ARCHIVED freeze)
 
 ---
 
@@ -66,16 +66,16 @@ Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": tru
 
 ## 4. API — `GET /api/posts/:id/comments`
 
-Paginated per [[PRD-API]] §4.0 cursor (`created_at` + `id`, `limit` default `20` max `50`):
+Paginated per [PRD-API](../PRD-API.md) §4.0 cursor (`created_at` + `id`, `limit` default `20` max `50`):
 `{ data: [{id, post_id, content, parent_id, created_at}], nextCursor }`.
 List with `is_hidden = false AND deleted_at IS NULL` for public; Admin
 sees all (including hidden). Flat sorted by `created_at` (not `id`);
 `parent_id` included but clients render flat unless threading flag is on
-(see [[feature-flags-site-settings]]).
+(see [feature-flags-site-settings](./feature-flags-site-settings.md)).
 
 ## 5. Frontend (lightbox + detail)
 
-Summary (full UI spec: [[PRD-FE]] §3.1): Like button with optimistic
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.1): Like button with optimistic
 update + rollback (`TanStack Query onMutate`); comment thread with Auth
 Wall for guests; like/comment creation disabled with frozen tooltip
 when `ARCHIVED`, **unlike stays enabled** (removing your own like);
@@ -89,7 +89,7 @@ No involvement.
 
 `likes` (composite PK `(user_id, post_id)`), `comments` (`post_id`,
 `parent_id` reserved), denormalized `posts.likes_count` /
-`comments_count` maintained transactionally (see [[db-schema]]). No new
+`comments_count` maintained transactionally (see [db-schema](../db-schema.md)). No new
 tables.
 
 ## 8. Edge cases

@@ -12,11 +12,11 @@ updated: 2026-09-07
 
 # Feature: Multi-Exhibition Lifecycle (root = latest, cron archive, freeze)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `exhibitions`, `queue` (scheduler), `audit`
-**Related:** [[PRD-API]] §2.2 (schema), §4.0 (error contract),
-[[PRD-FE]] §2.1/§2.3 (gallery + `/admin/exhibitions`), [[db-schema]],
-[[gallery-discovery]] (scoped reads), [[engagement]] (freeze)
+**Related:** [PRD-API](../PRD-API.md) §2.2 (schema), §4.0 (error contract),
+[PRD-FE](../PRD-FE.md) §2.1/§2.3 (gallery + `/admin/exhibitions`), [db-schema](../db-schema.md),
+[gallery-discovery](./gallery-discovery.md) (scoped reads), [engagement](./engagement.md) (freeze)
 
 ---
 
@@ -45,7 +45,7 @@ updated: 2026-09-07
 
 ### `GET /api/exhibitions` (public)
 
-Paginated per [[PRD-API]] §4.0 cursor (`start_date DESC` + `id` tiebreaker,
+Paginated per [PRD-API](../PRD-API.md) §4.0 cursor (`start_date DESC` + `id` tiebreaker,
 `limit` default `20` max `50`): `{ data: [{id, title, slug, phase, poster_url, location, start_date, end_date, posts_count}], nextCursor }`.
 `?phase=LIVE|ARCHIVED` optional
 (`DRAFT` excluded by default; `PRE_EVENT` excluded from public gallery — root `/` never resolves to `DRAFT`/`PRE_EVENT`). Root `/` uses latest `LIVE` (fallback
@@ -61,7 +61,7 @@ Errors: `404 NOT_FOUND` (unknown slug; `DRAFT` slug is `404` for non-ADMIN).
 #### `GET /api/exhibitions/:id/posts` (public)
 
 Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that
-exhibition, same cursor contract (see [[gallery-discovery]]).
+exhibition, same cursor contract (see [gallery-discovery](./gallery-discovery.md)).
 
 #### `POST /api/exhibitions` (ADMIN)
 
@@ -120,7 +120,7 @@ Likes/comments already stored stay readable (`likesCount` etc.);
 
 ## 6. Frontend (`/`, `/archive`, `/exhibition/$slug`, `/admin/exhibitions`)
 
-Summary (full UI spec: [[PRD-FE]] §2.1/§2.3):
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §2.1/§2.3):
 
 - `/` resolves latest via `GET /api/exhibitions?limit=1` then gallery;
   exhibition header (title, poster, dates, location); `ARCHIVED` banner
@@ -132,13 +132,13 @@ Summary (full UI spec: [[PRD-FE]] §2.1/§2.3):
 ## 7. Worker
 
 No image work. Scheduler lives in API (shares Redis). Note in
-[[PRD-Worker]] §5 is a pointer only.
+[PRD-Worker](../PRD-Worker.md) §5 is a pointer only.
 
 ## 8. Schema touch
 
 `exhibitions` table (cuid2, `slug` UNIQUE, indexes on `phase`,
 `start_date DESC`, `end_date`); `posts.exhibition_id` FK (see
-[[db-schema]]). No new tables beyond what exists.
+[db-schema](../db-schema.md)). No new tables beyond what exists.
 
 ## 9. Edge cases
 

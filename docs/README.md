@@ -10,22 +10,22 @@ status: living
 
 # Déclic Docs — Map of Content
 
-Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Marksman `file-stem` style, see `.marksman.toml`). Non-markdown sources (`.yml`, `.ts`, extensionless) are readable via companion notes below — never edit the fenced mirror, edit the source and re-sync.
+Start here. Every note below is linked with standard markdown links (relative paths, GitHub/GFM-compatible). Non-markdown sources (`.yml`, `.ts`, extensionless) are readable via companion notes below — never edit the fenced mirror, edit the source and re-sync.
 
 ## Product
 
-- [[PRD]] — vision, roles, exhibition lifecycle (`PRE_EVENT` → `LIVE` → `ARCHIVED`), frozen-archive rules. Status: draft `0.4-draft`, app `0.x` pre-release.
+- [PRD](./PRD.md) — vision, roles, exhibition lifecycle (`PRE_EVENT` → `LIVE` → `ARCHIVED`), frozen-archive rules. Status: draft `0.4-draft`, app `0.x` pre-release.
 
 ## Specs (vertical slices share these contracts — defined once, referenced everywhere)
 
-- [[PRD-API]] — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
-- [[db-schema]] — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
-- [[PRD-FE]] — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
-- [[PRD-Worker]] — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
+- [PRD-API](./PRD-API.md) — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
+- [db-schema](./db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
+- [PRD-FE](./PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
+- [PRD-Worker](./PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
 
 ## Features (1 file per feature — acceptance index)
 
-- [[features/README]] — status table + template rules (single source for endpoint bodies; `PRD-API` §4.x keeps pointers only).
+- [features/README](./features/README.md) — status table + template rules (single source for endpoint bodies; `PRD-API` §4.x keeps pointers only).
 
 ## Decisions
 
@@ -39,20 +39,20 @@ Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Ma
 
 ## Ops
 
-- [[DEVELOPMENT]] — repo map, env, dev loop, mirrors, releases, troubleshooting.
+- [DEVELOPMENT](./DEVELOPMENT.md) — repo map, env, dev loop, mirrors, releases, troubleshooting.
 
 ## Infra companions (Obsidian-readable mirrors, auto-synced)
 
 | Note | Source of truth | Sync |
 |---|---|---|
-| [[docker-compose]] | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
-| [[seeds]] | `docs/seed.ts` | same |
-| [[env]] | `docs/env.example` | same |
+| [docker-compose](./docker-compose.md) | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
+| [seeds](./seeds.md) | `docs/seed.ts` | same |
+| [env](./env.md) | `docs/env.example` | same |
 
 ## Conventions used in these notes
 
-- `[[Note]]` = cross-note link (resolves to `Note.md` in this folder or `adr/`).
-- `[[ADR-001-monorepo-mirror|ADR-001]]` = aliased link, short label.
+- Cross-note links use relative paths — `[PRD](./PRD.md)` from this folder, `../PRD-API.md` from a subfolder (adjust `../` to your file's depth).
+- `[ADR-001](./adr/ADR-001-monorepo-mirror.md)` = short label for a long filename.
 - `> [!abstract]` = document summary; `> [!note]-` = collapsed side note; `> [!warning]` = do-not-break rule.
 - YAML frontmatter (`title`, `aliases`, `tags`, `status`, `updated`) powers Obsidian search/graph/Dataview.
-- Fenced code (mermaid, `docker-compose.yml` trees, shell) is literal — links inside fences are intentionally *not* converted.
+- Fenced code (mermaid, `docker-compose.yml` trees, shell, SQL/TS samples) is literal — never put doc links inside fences.

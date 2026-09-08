@@ -11,13 +11,13 @@ updated: 2026-09-07
 
 # Feature: Curation & Moderation (order, approve/reject, comments, audit trail)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `curation`, `moderation` (no tables — via `posts`
-facade per [[ADR-005-modular-monolith|ADR-005]]), `engagement`
+facade per [ADR-005](../adr/ADR-005-modular-monolith.md)), `engagement`
 (comment hide), `audit` (trail)
-**Related:** [[PRD-API]] §4.0 (error contract), [[PRD-FE]] §3.3 +
-`/admin/*`, [[db-schema]], [[exhibition-lifecycle]] (per-exhibition
-scope), [[curator-replace-revert]] (frame-level curation)
+**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §3.3 +
+`/admin/*`, [db-schema](../db-schema.md), [exhibition-lifecycle](./exhibition-lifecycle.md) (per-exhibition
+scope), [curator-replace-revert](./curator-replace-revert.md) (frame-level curation)
 
 ---
 
@@ -78,7 +78,7 @@ outside the exhibition scope, i.e. `postId` belongs to another exhibition).
 - `UNPUBLISH` (admin hide during `LIVE`) → `posts.status = UNPUBLISHED` via same endpoint (`action: "UNPUBLISH"`, no reason required). Public gallery excludes `UNPUBLISHED`. Re-publish via `APPROVE` again (idempotent).
 - `PUBLISHED` is a legacy alias of `APPROVED` + `LIVE` (gallery treats both as visible); new writes use `APPROVED`/`UNPUBLISHED` only.
 - **Audit:** emits `AuditRequestedEvent` (`target_id=cuid-post`,
-  `action='post.moderate'`) — never a direct insert ([[ADR-005-modular-monolith|ADR-005]] Rule 2).
+  `action='post.moderate'`) — never a direct insert ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
 **Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "display_order": "0|hzzzzz:" }`
 (`display_order` present only for `APPROVE`; `REJECT` returns `rejection_reason` instead).
@@ -92,7 +92,7 @@ Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (`REJECT` without reason).
 
 Soft moderation (verb kept as idempotent hide) — via the `engagement`
 facade (`hideComment`, same tx as the `comments_count` decrement),
-never a raw Drizzle write ([[ADR-005-modular-monolith|ADR-005]] Rule 2).
+never a raw Drizzle write ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 Idempotent: hiding an already-hidden comment → `204`, no double decrement.
 `posts.comments_count` decremented only if the comment was previously
 counted (`is_hidden=false AND deleted_at IS NULL`). Admin reads still
@@ -108,12 +108,12 @@ Read-only trail over `admin_audit_logs`. Query params: `target_id`
 `limit` (default `20`, max `50`), `cursor` (§4.0 schema,
 `ORDER BY created_at, id`). Response: `{ data: [{id, admin_id, action,
 target_id, payload, created_at}], nextCursor }`. Powers the
-revert-history UI (see [[curator-replace-revert]]) and phase-change
+revert-history UI (see [curator-replace-revert](./curator-replace-revert.md)) and phase-change
 trail; retention unbounded for 1.0.
 
 ## 6. Frontend (`/admin/moderation`, `/admin/curate`, `/admin/comments`)
 
-Summary (full UI spec: [[PRD-FE]] §2.3/§3.3):
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §2.3/§3.3):
 
 - **Moderation queue:** per-exhibition filter, cover + frame strip for
   SERIES, Approve/Reject with reason, per-frame Replace entry point.
@@ -121,7 +121,7 @@ Summary (full UI spec: [[PRD-FE]] §2.3/§3.3):
   hint), mobile move up/down fallback, optimistic reorder +
   `PATCH reorder {postId, prevDisplayOrder, nextDisplayOrder}`.
   Disabled when `ARCHIVED`. Intra-series order is authorial (see
-  [[series-upload]] §5), not editable here.
+  [series-upload](./series-upload.md) §5), not editable here.
 - **Comment moderation:** per-exhibition flat list, `is_hidden` toggle.
 
 ## 7. Worker
@@ -132,7 +132,7 @@ No involvement.
 
 Writes go through `posts` facade (`display_order`, `status`,
 `rejection_reason`) and `comments.is_hidden`; reads
-`admin_audit_logs` (see [[db-schema]]). `curation`/`moderation` own no
+`admin_audit_logs` (see [db-schema](../db-schema.md)). `curation`/`moderation` own no
 tables. No new tables.
 
 ## 9. Edge cases

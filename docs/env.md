@@ -12,7 +12,7 @@ status: living
 # Environment Variables
 
 Copy to root `.env` before first run: `cp docs/env.example .env`
-(merged root `.env.example` adds service URLs — see [[DEVELOPMENT]] §4).
+(merged root `.env.example` adds service URLs — see [DEVELOPMENT](./DEVELOPMENT.md) §4).
 Never commit real secrets (see `.gitignore`).
 
 | Group | Keys |

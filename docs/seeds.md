@@ -13,7 +13,7 @@ status: living
 
 Initial data for a fresh database. Run `bun docs/seed.ts` (idempotent,
 `ON CONFLICT DO NOTHING`) — or `bun run seed` once `packages/db` lands
-(see [[DEVELOPMENT]] §5.2).
+(see [DEVELOPMENT](./DEVELOPMENT.md) §5.2).
 
 | Export | Table | Rows |
 |---|---|---|
@@ -21,7 +21,7 @@ Initial data for a fresh database. Run `bun docs/seed.ts` (idempotent,
 | `siteSettingsSeed` | `site_settings` | `id=1`, `max_series_size=10` (+ title, maintenance off) |
 | `exhibitionsSeed` | `exhibitions` | `declic-2026` (`PRE_EVENT`, Sep 2026) |
 
-Contract: [[db-schema]] §1, flags/limits: [[PRD-API]] §2.9. Lowering
+Contract: [db-schema](./db-schema.md) §1, flags/limits: [PRD-API](./PRD-API.md) §2.9. Lowering
 `max_series_size` later never invalidates existing SERIES (grandfathering).
 
 > [!warning] Source of truth is `docs/seed.ts`, not this note.

@@ -11,11 +11,11 @@ updated: 2026-09-07
 
 # Feature: Auth & RBAC (OAuth, guards, role elevation)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `auth`, `users`
-**Related:** [[PRD-API]] §3 (+ §4.0 error contract), [[PRD-FE]] §6
-(session/cookie/guards), [[db-schema]] (`users`),
-[[ADR-005-modular-monolith|ADR-005]] Rule 2 (`users` owns `users.role`)
+**Related:** [PRD-API](../PRD-API.md) §3 (+ §4.0 error contract), [PRD-FE](../PRD-FE.md) §6
+(session/cookie/guards), [db-schema](../db-schema.md) (`users`),
+[ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2 (`users` owns `users.role`)
 
 ---
 
@@ -40,8 +40,8 @@ updated: 2026-09-07
   Google + GitHub OAuth 2.0.
 - Web: `HTTP-Only`, `Secure`, `SameSite=Lax` first-party cookie — web +
   API must share one registrable domain (`app.*` + `api.*`,
-  `trustedOrigins` + CORS) or `/api/*` reverse proxy (see [[PRD-FE]]
-  §6, [[PRD]] §8.5).
+  `trustedOrigins` + CORS) or `/api/*` reverse proxy (see [PRD-FE](../PRD-FE.md)
+  §6, [PRD](../PRD.md) §8.5).
 - Future mobile: `Authorization: Bearer <token>` via `bearer()` plugin.
 - `users` ids stay Better Auth-managed (`uuid`/`text`, **not** cuid2);
   `role` defaults `VIEWER`.
@@ -52,7 +52,7 @@ updated: 2026-09-07
 ## 3. Guard chain, central matrix & role cache
 
 `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` →
-`FeatureFlagGuard` (see [[PRD-API]] §3.2 for the full endpoint matrix).
+`FeatureFlagGuard` (see [PRD-API](../PRD-API.md) §3.2 for the full endpoint matrix).
 UI guards (middleware/HOC) redirect fast; API guards are the final
 authority.
 
@@ -100,7 +100,7 @@ only (freeze enforced by `ExhibitionPhaseGuard` + `FeatureFlagGuard`).
 Changing one rule = editing one row here. If the mapping ever moves to
 DB (hybrid pattern), only this map's source changes (const → cached
 query); no controller is touched. `users` module stays the sole writer
-of `users.role` ([[ADR-005-modular-monolith|ADR-005]] Rule 2), so a
+of `users.role` ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2), so a
 future storage change (e.g. `user_roles` join table) lands in one
 module.
 
@@ -109,7 +109,7 @@ module.
 `RolesGuard` resolves `user → role` through a `RoleCache` seam:
 
 - **1.0:** in-memory `Map` per API instance (same pattern as
-  `feature_flags`, see [[feature-flags-site-settings]] §5).
+  `feature_flags`, see [feature-flags-site-settings](./feature-flags-site-settings.md) §5).
 - Key `user:{id}` → role; **TTL 60s** as safety net only.
 - **Invalidation is active, not TTL-driven:** `PATCH .../role` deletes
   the key synchronously inside the same tx as the `UPDATE` + audit row,
@@ -154,7 +154,7 @@ is the Better Auth user id, **not** cuid2).
   `payload:{before,after}`) + `RoleCache`
   invalidation for `:id`. Visible on the target's very next request.
 - Only the `users` module writes `users.role` (sole writer,
-  [[ADR-005-modular-monolith|ADR-005]] Rule 2).
+  [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
 **Response `200 OK`:** updated user (public fields).
 
@@ -170,7 +170,7 @@ OAuth (creating `VIEWER` rows) → admin bulk-promotes to
 
 ## 7. Frontend (`/admin/users`, NEW for 1.0)
 
-Summary (route to be added in [[PRD-FE]] §2.3): searchable table
+Summary (route to be added in [PRD-FE](../PRD-FE.md) §2.3): searchable table
 (`GET /api/admin/users`) + per-row role dropdown + bulk-select promote
 (checkbox → one promote action for launch onboarding) → `PATCH` → toast +
 refetch; own row's dropdown disabled (tooltip "You cannot change your
@@ -180,7 +180,7 @@ Requires `ADMIN` (route guard + API guard).
 Route guards: `/dashboard/*` → session + `PHOTOGRAPHER|ADMIN`;
 `/admin/*` → session + `ADMIN`, except artwork routes
 (`/admin/moderation`, `/admin/curate`, `/admin/comments`) which allow
-`ADMIN|CURATOR` (see [[PRD-FE]] §2.3).
+`ADMIN|CURATOR` (see [PRD-FE](../PRD-FE.md) §2.3).
 
 ## 8. Worker
 
@@ -188,7 +188,7 @@ No involvement.
 
 ## 9. Schema touch
 
-Reads/writes `users.role` (see [[db-schema]]); audit
+Reads/writes `users.role` (see [db-schema](../db-schema.md)); audit
 `user.role_change`. No new tables, no new columns. `RoleCache` is
 runtime-only (never persisted).
 

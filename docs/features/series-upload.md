@@ -12,11 +12,11 @@ updated: 2026-09-07
 
 # Feature: Submission Lifecycle — Upload, Edit, Frame Reorder (SINGLE & SERIES)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (+ `photo-items`), `storage`, `queue` (API); upload/edit pages (web)
-**Related:** [[PRD-API]] §4.0 (contracts), [[PRD-FE]] §3.2 (`/dashboard/upload`),
-[[PRD-Worker]] §1–§3, [[db-schema]] (`posts`, `photo_items`),
-[[withdraw-work]] (retraction), [[exhibition-lifecycle]] (phase gates)
+**Related:** [PRD-API](../PRD-API.md) §4.0 (contracts), [PRD-FE](../PRD-FE.md) §3.2 (`/dashboard/upload`),
+[PRD-Worker](../PRD-Worker.md) §1–§3, [db-schema](../db-schema.md) (`posts`, `photo_items`),
+[withdraw-work](./withdraw-work.md) (retraction), [exhibition-lifecycle](./exhibition-lifecycle.md) (phase gates)
 
 ---
 
@@ -142,10 +142,10 @@ incorporates `cuid2` for uniqueness.
 ]
 ```
 
-> Canonical payload `{postId, photoItemId, s3Key, curated}` (see [[PRD-Worker]] §1). Fresh uploads always send `curated: false`.
+> Canonical payload `{postId, photoItemId, s3Key, curated}` (see [PRD-Worker](../PRD-Worker.md) §1). Fresh uploads always send `curated: false`.
 
 > Post status transitions to `PENDING` only after **all** its photo_items
-> finish processing (see [[PRD-Worker]] §3.3).
+> finish processing (see [PRD-Worker](../PRD-Worker.md) §3.3).
 
 **Response `201 Created`:** newly created `post` (cuid2 ids) with nested
 `items`.
@@ -171,7 +171,7 @@ is a curation decision → `409 {code:"EDIT_CLOSED"}`). Title/caption edit on `F
 
 > Frame replacement by the photographer is **not** covered here — replace
 > frames via withdraw + re-upload (or curator replace, see
-> [[curator-replace-revert]]). Frame *order* is §5.
+> [curator-replace-revert](./curator-replace-revert.md)). Frame *order* is §5.
 
 **API Actions:** `UPDATE posts SET title=COALESCE(:title,title),
 caption=COALESCE(:caption,caption), updated_at=now() WHERE id=:id`.
@@ -194,7 +194,7 @@ Errors: `400 VALIDATION_ERROR` (id set mismatch — drops/adds/foreign ids); `40
 
 ## 6. Frontend (`/dashboard`, `/dashboard/upload`, `/dashboard/edit/$postId`)
 
-Summary (full UI spec: [[PRD-FE]] §3.2):
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2):
 
 - **Upload:** SINGLE/SERIES toggle (auto-switch on drop count),
   `feature_flags.series_enabled` + exhibition `phase` gating, per-file
@@ -204,17 +204,17 @@ Summary (full UI spec: [[PRD-FE]] §3.2):
 - **EXIF:** `exifr` per file → shared work `title`/`caption` + per-frame
   `exif_metadata` (badge `Auto-filled from EXIF`).
 - **Edit:** form for `title`/`caption` (§4) + `FrameReorderList` (§5)
-  while `PENDING`; withdrawn state hands off to [[withdraw-work]].
+  while `PENDING`; withdrawn state hands off to [withdraw-work](./withdraw-work.md).
 
 ## 7. Worker
 
-Standard per-frame pipeline (see [[PRD-Worker]] §1–§3): N jobs for N
+Standard per-frame pipeline (see [PRD-Worker](../PRD-Worker.md) §1–§3): N jobs for N
 frames, `blurhash` + 3 derivatives each, post promotes to `PENDING`
 when all succeed. Edit (§4) and reorder (§5) enqueue **no** jobs.
 
 ## 8. Schema touch
 
-Writes `posts` + `photo_items` (see [[db-schema]]). No new tables. Limit
+Writes `posts` + `photo_items` (see [db-schema](../db-schema.md)). No new tables. Limit
 source: `site_settings.max_series_size` (grandfathering — old SERIES
 stay valid when lowered).
 

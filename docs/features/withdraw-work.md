@@ -11,10 +11,10 @@ updated: 2026-09-07
 
 # Feature: Withdraw Work (photographer pulls back own submission)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner module:** `posts` (API) + dashboard (web)
-**Related:** [[PRD-API]] §4.0 (error contract), [[PRD-FE]] §2.2,
-[[db-schema]] (`posts.deleted_at`), [[ADR-005-modular-monolith|ADR-005]] Rule 2
+**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §2.2,
+[db-schema](../db-schema.md) (`posts.deleted_at`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
 
 ---
 
@@ -46,12 +46,12 @@ Effects (one tx): set `deleted_at`; cancel pending BullMQ jobs for its
 deferred post-1.0, see §7). Emits `AuditRequestedEvent`
 (`action='post.withdraw'`).
 
-Error shape: see [[PRD-API]] §4.0 (canonical `{code,message,details?}`).
+Error shape: see [PRD-API](../PRD-API.md) §4.0 (canonical `{code,message,details?}`).
 
 ## 3. Frontend (`/dashboard`)
 
 - **Withdraw** button visible only on `PENDING`/`REJECTED` cards (see
-  [[PRD-FE]] §2.2) → confirm dialog ("Withdrawn works cannot be
+  [PRD-FE](../PRD-FE.md) §2.2) → confirm dialog ("Withdrawn works cannot be
   restored") → optimistic removal → `204` ok / `409` toast rollback.
 - Withdrawn works never render (API already filters `deleted_at`).
 
@@ -63,7 +63,7 @@ cancellation is best-effort via BullMQ `job.remove()`.
 
 ## 5. Schema touch
 
-None — reuses `posts.deleted_at` (see [[db-schema]]). No new tables,
+None — reuses `posts.deleted_at` (see [db-schema](../db-schema.md)). No new tables,
 no new columns, no migration.
 
 ## 6. Edge cases

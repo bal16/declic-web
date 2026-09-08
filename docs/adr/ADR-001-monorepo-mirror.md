@@ -13,7 +13,7 @@ updated: 2026-09-04
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [[PRD]] §6/§8.5, [[PRD-API]] §1–§2/§4, [[PRD-Worker]] §1.2, [[db-schema]], `../seed.ts`, `../docker-compose.yml`, [[DEVELOPMENT]]
+**Related:** [PRD](../PRD.md) §6/§8.5, [PRD-API](../PRD-API.md) §1–§2/§4, [PRD-Worker](../PRD-Worker.md) §1.2, [db-schema](../db-schema.md), `../seed.ts`, `../docker-compose.yml`, [DEVELOPMENT](../DEVELOPMENT.md)
 
 ---
 
@@ -21,9 +21,9 @@ updated: 2026-09-04
 
 Déclic has three runtimes that look like three apps but share one contract surface:
 
-* `apps/web` — TanStack Start public gallery + photographer dashboard + admin UI ([[PRD-FE]] §2).
-* `apps/api` — NestJS on Bun, owns Better Auth sessions, RBAC, presigned MinIO uploads, and enqueues one BullMQ job per `photo_items` row ([[PRD-API]] §1/§4).
-* `apps/worker` — NestJS BullMQ consumer, regenerates `blurhash` + derivatives per frame with `Bun.Image` and promotes `posts.status` to `PENDING` ([[PRD-Worker]] §1–§3).
+* `apps/web` — TanStack Start public gallery + photographer dashboard + admin UI ([PRD-FE](../PRD-FE.md) §2).
+* `apps/api` — NestJS on Bun, owns Better Auth sessions, RBAC, presigned MinIO uploads, and enqueues one BullMQ job per `photo_items` row ([PRD-API](../PRD-API.md) §1/§4).
+* `apps/worker` — NestJS BullMQ consumer, regenerates `blurhash` + derivatives per frame with `Bun.Image` and promotes `posts.status` to `PENDING` ([PRD-Worker](../PRD-Worker.md) §1–§3).
 
 Shared surface (all must change together): `posts`/`photo_items` cuid2 ids, `exhibition_id` scoping, `feature_flags` row-per-flag kill-switches, `site_settings.max_series_size`, and the queue payload `{ postId, photoItemId, s3Key, curated }`.
 
@@ -77,7 +77,7 @@ Keeps monorepo DX (one PR for a cross-cutting change, one lockfile, `bun --filte
 * Positive: single PR for schema/API/worker/web changes; `docker-compose.yml` dev layout (`./apps/*`) keeps working; public portfolio repo (`declic-web`) without leaking server code.
 * Negative: `packages/*` is duplicated into mirrors (accepted — mirrors are generated artifacts, never edited).
 * Guardrails required: branch protection + "read-only mirror" README on mirrors; CI leak-guard so no server secret reaches the public web mirror; deploy keys or a bot PAT scoped to the three mirrors.
-* Deploy constraint is orthogonal but recorded here: Better Auth cookies require web + API under one registrable domain (`app.*` + `api.*` with `trustedOrigins`/CORS) or an `/api/*` reverse proxy through the web domain ([[PRD]] §8.5). Splitting repos does not split domains.
+* Deploy constraint is orthogonal but recorded here: Better Auth cookies require web + API under one registrable domain (`app.*` + `api.*` with `trustedOrigins`/CORS) or an `/api/*` reverse proxy through the web domain ([PRD](../PRD.md) §8.5). Splitting repos does not split domains.
 
 ## 5. Verification
 
@@ -104,9 +104,9 @@ via a comment cross-reference in `mirror.yml`.
 
 ## Cross references
 
-* Repo layout, dev commands, and deploy flow: [[DEVELOPMENT]]
-* Product vision and roles: [[PRD]]
-* API schema and endpoints: [[PRD-API]]
-* Worker pipeline: [[PRD-Worker]]
-* Canonical schema diagram: [[db-schema]]
-* Seeds: `../seed.ts` (moving to `packages/db/src/seed.ts`; see [[DEVELOPMENT]])
+* Repo layout, dev commands, and deploy flow: [DEVELOPMENT](../DEVELOPMENT.md)
+* Product vision and roles: [PRD](../PRD.md)
+* API schema and endpoints: [PRD-API](../PRD-API.md)
+* Worker pipeline: [PRD-Worker](../PRD-Worker.md)
+* Canonical schema diagram: [db-schema](../db-schema.md)
+* Seeds: `../seed.ts` (moving to `packages/db/src/seed.ts`; see [DEVELOPMENT](../DEVELOPMENT.md))

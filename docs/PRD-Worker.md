@@ -18,7 +18,7 @@ updated: 2026-09-01
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> [!abstract] This document complements [[PRD-API]]. The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [[db-schema]]; for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [[PRD-API]] §2.2/§2.8/§3.3 and [[exhibition-lifecycle]]. Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
+> [!abstract] This document complements [PRD-API](./PRD-API.md). The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [db-schema](./db-schema.md); for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [PRD-API](./PRD-API.md) §2.2/§2.8/§3.3 and [exhibition-lifecycle](./features/exhibition-lifecycle.md). Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
 
 ---
 
@@ -260,7 +260,7 @@ If any frame fails, rollback for that frame only — sibling frames still succee
 
 1. Mark the **work** as terminal failure: `UPDATE posts SET status = 'FAILED_PROCESSING', updated_at = now() WHERE id = :postId`. Photographer sees an actionable error state (not an endless spinner).
 2. Error details are logged to an internal log column (`posts.rejection_reason` or a separate `job_logs`/`admin_audit_logs` table).
-3. Dashboard shows **Retry** (re-enqueue only frames with `blurhash IS NULL`) and **Withdraw/Edit title** remains available (see [[withdraw-work]] §2, [[series-upload]] §4). Sibling frames' derivatives remain valid — no need to reprocess the whole series.
+3. Dashboard shows **Retry** (re-enqueue only frames with `blurhash IS NULL`) and **Withdraw/Edit title** remains available (see [withdraw-work](./features/withdraw-work.md) §2, [series-upload](./features/series-upload.md) §4). Sibling frames' derivatives remain valid — no need to reprocess the whole series.
 4. Stuck detector (separate from failure): posts in `PROCESSING` > 10m emit log + metric `posts_stuck_processing` (queue backlog vs genuine failure signal) but do not auto-fail.
 
 > For SERIES, a single failed frame blocks promotion to `PENDING`; other frames' derivatives remain valid — no need to reprocess the whole series.
@@ -324,7 +324,7 @@ worker:
 
 ## 6. Cross References
 
-- **General PRD:** [[PRD]] — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
-- **Backend API:** [[PRD-API]] — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.
-- **DB Schema:** [[db-schema]] — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
+- **General PRD:** [PRD](./PRD.md) — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
+- **Backend API:** [PRD-API](./PRD-API.md) — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.
+- **DB Schema:** [db-schema](./db-schema.md) — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
 - **Local Infra:** `docker-compose.yml` + `env.example`.

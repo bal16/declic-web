@@ -11,10 +11,10 @@ updated: 2026-09-07
 
 # Feature: Gallery & Discovery (public reads, lightbox, OG)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (reads), `exhibitions` (scoping)
-**Related:** [[PRD-API]] §4.0 (cursor schema), [[PRD-FE]] §3.1,
-[[exhibition-lifecycle]] (latest/archive scoping)
+**Related:** [PRD-API](../PRD-API.md) §4.0 (cursor schema), [PRD-FE](../PRD-FE.md) §3.1,
+[exhibition-lifecycle](./exhibition-lifecycle.md) (latest/archive scoping)
 
 ---
 
@@ -32,7 +32,7 @@ updated: 2026-09-07
 
 **Access:** Public (no auth). If a session exists, additional field
 `isLiked` is included. **Scoped to an exhibition** — defaults to latest
-published exhibition (see [[exhibition-lifecycle]]).
+published exhibition (see [exhibition-lifecycle](./exhibition-lifecycle.md)).
 
 **Query Parameters:**
 
@@ -42,7 +42,7 @@ published exhibition (see [[exhibition-lifecycle]]).
 | `exhibition_slug` | `string` | — | Alternative (e.g. `declic-2026`) |
 | `sort` | `enum` | `curated` | `curated` (by `posts.display_order`), `most_liked` (by `likes_count`), `recent` (by `posts.created_at` — **not** `id`) |
 | `search` | `string` | — | Substring match on `posts.title` or `users.name` |
-| `cursor` | `string` | — | Opaque `base64url(JSON)` per [[PRD-API]] §4.0 — **never raw cuid2 sort** |
+| `cursor` | `string` | — | Opaque `base64url(JSON)` per [PRD-API](../PRD-API.md) §4.0 — **never raw cuid2 sort** |
 | `limit` | `integer` | `20` | `1..50` |
 | `type` | `enum` | — | Filter `SINGLE` or `SERIES` (optional) |
 
@@ -93,7 +93,7 @@ published exhibition (see [[exhibition-lifecycle]]).
 - **`/mine`:** `PHOTOGRAPHER` (own data), `ADMIN` (all data). All
   statuses owned by the user, nested `items` (cuid2 ids). Same cursor
   contract as §2 (`recent` default). Powers
-  `/dashboard` (see [[series-upload]] §6).
+  `/dashboard` (see [series-upload](./series-upload.md) §6).
 - **`/:id` (cuid2):** public if `status IN (APPROVED, PUBLISHED)` and parent exhibition `phase IN ('LIVE','ARCHIVED')`, owner/admin any status. All
   `photo_items` ordered by `item_order` with derivatives. Non-public
   fields (`rejection_reason`, `display_order`) are stripped for
@@ -102,7 +102,7 @@ published exhibition (see [[exhibition-lifecycle]]).
 
 ## 4. Frontend (`/`, `/archive`, `/post/$postId`, `/og/$postId`)
 
-Summary (full UI spec: [[PRD-FE]] §3.1):
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.1):
 
 - **Grid:** justified layout by cover aspect (no crop), `SERIES • N`
   badge, `useInfiniteQuery` cursor pagination, blurhash placeholders
@@ -116,7 +116,7 @@ Summary (full UI spec: [[PRD-FE]] §3.1):
 - **OG:** `/og/$postId` server route (Satori + resvg) — cover + title +
   photographer + `SERIES • N` + CLIC branding.
 - **ARCHIVED:** banner + disabled engagement (see
-  [[exhibition-lifecycle]] §5).
+  [exhibition-lifecycle](./exhibition-lifecycle.md) §5).
 
 ## 5. Worker
 
@@ -126,7 +126,7 @@ No involvement (reads serve stored derivatives + `blurhash`).
 
 Reads `posts` (+ `photo_items`, `photo_derivatives`, `users` join).
 Relies on composite `(exhibition_id, status)` index (see
-[[db-schema]]). No new tables.
+[db-schema](../db-schema.md)). No new tables.
 
 ## 7. Edge cases
 

@@ -13,7 +13,7 @@ updated: 2026-09-08
 **Date:** 2026-09-08
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-002-release-tagging|ADR-002]], `../../.github/workflows/ci.yml`, `../../.github/workflows/mirror.yml`
+**Related:** [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-002](./ADR-002-release-tagging.md), `../../.github/workflows/ci.yml`, `../../.github/workflows/mirror.yml`
 
 ---
 
@@ -30,7 +30,7 @@ updated: 2026-09-08
   Strict protection now would block that workflow.
 * CI posture: `ci.yml` triggers still manual-only (`workflow_dispatch`);
   jobs `verify` + `leak-guard`. `mirror.yml` fans out on every push to
-  `main` (paths-scoped, see [[ADR-001-monorepo-mirror|ADR-001]] §6).
+  `main` (paths-scoped, see [ADR-001](./ADR-001-monorepo-mirror.md) §6).
   `release.yml` is tag-driven (`v*`).
 
 ## 2. Decision (proposed)
@@ -64,10 +64,10 @@ Deliberately **out of scope**:
 * `mirror-*` branches in the monorepo (local-only CI scratch, never pushed
   to origin) — no rule.
 * Mirror repos (`declic-web/api/worker`) — **no protection by design**;
-  the bot's force-pushes require it ([[ADR-001-monorepo-mirror|ADR-001]]).
+  the bot's force-pushes require it ([ADR-001](./ADR-001-monorepo-mirror.md)).
 * Tag protection (`v*` maintainer-only) — unavailable on Free+private;
   substitute is discipline + strict `release.yml` (verify → publish →
-  release), per [[ADR-002-release-tagging|ADR-002]] §5.1.
+  release), per [ADR-002](./ADR-002-release-tagging.md) §5.1.
 
 ## 3. Alternatives considered
 
@@ -136,6 +136,6 @@ E.g. only block force-push/deletion, allow direct pushes.
 
 ## Cross references
 
-* Mirror fan-out and why mirrors stay unprotected: [[ADR-001-monorepo-mirror|ADR-001]]
-* Release gates, tag hygiene, GHCR limits: [[ADR-002-release-tagging|ADR-002]]
+* Mirror fan-out and why mirrors stay unprotected: [ADR-001](./ADR-001-monorepo-mirror.md)
+* Release gates, tag hygiene, GHCR limits: [ADR-002](./ADR-002-release-tagging.md)
 * Workflows: `../../.github/workflows/ci.yml`, `../../.github/workflows/mirror.yml`, `../../.github/workflows/release.yml`

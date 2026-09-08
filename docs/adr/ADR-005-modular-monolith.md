@@ -13,14 +13,14 @@ updated: 2026-09-07
 **Date:** 2026-09-07
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [[PRD-API]] §1–§2/§4, [[PRD-Worker]] §1–§3, [[db-schema]], `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-003-zod-dto-strategy|ADR-003]]
+**Related:** [PRD-API](../PRD-API.md) §1–§2/§4, [PRD-Worker](../PRD-Worker.md) §1–§3, [db-schema](../db-schema.md), `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-003](./ADR-003-zod-dto-strategy.md)
 
 ---
 
 ## 1. Context
 
-`apps/api` is a single NestJS deployable ([[ADR-001-monorepo-mirror|ADR-001]]) with 12 planned
-feature modules ([[PRD-API]] §1.1: auth, users, exhibitions,
+`apps/api` is a single NestJS deployable ([ADR-001](./ADR-001-monorepo-mirror.md)) with 12 planned
+feature modules ([PRD-API](../PRD-API.md) §1.1: auth, users, exhibitions,
 posts/photo-items, curation, moderation, engagement, storage, queue,
 feature-flags, site-settings, audit) plus `common/`. Today only
 `app.module.ts` (global config + health) and the `modules/examples/`
@@ -110,7 +110,7 @@ Payloads use cuid2 `text` ids; `users` ids stay Better Auth-managed;
 
 ### Rule 4 — Shared kernel only
 
-`packages/contracts` (pure Zod DTOs, [[ADR-003-zod-dto-strategy|ADR-003]]) + `packages/db`
+`packages/contracts` (pure Zod DTOs, [ADR-003](./ADR-003-zod-dto-strategy.md)) + `packages/db`
 (schema) + `common/` are the only shared code. DTO wrappers stay
 one line each co-located with their module (`*.dto.ts` via
 `createZodDto`).
@@ -146,7 +146,7 @@ Split posts/engagement/moderation into separate deployables now.
 
 * Pros: independent deploys, strongest isolation.
 * Cons: one-person team pays service-discovery, distributed-tx,
-  and multi-repo coordination tax (the exact cost [[ADR-001-monorepo-mirror|ADR-001]] rejected);
+  and multi-repo coordination tax (the exact cost [ADR-001](./ADR-001-monorepo-mirror.md) rejected);
   single Postgres/Redis means distribution without independence.
   Revisit only if a module gets its own team or load profile —
   Rule 1–3 boundaries make that cut mechanical.
@@ -155,7 +155,7 @@ Split posts/engagement/moderation into separate deployables now.
 
 One deployable, enforced boundaries, facade-sync CRUD with an
 audit-only event seam. Keeps Bun/NestJS
-DX and [[ADR-001-monorepo-mirror|ADR-001]] release flow (`vX.Y.Z` single tag) unchanged while
+DX and [ADR-001](./ADR-001-monorepo-mirror.md) release flow (`vX.Y.Z` single tag) unchanged while
 preserving a later split path.
 
 ## 4. Consequences
@@ -181,7 +181,7 @@ preserving a later split path.
   test traces `POST /api/posts` → queued jobs → worker frames →
   `PENDING` without importing internals across modules, plus one test
   proving a failed audit listener never fails the request.
-* `bun run coverage` stays ≥90% lines per app ([[ADR-002-release-tagging|ADR-002]] gate).
+* `bun run coverage` stays ≥90% lines per app ([ADR-002](./ADR-002-release-tagging.md) gate).
 
 ## 6. Addendum — layered boundary gate (2026-09-08)
 
@@ -206,10 +206,10 @@ stays deferred (planning/docs still churn on `main`).
 
 ## Cross references
 
-* Module list + responsibilities: [[PRD-API]] §1.1
-* Schema + ownership targets: [[db-schema]], `../seed.ts`
-* Queue payload + worker contract: [[PRD-Worker]] §1–§3
-* DTO strategy for `dto.ts` files: [[ADR-003-zod-dto-strategy|ADR-003]]
-* Repo/release context: [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-002-release-tagging|ADR-002]]
+* Module list + responsibilities: [PRD-API](../PRD-API.md) §1.1
+* Schema + ownership targets: [db-schema](../db-schema.md), `../seed.ts`
+* Queue payload + worker contract: [PRD-Worker](../PRD-Worker.md) §1–§3
+* DTO strategy for `dto.ts` files: [ADR-003](./ADR-003-zod-dto-strategy.md)
+* Repo/release context: [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-002](./ADR-002-release-tagging.md)
 * Living module template: `../../apps/api/src/modules/examples/`
 * App composition root: `../../apps/api/src/app.module.ts`

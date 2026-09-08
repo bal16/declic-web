@@ -12,11 +12,11 @@ updated: 2026-09-07
 
 # Feature: Curator Replace & Revert (Option C, non-destructive)
 
-**Status:** Specced ([[PRD]] 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (frame update), `queue` (re-job), `audit`
-**Related:** [[PRD-API]] §4.0 (error contract), [[PRD-FE]] §3.2.1
-(`CuratedDiffViewer`), [[PRD-Worker]] (`curated:true` payload),
-[[db-schema]] (`photo_items.source`), [[ADR-005-modular-monolith|ADR-005]] Rule 2
+**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §3.2.1
+(`CuratedDiffViewer`), [PRD-Worker](../PRD-Worker.md) (`curated:true` payload),
+[db-schema](../db-schema.md) (`photo_items.source`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
 
 ---
 
@@ -62,11 +62,11 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
 5. Delete old `photo_derivatives` for that `photo_item_id` (avoid stale
    CDN; recommended over keep-until-overwrite).
 6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId,
-   s3Key, curated: true }` (same pipeline as [[PRD-Worker]]).
+   s3Key, curated: true }` (same pipeline as [PRD-Worker](../PRD-Worker.md)).
 7. Emit `AuditRequestedEvent` `{ action:'photo_item.replace',
    admin_id, target_id:itemId, payload:{ postId,
    old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }`
-   (never a direct insert — [[ADR-005-modular-monolith|ADR-005]] Rule 2).
+   (never a direct insert — [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` —
 gallery shows old derivatives until worker completes (then new cover if
@@ -107,11 +107,11 @@ is linear, the latest entry is by definition the correct one).
 
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }`.
 History: `GET /api/admin/audit-logs?target_id=:itemId` (see
-[[curation-moderation]] § Audit trail).
+[curation-moderation](./curation-moderation.md) § Audit trail).
 
 ## 4. Frontend (`/admin/moderation`)
 
-Summary (full UI spec: [[PRD-FE]] §3.2.1):
+Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2.1):
 
 - Per-frame **Replace** button → file picker → instant preview →
   **side-by-side diff slider** (`CuratedDiffViewer`: current `web.webp`
@@ -124,13 +124,13 @@ Summary (full UI spec: [[PRD-FE]] §3.2.1):
 ## 5. Worker
 
 Same pipeline, `curated:true` / `revert:true` are logging signals only
-(see [[PRD-Worker]]). Replacement regenerates `blurhash` + 3
+(see [PRD-Worker](../PRD-Worker.md)). Replacement regenerates `blurhash` + 3
 derivatives; `posts.status` aggregation unaffected (`PENDING` stays).
 
 ## 6. Schema touch
 
 `photo_items.source` (`ORIGINAL`→`CURATED`), `updated_at` (see
-[[db-schema]]). Old keys live on in `admin_audit_logs` payloads; old
+[db-schema](../db-schema.md)). Old keys live on in `admin_audit_logs` payloads; old
 files stay in `raw-uploads/`. No new tables.
 
 ## 7. Edge cases

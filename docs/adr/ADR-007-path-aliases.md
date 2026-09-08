@@ -13,7 +13,7 @@ updated: 2026-09-08
 **Date:** 2026-09-08
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [[ADR-001-monorepo-mirror|ADR-001]], [[ADR-005-modular-monolith|ADR-005]], `../../packages/tsconfig/base.json`, `../../apps/web/vite.config.ts`, `../../scripts/check-boundaries.ts`
+**Related:** [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-005](./ADR-005-modular-monolith.md), `../../packages/tsconfig/base.json`, `../../apps/web/vite.config.ts`, `../../scripts/check-boundaries.ts`
 
 ---
 
@@ -148,7 +148,7 @@ ROT faster than the saved config lines. All-at-once was chosen.
 
 ## Cross references
 
-* Mirror slices and why per-app anchors are mirror-safe: [[ADR-001-monorepo-mirror|ADR-001]]
-* Boundary gate alias handling: [[ADR-005-modular-monolith|ADR-005]] §6, `../../scripts/check-boundaries.ts`
-* Toolchain (oxlint+oxfmt) and dev commands: [[DEVELOPMENT]]
+* Mirror slices and why per-app anchors are mirror-safe: [ADR-001](./ADR-001-monorepo-mirror.md)
+* Boundary gate alias handling: [ADR-005](./ADR-005-modular-monolith.md) §6, `../../scripts/check-boundaries.ts`
+* Toolchain (oxlint+oxfmt) and dev commands: [DEVELOPMENT](../DEVELOPMENT.md)
 * Alias aspirational example: `../PRD-FE.md` §6.1
