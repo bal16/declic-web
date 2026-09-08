@@ -9,7 +9,9 @@ pre-commit:
       stage_fixed: true
       run: bunx oxlint --fix {staged_files}
     oxfmt:
-      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css}'
+      # yml/yaml/md included so compose files and the root README are
+      # auto-fixed at commit (docs/** prose stays under markdownlint).
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css,yml,yaml,md}'
       # Mirror .oxfmtrc.jsonc ignores: oxfmt errors ("no target file",
       # exit 2) when EVERY staged file is ignored, which aborts the
       # commit. Excluding here keeps hook invocation consistent with

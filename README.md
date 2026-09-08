@@ -64,16 +64,16 @@ are generated automatically — see `docs/DEVELOPMENT.md`.
 
 ## Scripts
 
-| Command              | What it does                              |
-| -------------------- | ----------------------------------------- |
-| `bun run dev`        | Dev servers for all apps                  |
-| `bun run build`      | Production build for all apps             |
-| `bun run test`       | Unit tests for all apps                   |
-| `bun run test:e2e`   | End-to-end tests for all apps             |
-| `bun run typecheck`  | TypeScript check per app                  |
-| `bun run lint`       | `oxlint` over the repo                    |
-| `bun run format`     | `oxfmt` over the repo                     |
-| `bun run coverage`   | Coverage gate (≥90% lines per app)        |
+| Command             | What it does                       |
+| ------------------- | ---------------------------------- |
+| `bun run dev`       | Dev servers for all apps           |
+| `bun run build`     | Production build for all apps      |
+| `bun run test`      | Unit tests for all apps            |
+| `bun run test:e2e`  | End-to-end tests for all apps      |
+| `bun run typecheck` | TypeScript check per app           |
+| `bun run lint`      | `oxlint` over the repo             |
+| `bun run format`    | `oxfmt` over the repo              |
+| `bun run coverage`  | Coverage gate (≥90% lines per app) |
 
 Git hooks: `bunx lefthook install` once per clone (staged `oxlint --fix` + `oxfmt`).
 
@@ -82,15 +82,15 @@ Git hooks: `bunx lefthook install` once per clone (staged `oxlint --fix` + `oxfm
 Start with `docs/DEVELOPMENT.md` for the dev loop, environment, mirrors,
 and releases.
 
-| Doc                         | Contents                                              |
-| --------------------------- | ----------------------------------------------------- |
-| `docs/PRD.md`               | Vision, roles, exhibition lifecycle, archive rules    |
-| `docs/PRD-API.md`           | Modules, schema text, cursor/error/flag contracts     |
-| `docs/PRD-FE.md`            | Routes, upload/lightbox/curation UI, auth guards      |
-| `docs/PRD-Worker.md`        | Per-frame pipeline, retry/DLQ, memory budget          |
-| `docs/db-schema.md`         | Canonical ER diagram + seeds summary                  |
-| `docs/features/`            | One acceptance file per feature (vertical slice)      |
-| `docs/adr/`                 | Architecture decisions (monorepo, releases, logging)  |
+| Doc                  | Contents                                             |
+| -------------------- | ---------------------------------------------------- |
+| `docs/PRD.md`        | Vision, roles, exhibition lifecycle, archive rules   |
+| `docs/PRD-API.md`    | Modules, schema text, cursor/error/flag contracts    |
+| `docs/PRD-FE.md`     | Routes, upload/lightbox/curation UI, auth guards     |
+| `docs/PRD-Worker.md` | Per-frame pipeline, retry/DLQ, memory budget         |
+| `docs/db-schema.md`  | Canonical ER diagram + seeds summary                 |
+| `docs/features/`     | One acceptance file per feature (vertical slice)     |
+| `docs/adr/`          | Architecture decisions (monorepo, releases, logging) |
 
 Note: files under `docs/` use Obsidian-style `[[wikilinks]]` for the
 internal knowledge graph. This root README intentionally stays plain

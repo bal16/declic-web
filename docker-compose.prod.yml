@@ -11,10 +11,9 @@
 # ═════════════════════════════════════════════════════════════
 
 services:
-
   # ── NestJS API (prebuilt) ──────────────────────────────────────
   api:
-    profiles: ["prod"]
+    profiles: ['prod']
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -27,7 +26,7 @@ services:
 
   # ── Image-processing worker (prebuilt) ─────────────────────────
   worker:
-    profiles: ["prod"]
+    profiles: ['prod']
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
@@ -39,7 +38,7 @@ services:
 
   # ── TanStack Start frontend (prebuilt) ─────────────────────────
   web:
-    profiles: ["prod"]
+    profiles: ['prod']
     build:
       context: .
       dockerfile: apps/web/Dockerfile
