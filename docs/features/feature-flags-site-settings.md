@@ -116,7 +116,7 @@ current value. Emits `AuditRequestedEvent` (`action: site_settings.update`).
   `GET /api/feature-flags`.
 - **`/admin/settings` (IN for 1.0, minimal):** three toggles
   (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`)
-  + one number input
+  plus one number input
   (`max_series_size` 1–20) over the existing `PATCH` endpoints;
   `TanStack Query` `staleTime: 10_000`; error mapping
   (`FEATURE_DISABLED`/`VALIDATION_ERROR` toasts); link to the audit

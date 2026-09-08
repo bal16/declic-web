@@ -129,7 +129,7 @@ E.g. only block force-push/deletion, allow direct pushes.
   break-glass story (e.g. temporary rule relaxation by owner, logged
   in the PR)? Classic protection has no per-actor bypass on Free.
 * **OQ-4 — Tag discipline without tag protection:** is social convention
-  + annotated-tag hygiene enough until a plan upgrade, or should tag
+  plus annotated-tag hygiene enough until a plan upgrade, or should tag
   creation move to a script/CI job (`release.yml` dispatch only)?
 
 ---

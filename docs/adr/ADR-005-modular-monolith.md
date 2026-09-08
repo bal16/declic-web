@@ -95,7 +95,7 @@ with no behavioral difference; adding an action never changes the contract.
 
 **Failure semantics (best-effort + visibility):** the request succeeds
 first; the listener writes behind it. A listener failure is Pino-logged
-+ metered and never fails the request. Rationale: for an exhibition
+plus metered and never fails the request. Rationale: for an exhibition
 admin trail the work state is critical and its note is not — reversing
 that priority (failing a valid approve over a trail write) is worse
 than a losable row. Durable outbox is post-1.0.
