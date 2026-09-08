@@ -23,10 +23,26 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: '1.4.2'
 
       - name: Install (frozen lockfile)
         run: bun install --frozen-lockfile
+
+      # Fail-fast order: cheapest checks without build output first
+      # (format/lint/boundaries/compose), then typecheck/unit, then
+      # build, then e2e (needs build output). Expensive steps run last
+      # so style violations don't waste minutes of typecheck/test/build.
+      - name: Format check (oxfmt)
+        run: bun run format:check
+
+      - name: Lint (oxlint, check mode)
+        run: bun run lint
+
+      - name: Module boundaries (ADR-005)
+        run: bun run boundaries
+
+      - name: Compose sync check (spec materialized to root, dormant until triggers enabled)
+        run: bun run sync:compose --check
 
       # Tolerant until every workspace defines these scripts (scaffold step).
       # The `||` fallbacks can be removed once typecheck/test/test:e2e/build
@@ -37,23 +53,11 @@ jobs:
       - name: Test workspaces (unit, src/)
         run: bun run --filter "@declic/*" test || echo "::notice::test not defined in all workspaces yet — skipping"
 
-      - name: Test workspaces (e2e, test/)
-        run: bun run --filter "@declic/*" test:e2e || echo "::notice::test:e2e not defined in all workspaces yet — skipping"
-
       - name: Build workspaces
         run: bun run --filter "@declic/*" build || echo "::notice::build not defined in all workspaces yet — skipping"
 
-      - name: Lint (oxlint, check mode)
-        run: bun run lint
-
-      - name: Module boundaries (ADR-005)
-        run: bun scripts/check-boundaries.ts
-
-      - name: Compose sync check (spec materialized to root, dormant until triggers enabled)
-        run: bun run sync:compose --check
-
-      - name: Format check (oxfmt)
-        run: bun run format:check
+      - name: Test workspaces (e2e, test/, needs build output)
+        run: bun run --filter "@declic/*" test:e2e || echo "::notice::test:e2e not defined in all workspaces yet — skipping"
 
   # Protects the public mirror: apps/web must never reference server secrets
   # or server-side code paths (see ADR-001, docs/adr/ADR-001-monorepo-mirror.md).
