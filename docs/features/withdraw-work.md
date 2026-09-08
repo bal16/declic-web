@@ -86,3 +86,4 @@ no new columns, no migration.
 - [ ] `DELETE` PUBLISHED → `409 WITHDRAW_CLOSED` + toast copy
 - [ ] Double `DELETE` → `204` both times
 - [ ] `GET /api/admin/audit-logs?action=post.withdraw` shows the row
+- [ ] `ADMIN` deletes another user's `PENDING` work → `204`; non-owner non-admin → `403 FORBIDDEN`

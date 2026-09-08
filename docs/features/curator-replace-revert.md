@@ -74,8 +74,12 @@ gallery shows old derivatives until worker completes (then new cover if
 ## 3. API — `POST /api/admin/posts/:postId/frames/:itemId/revert` (ADMIN + CURATOR, cuid2)
 
 **Access:** `ADMIN`, `CURATOR`. **Blocked when parent exhibition is
-`ARCHIVED`**. Stack of single-levels: each call undoes exactly the
+`ARCHIVED`** (`403 {code:"ARCHIVED"}`). Stack of single-levels: each call undoes exactly the
 **latest** replace (repeatable — call again to walk further back).
+
+**Request Body:** empty (`{}`). The server always resolves the latest
+`photo_item.replace` audit row; no `from_audit_id` is accepted (history
+is linear, the latest entry is by definition the correct one).
 
 **API Actions (transactional):**
 

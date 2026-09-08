@@ -18,8 +18,8 @@ defined once in [[PRD-API]] §4.0 / §2 and [[db-schema]] — feature files
 
 | Feature | Status | Owner modules |
 |---|---|---|
-| [[withdraw-work]] — author retraction (`DELETE /posts/:id`) | specced, not implemented | `posts` |
-| [[series-upload]] — upload, photographer edit (new `PATCH /posts/:id`), frame reorder | specced, not implemented | `posts`, `storage`, `queue` |
+| [[withdraw-work]] — author retraction (`DELETE /api/posts/:id`) | specced, not implemented | `posts` |
+| [[series-upload]] — upload, photographer edit (new `PATCH /api/posts/:id`), frame reorder | specced, not implemented | `posts`, `storage`, `queue` |
 | [[curator-replace-revert]] — Option C replace + single-level revert | specced, not implemented | `posts`, `queue`, `audit` |
 | [[exhibition-lifecycle]] — multi-exhibition, cron archive, freeze | specced, not implemented | `exhibitions`, `queue`, `audit` |
 | [[gallery-discovery]] — public reads, lightbox, OG | specced, not implemented | `posts`, `exhibitions` |

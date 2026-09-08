@@ -57,6 +57,9 @@ Body `{ "enabled": false }`. Validates `key` exists; invalidates cache
 immediately; `updated_at` + `updated_by` auto-set; audits
 (`action: feature_flag.toggle`, `payload: {key, before, after}`).
 
+**Response `200 OK`:** `{ "key": "series_enabled", "enabled": false, "updated_at": "..." }`.
+Errors: `404 NOT_FOUND` (unknown `key`).
+
 | Flag (`key`) | Default | Effect when `false` |
 |---|---|---|
 | `series_enabled` | `true` | `POST /api/posts` SERIES → `403 FEATURE_DISABLED` |
@@ -76,9 +79,16 @@ response `code` follows the first failing gate.
 `{ site_title, site_description, max_series_size, maintenance_mode,
 contact_email, instagram_url }`. Same CDN cache headers as flags.
 
+> `maintenance_mode` contract (banner-only, 1.0): when `true`, every
+> route renders a top banner `"Scheduled maintenance — browsing only,
+> uploads may be delayed"`; all reads and writes still return `200`
+> (no write is blocked). Enforcement middleware is post-1.0 (see §10).
+
 #### `PATCH /api/admin/site-settings` (ADMIN, singleton)
 
 Partial body (e.g. `{ "max_series_size": 8 }`). `CHECK` enforced.
+**Response `200 OK`:** the updated `site_settings` row (`id=1`).
+Errors: `400 VALIDATION_ERROR` (`max_series_size` outside `1..20`).
 **Grandfathering:** lowering `10` → `5` never invalidates existing
 10-frame SERIES — only new `POST /api/posts` validates against the
 current value. Audits (`action: site_settings.update`).

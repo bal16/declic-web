@@ -91,11 +91,14 @@ published exhibition (see [[exhibition-lifecycle]]).
 ## 3. API — `GET /api/posts/mine` & `GET /api/posts/:id`
 
 - **`/mine`:** `PHOTOGRAPHER` (own data), `ADMIN` (all data). All
-  statuses owned by the user, nested `items` (cuid2 ids). Powers
+  statuses owned by the user, nested `items` (cuid2 ids). Same cursor
+  contract as §2 (`recent` default). Powers
   `/dashboard` (see [[series-upload]] §6).
 - **`/:id` (cuid2):** public if `status IN (APPROVED, PUBLISHED)` and parent exhibition `phase IN ('LIVE','ARCHIVED')`, owner/admin any status. All
-  `photo_items` ordered by `item_order` with derivatives.
-- **Alias:** `GET /api/photos/:id` → `GET /api/posts/:id` (deprecated).
+  `photo_items` ordered by `item_order` with derivatives. Non-public
+  fields (`rejection_reason`, `display_order`) are stripped for
+  non-owner public reads.
+- **Alias:** `GET /api/photos/:id` → `GET /api/posts/:id` (deprecated, removed post-1.0).
 
 ## 4. Frontend (`/`, `/archive`, `/post/$postId`, `/og/$postId`)
 
@@ -143,4 +146,7 @@ Relies on composite `(exhibition_id, status)` index (see
 - [ ] Public gallery `< 50ms` p95, `/` = latest `LIVE` (fallback `ARCHIVED`; empty-state when neither: "Pameran berikutnya sedang disiapkan.")
 - [ ] Stale `curated` cursor → never 500; skips/duplicates across a mid-pagination reorder tolerated, FE refetches after admin reorder
 - [ ] Shared `/post/$postId` unfurls with cover + title on WhatsApp
+- [ ] `?search=` matches title + photographer name (case-insensitive substring), scoped to the requested exhibition
+- [ ] `sort=most_liked|recent` orders by `likes_count DESC` / `created_at DESC`; `?type=SERIES` filters to series only
+- [ ] `GET /api/posts/mine` returns all owner statuses with nested items; non-public fields stripped for public `/:id` reads
 - [ ] `ARCHIVED` gallery readable, engagement frozen

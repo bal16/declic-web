@@ -56,6 +56,13 @@ updated: 2026-09-07
 UI guards (middleware/HOC) redirect fast; API guards are the final
 authority.
 
+**`SessionGuard`:** validates the Better Auth session (first-party cookie)
+or `Bearer` token (mobile); no valid session → `401 {code:"UNAUTHENTICATED"}`.
+`@Public()` (no session needed): `GET /api/posts`, `GET /api/posts/:id`,
+`GET /api/posts/:id/comments`, `GET /api/exhibitions`, `GET /api/exhibitions/:slug`,
+`GET /api/exhibitions/:id/posts`, `GET /api/feature-flags`, `GET /api/site-settings`,
+plus the Better Auth mount itself. Everything else requires a session.
+
 Per-endpoint guards only (no global default-deny). Union is **manual**:
 every guarded endpoint lists `ADMIN` explicitly — `RolesGuard` has no
 implicit superset rule.
@@ -82,6 +89,13 @@ export const ROLE_MATRIX = {
 // usage: @Require('moderate:write')  (likes/comments need session only;
 // public gallery is @Public() — see matrix in [[PRD-API]] §3.2)
 ```
+
+Key → endpoint binding (owner checks live in the service, not the guard):
+`posts:write` = `POST /api/posts/upload-url`, `POST /api/posts`;
+`posts:own` = `PATCH /api/posts/:id`, `PATCH /api/posts/:id/items/reorder`,
+`DELETE /api/posts/:id` (owner or `ADMIN`); `replace:write` also covers
+`POST .../frames/:itemId/revert`; like/comment creation needs session
+only (freeze enforced by `ExhibitionPhaseGuard` + `FeatureFlagGuard`).
 
 Changing one rule = editing one row here. If the mapping ever moves to
 DB (hybrid pattern), only this map's source changes (const → cached
@@ -206,3 +220,7 @@ runtime-only (never persisted).
   CRUD → `403`
 - [ ] One-row change in `ROLE_MATRIX` flips exactly one rule (no stray
   literals — grep `ADMIN.*CURATOR` outside the matrix finds nothing)
+- [ ] OAuth login (Google/GitHub) round-trips to a session; anon gallery
+  reads stay `@Public()`; no-session write → `401 UNAUTHENTICATED`
+- [ ] First admin via direct DB edit works exactly once (documented runbook)
+- [ ] `VIEWER` calls `POST /api/posts/upload-url` → `403 FORBIDDEN`

@@ -69,7 +69,7 @@ src/
 **ID generation rule:**
 
 - `users.id` — Better Auth-managed (`uuid`/`text`), unchanged.
-- All **domain tables** (`posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, and FKs `post_id`/`photo_item_id`/`target_id`/`parent_id`) — **`text` PK with `cuid2` generated in application** (`@paralleldrive/cuid2` `createId()`). No `DEFAULT gen_random_uuid()` in DB. Ordering/pagination must use `created_at` + `display_order`, never lexicographic `id` sort (`cuid2` is not ULID-sortable — cursor uses `created_at`).
+- All **domain tables** (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, and FKs `exhibition_id`/`post_id`/`photo_item_id`/`target_id`/`parent_id`) — **`text` PK with `cuid2` generated in application** (`@paralleldrive/cuid2` `createId()`). No `DEFAULT gen_random_uuid()` in DB. Ordering/pagination must use `created_at` + `display_order`, never lexicographic `id` sort (`cuid2` is not ULID-sortable — cursor uses `created_at`).
 
 ### 2.1 `users` (Managed jointly with Better Auth — NOT cuid2)
 
@@ -94,7 +94,7 @@ src/
 | `slug` | `varchar(255)` | NOT NULL, UNIQUE | URL slug (`declic-2026`), used in `/exhibition/[slug]` |
 | `description` | `text` | NULLABLE | Curatorial statement |
 | `phase` | `enum` | NOT NULL, DEFAULT `'PRE_EVENT'` | `'PRE_EVENT'`, `'LIVE'`, `'ARCHIVED'`, `'DRAFT'` — per-exhibition lifecycle |
-| `poster_s3_key` | `text` | NULLABLE | Poster image path in MinIO |
+| `poster_s3_key` | `text` | NULLABLE | Poster image path in MinIO (`posters/` prefix; single file, no derivatives, no worker). Presigned via `POST /api/admin/exhibitions/:id/poster-upload-url` (same allowlist/size rules as photos, `expiresIn: 900`); gated on `phase != ARCHIVED` |
 | `location` | `varchar(255)` | NULLABLE | Venue (e.g. “Gedung CLIC UNNES”) |
 | `start_date` | `timestamp` | NOT NULL | Exhibition start — used to order `latest` |
 | `end_date` | `timestamp` | NOT NULL | Exhibition end — **cron trigger** `LIVE` → `ARCHIVED` when `end_date <= now()` |
@@ -145,7 +145,7 @@ Indexes: `exhibition_id`, `display_order`, `status`, `photographer_id`, `created
 
 Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
-> A SINGLE work has exactly 1 row here (`item_order=0`). A SERIES has 2–N (limit `feature_flags.max_series_size`, default 10). **Option C:** admin replacement does **not** create a new `photo_items` row — it updates `original_s3_key`/`source`/`blurhash`/`exif_metadata` in place and re-enqueues a worker job to regenerate derivatives; the old `s3_key` is preserved in `admin_audit_logs` payload for revert.
+> A SINGLE work has exactly 1 row here (`item_order=0`). A SERIES has 2–N (limit `site_settings.max_series_size`, default 10). **Option C:** admin replacement does **not** create a new `photo_items` row — it updates `original_s3_key`/`source`/`blurhash`/`exif_metadata` in place and re-enqueues a worker job to regenerate derivatives; the old `s3_key` is preserved in `admin_audit_logs` payload for revert.
 
 ### 2.5 `photo_derivatives` — cuid2
 
@@ -153,7 +153,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 |---|---|---|---|
 | `id` | `text` | PK, `cuid2` (app-generated) | Derivative ID |
 | `photo_item_id` | `text` | FK → `photo_items.id`, ON DELETE CASCADE | Parent frame |
-| `variant` | `enum` | NOT NULL | `'thumbnail'`, `'web'`, `'lightbox'` |
+| `variant` | `enum` | NOT NULL | `'thumbnail'`, `'web'`, `'lightbox'` — file names use the short form (`thumb.webp`, `web.webp`, `lightbox.webp` under `derivatives/{photo_item_id}/`) |
 | `s3_key` | `text` | NOT NULL | Derivative MinIO path (`derivatives/{photo_item_id}/...`) |
 | `url` | `text` | NOT NULL | Public CDN / MinIO URL |
 | `width` | `integer` | NOT NULL | Pixel width |
@@ -193,8 +193,8 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `id` | `text` | PK, `cuid2` (app-generated) | Log ID |
-| `admin_id` | `uuid` / `text` | FK → `users.id`, ON DELETE SET NULL | Acting admin |
-| `action` | `varchar(100)` | NOT NULL | e.g. `post.approve`, `post.reject`, `curation.reorder`, `comment.hide`, `feature_flag.toggle` |
+| `admin_id` | `uuid` / `text` | FK → `users.id`, ON DELETE SET NULL, NULLABLE | Acting admin (`NULL` for cron, e.g. `exhibition.phase_change` via scheduler) |
+| `action` | `varchar(100)` | NOT NULL | e.g. `post.moderate`, `post.withdraw`, `curation.reorder`, `comment.hide`, `feature_flag.toggle`, `photo_item.replace` |
 | `target_id` | `text` | NULLABLE | Target work/comment ID (`cuid2`) |
 | `payload` | `jsonb` | NULLABLE | Snapshot of change |
 | `created_at` | `timestamp` | DEFAULT `now()` | Time |
@@ -220,6 +220,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 |---|---|---|
 | `series_enabled` | `true` | `POST /api/posts` with `type=SERIES` or `items.length>1` → `403 {code:"FEATURE_DISABLED"}`. Existing SERIES remain readable. Toggle via `PATCH /api/admin/feature-flags/:key` |
 | `threaded_comments_enabled` | `false` | `POST /api/posts/:id/comments` with `parentId` → `400 {code:"FEATURE_DISABLED"}`. No threading UI. |
+| `comments_enabled` | `true` | `POST /api/posts/:id/comments` → `403 {code:"FEATURE_DISABLED"}` (spam-emergency kill-switch; reads stay open). See [[feature-flags-site-settings]] §3. |
 
 > Flags are cached in-memory (10s TTL) and invalidated on `PATCH /api/admin/feature-flags/:key`. **No** `GET /api/system/settings` — use `GET /api/feature-flags` (public, filtered list) + `GET /api/exhibitions/:id` for phase. Legacy `GET /api/system/settings` is **deleted**.
 
@@ -282,23 +283,25 @@ GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 
 | Endpoint Group | Anon | Viewer | Photographer | Curator | Admin |
 |---|---|---|---|---|---|
-| Public Gallery (`GET /exhibitions`, `GET /posts`) | Allowed | Allowed | Allowed | Allowed | Allowed |
-| Interactions (`POST /posts/:id/likes`, `POST /posts/:id/comments`) | Blocked | Authenticated (blocked when exhibition `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) |
-| Upload (`POST /posts/presigned-url`, `POST /posts`) | Blocked | Blocked | Allowed (only exhibition `PRE_EVENT`/`LIVE` + `series_enabled` flag) | Blocked | Allowed |
+| Public Gallery (`GET /api/exhibitions`, `GET /api/posts`) | Allowed | Allowed | Allowed | Allowed | Allowed |
+| Interactions (`POST /api/posts/:id/like`, `POST /api/posts/:id/comments`) | Blocked | Authenticated (blocked when exhibition `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) | Authenticated (blocked when `ARCHIVED`) |
+| Upload (`POST /api/posts/upload-url`, `POST /api/posts`) | Blocked | Blocked | Allowed (only exhibition `PRE_EVENT`/`LIVE` + `series_enabled` flag) | Blocked | Allowed |
 | Exhibitions (`POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`) | Blocked | Blocked | Blocked | Blocked | Allowed |
-| Contributor Dashboard (`GET /posts/mine`) | Blocked | Blocked | Own Data Only | Blocked | All Data |
-| Moderation (`PATCH /admin/posts/:id/moderate`) | Blocked | Blocked | Blocked | Allowed | Allowed |
-| Curation Layout (`PATCH /admin/curate/reorder`) | Blocked | Blocked | Blocked | Allowed (orders works) | Allowed |
+| Contributor Dashboard (`GET /api/posts/mine`) | Blocked | Blocked | Own Data Only | Blocked | All Data |
+| Moderation (`PATCH /api/admin/posts/:id/moderate`) | Blocked | Blocked | Blocked | Allowed | Allowed |
+| Curation Layout (`PATCH /api/admin/curate/reorder`) | Blocked | Blocked | Blocked | Allowed (orders works) | Allowed |
 | Curator Replace/Revert (`POST .../replace`, `POST .../revert`) | Blocked | Blocked | Blocked | Allowed | Allowed |
-| Comment Moderation (`DELETE /admin/comments/:id`) | Blocked | Blocked | Blocked | Allowed | Allowed |
+| Comment Moderation (`DELETE /api/admin/comments/:id`) | Blocked | Blocked | Blocked | Allowed | Allowed |
 | User Management (`GET /api/admin/users`, `PATCH /api/admin/users/:id/role`) | Blocked | Blocked | Blocked | Blocked | Allowed |
-| Feature Flags (`PATCH /api/admin/feature-flags`) | Blocked | Blocked | Blocked | Blocked | Allowed |
+| Feature Flags (`PATCH /api/admin/feature-flags/:key`) | Blocked | Blocked | Blocked | Blocked | Allowed |
 | Site Settings (`PATCH /api/admin/site-settings`) | Blocked | Blocked | Blocked | Blocked | Allowed |
 | Audit Trail (`GET /api/admin/audit-logs`) | Blocked | Blocked | Blocked | Allowed (read) | Allowed |
 
 Union is manual — `ADMIN` is listed explicitly everywhere (no implicit superset in `RolesGuard`). Role literals live in one map (`common/auth/role-matrix.ts`, see [[auth-rbac]] §3.1); endpoints reference permission keys.
 
 Implementation: `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` (checks `exhibitions.phase != ARCHIVED` for the target exhibition, or latest if not specified) → `FeatureFlagGuard` (checks `feature_flags.series_enabled` etc.).
+
+**`ExhibitionPhaseGuard` phase rules:** `ARCHIVED` → `403 {code:"ARCHIVED"}` on all writes for that exhibition (see §5 Archive Phase Rule). `DRAFT` → excluded from every public read by default (`ADMIN` bypass via `?phase=DRAFT`); writes require `ADMIN`. `PRE_EVENT` → excluded from public gallery reads, but `POST /api/posts/upload-url` + `POST /api/posts` stay open. When `exhibitionId` is omitted, the guard resolves the same latest exhibition as the handler (`PRE_EVENT`/`LIVE` for writes, `LIVE`-fallback-`ARCHIVED` for reads) — never a different row.
 
 ### 3.3 Feature Flag Guard (Kill-Switch)
 
@@ -317,7 +320,7 @@ export class FeatureFlagGuard implements CanActivate {
 // usage: @UseGuards(FeatureFlagGuard) @RequireFeatureFlag('series_enabled')
 ```
 
-- Guard reads `feature_flags` table (single row `id=1`, cached 10s TTL).
+- Guard reads `feature_flags` table (row-per-flag `key` PK, cached `SELECT *` → `Map` 10s TTL).
 - When `series_enabled=false`, `POST /api/posts` with `SERIES` fails fast with `403 FEATURE_DISABLED`. `GET /api/posts` and existing SERIES detail remain allowed.
 - Flag changes are audited to `admin_audit_logs` (`action: feature_flag.toggle`).
 
@@ -362,15 +365,15 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `VALIDATION_ERROR` | 400 | Body/query/cursor/DTO validation failed (`details` = field errors) |
 | `UNAUTHENTICATED` | 401 | No/invalid session or bearer token |
 | `FORBIDDEN` | 403 | RBAC deny (role insufficient) |
-| `FEATURE_DISABLED` | 403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`) |
+| `FEATURE_DISABLED` | 403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`) |
 | `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder/replace/revert blocked) |
 | `NOT_FOUND` | 404 | Unknown `id`/`slug` |
-| `WITHDRAW_CLOSED` | 409 | `DELETE /posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`) |
+| `WITHDRAW_CLOSED` | 409 | `DELETE /api/posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`) |
 | `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
 | `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
 | `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |
-| `EDIT_CLOSED` | 409 | `PATCH /posts/:id` outside `PENDING`/`FAILED_PROCESSING`, or frame-reorder outside `PENDING` |
-| `ROLE_CHANGE_DENIED` | 409 | `PATCH /admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
+| `EDIT_CLOSED` | 409 | `PATCH /api/posts/:id` outside `PENDING`/`FAILED_PROCESSING`, or frame-reorder outside `PENDING` |
+| `ROLE_CHANGE_DENIED` | 409 | `PATCH /api/admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
 
 All `{code:"..."}` references elsewhere in this document point to this table.
 
@@ -428,10 +431,9 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 | Aspect | Requirement |
 |---|---|
 | **Response Time** | `GET /api/posts` < 50ms (composite index `(exhibition_id, status)` + `likes_count`/`comments_count` cache + CDN); `GET /api/exhibitions` < 50ms |
-| **Archive Phase Rule** | If **exhibition** `phase === 'ARCHIVED'`: `POST /api/posts/upload-url` + `POST /api/posts` → `403`; **`POST /likes` + `POST /comments` → `403 ARCHIVED` (frozen, reads remain; `DELETE /like` stays `204`)**. Cron auto `LIVE` → `ARCHIVED` at `end_date`. |
-| **Feature Flags** | Row-per-flag `feature_flags(key, enabled)` (cache 10s TTL); `series_enabled=false` blocks **new** SERIES creation (`403 FEATURE_DISABLED`) but not reading existing; `threaded_comments_enabled` gates `parentId`; add flag via `INSERT`, no migration |
-| **Site Settings** | Singleton `site_settings(id=1, max_series_size CHECK 1..20, site_title, maintenance_mode)` — `GET /api/site-settings` public, `PATCH /api/admin/site-settings` admin; **grandfathering** old SERIES when limit lowered |
-| **Optimistic Updates** | `POST/DELETE /posts/:id/like` idempotent — safe for retry & optimistic UI |
+| **Archive Phase Rule** | If **exhibition** `phase === 'ARCHIVED'`: `POST /api/posts/upload-url` + `POST /api/posts` → `403 {code:"ARCHIVED"}`; **`POST /api/posts/:id/like` + `POST /api/posts/:id/comments` → `403 {code:"ARCHIVED"}` (frozen, reads remain; `DELETE /api/posts/:id/like` stays `204`)**. Cron auto `LIVE` → `ARCHIVED` at `end_date`. |
+| **Feature Flags** | Row-per-flag `feature_flags(key, enabled)` (cache 10s TTL); `series_enabled=false` blocks **new** SERIES creation (`403 FEATURE_DISABLED`) but not reading existing; `threaded_comments_enabled` gates `parentId`; `comments_enabled=false` blocks new comments (`403 FEATURE_DISABLED`, reads stay open); add flag via `INSERT`, no migration |
+| **Optimistic Updates** | `POST /api/posts/:id/like → 200 {likesCount, isLiked}`, `DELETE /api/posts/:id/like → 204` — idempotent, safe for retry & optimistic UI |
 | **Pagination** | Cursor-based on `created_at` + `id` (opaque, base64) — not lexicographic `cuid2` sort; stable for `curated` sort that is frequently reordered |
 | **ID Generation** | Domain tables use app-generated `cuid2` (`text` PK, e.g. Drizzle `$defaultFn(() => createId())`); `users` stays Better Auth-managed; no `gen_random_uuid()` for domain tables |
 | **Security** | RBAC + `FeatureFlagGuard` (row-per-flag) + `ExhibitionPhaseGuard` at API layer; all Admin endpoints require `RolesGuard`; flag & site_settings toggles audit-logged |

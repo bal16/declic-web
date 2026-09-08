@@ -125,8 +125,8 @@ incorporates `cuid2` for uniqueness.
 **API Actions (transactional, scoped to exhibition):**
 
 1. Resolve `exhibition_id` (provided or latest). If
-   `exhibitions.phase === 'ARCHIVED'` → `403` (see Errors). If
-   `type===SERIES` and `series_enabled===false` → `403 FEATURE_DISABLED`.
+   `exhibitions.phase === 'ARCHIVED'` → `403 {code:"ARCHIVED"}` (see Errors). If
+   `type===SERIES` and `series_enabled===false` → `403 {code:"FEATURE_DISABLED"}`.
 2. Validate `1 <= items.length <= site_settings.max_series_size`.
 3. Verify each `s3Key` exists in MinIO (HEAD) — optional but recommended.
 4. Insert `posts` (`id=cuid2`, `exhibition_id`, `status='PROCESSING'`,
@@ -137,10 +137,12 @@ incorporates `cuid2` for uniqueness.
 
 ```json
 [
-  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg" },
-  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg" }
+  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg", "curated": false },
+  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg", "curated": false }
 ]
 ```
+
+> Canonical payload `{postId, photoItemId, s3Key, curated}` (see [[PRD-Worker]] §1). Fresh uploads always send `curated: false`.
 
 > Post status transitions to `PENDING` only after **all** its photo_items
 > finish processing (see [[PRD-Worker]] §3.3).
@@ -150,9 +152,9 @@ incorporates `cuid2` for uniqueness.
 
 **Errors:**
 
-- `403 Forbidden` if target `exhibitions.phase === 'ARCHIVED'` →
+- `403 {code:"ARCHIVED"}` if target `exhibitions.phase === 'ARCHIVED'` →
   `"Exhibition has been archived, new uploads are closed"`.
-- `403 FEATURE_DISABLED` if `type===SERIES` and `series_enabled===false`
+- `403 {code:"FEATURE_DISABLED"}` if `type===SERIES` and `series_enabled===false`
   → `"SERIES creation is temporarily disabled"`.
 
 ## 4. API — `PATCH /api/posts/:id` (NEW for 1.0, photographer edit)
@@ -182,9 +184,13 @@ admin action).
 
 Allows photographer to reorder frames inside a SERIES before moderation:
 `{ "orderedItemIds": ["cuid-2","cuid-1","cuid-3"] }` → updates
-`photo_items.item_order`. Same guards as §4 (`PENDING`-only owner,
-`403 ARCHIVED` when archived). Validates the id set equals the work's
+`photo_items.item_order`. Owner-only while `posts.status='PENDING'`
+(title/caption edit in §4 additionally allows `FAILED_PROCESSING`);
+`403 {code:"ARCHIVED"}` when archived. Validates the id set equals the work's
 current items (no drops/adds — that is withdraw + re-upload).
+
+**Response `200 OK`:** `{ "postId": "cuid-post", "orderedItemIds": ["cuid-2","cuid-1","cuid-3"] }` (echo of the persisted order).
+Errors: `400 VALIDATION_ERROR` (id set mismatch — drops/adds/foreign ids); `404 NOT_FOUND`; `409 {code:"EDIT_CLOSED"}` (status not `PENDING`); `403 {code:"ARCHIVED"}`.
 
 ## 6. Frontend (`/dashboard`, `/dashboard/upload`, `/dashboard/edit/$postId`)
 
@@ -236,3 +242,4 @@ stay valid when lowered).
 - [ ] Upload into `ARCHIVED` → `403 ARCHIVED`
 - [ ] `PATCH` title on PENDING → `200`; on PUBLISHED → `409`
 - [ ] Frame reorder persists `item_order`; mismatched id set → `400`
+- [ ] `FAILED_PROCESSING` → dashboard Retry re-enqueues only `blurhash IS NULL` frames; success promotes to `PENDING`

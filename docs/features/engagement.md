@@ -30,11 +30,15 @@ interactions), [[db-schema]] (`likes`, `comments`),
 
 ## 2. API — `POST /api/posts/:id/like` & `DELETE /api/posts/:id/like` (cuid2)
 
+Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": true }`;
+`DELETE → 204` (empty).
+
 - **Idempotent** — repeated `POST` does not duplicate (composite PK on
   `likes(user_id, post_id)`), `DELETE` on a not-yet-liked work still
   returns `204`.
 - Atomically maintains `posts.likes_count` within same transaction.
-- Supports Optimistic UI — frontend may update count before response.
+- Supports Optimistic UI — frontend may update count before response,
+  then reconciles with the returned `likesCount`.
 - **Frozen when parent exhibition is `ARCHIVED`:** `POST /like`
   → `403 {code:"ARCHIVED", message:"This exhibition is archived, likes
   are frozen"}`. **`DELETE /like` (unlike) stays open** → `204`
@@ -48,8 +52,12 @@ interactions), [[db-schema]] (`likes`, `comments`),
 
 **Body:** `{ "content": "Amazing composition!", "parentId": "cuid-parent-optional" }`
 
-- **Frozen when parent exhibition is `ARCHIVED`:** `POST /comments` →
-  `403 ARCHIVED` (reads remain).
+**Response `201 Created`:** `{ "id": "cuid-comment", "post_id": "cuid-post", "content": "...", "parent_id": null, "created_at": "..." }`.
+
+**Failure precedence:** `404 NOT_FOUND` (work invisible: `UNPUBLISHED`/withdrawn or wrong exhibition scope) → `403 {code:"ARCHIVED"}` (frozen exhibition) → `403 {code:"FEATURE_DISABLED"}` (`comments_enabled=false`) → `400 {code:"FEATURE_DISABLED"}` (`parentId` sent while `threaded_comments_enabled=false`).
+
+- **Frozen when parent exhibition is `ARCHIVED`:** `POST /api/posts/:id/comments` →
+  `403 {code:"ARCHIVED"}` (reads remain).
 - If `threaded_comments_enabled===false` and `parentId` is sent →
   `400 {code:"FEATURE_DISABLED"}` (recommended over silent null).
 - Otherwise stores `parent_id` (cuid2) nullable. Increments
@@ -58,6 +66,8 @@ interactions), [[db-schema]] (`likes`, `comments`),
 
 ## 4. API — `GET /api/posts/:id/comments`
 
+Paginated per [[PRD-API]] §4.0 cursor (`created_at` + `id`, `limit` default `20` max `50`):
+`{ data: [{id, post_id, content, parent_id, created_at}], nextCursor }`.
 List with `is_hidden = false AND deleted_at IS NULL` for public; Admin
 sees all (including hidden). Flat sorted by `created_at` (not `id`);
 `parent_id` included but clients render flat unless threading flag is on

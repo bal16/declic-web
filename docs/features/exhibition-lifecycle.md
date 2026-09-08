@@ -45,29 +45,36 @@ updated: 2026-09-07
 
 ### `GET /api/exhibitions` (public)
 
-List ordered by `start_date DESC`. `?phase=LIVE|ARCHIVED` optional
+Paginated per [[PRD-API]] §4.0 cursor (`start_date DESC` + `id` tiebreaker,
+`limit` default `20` max `50`): `{ data: [{id, title, slug, phase, poster_url, location, start_date, end_date, posts_count}], nextCursor }`.
+`?phase=LIVE|ARCHIVED` optional
 (`DRAFT` excluded by default; `PRE_EVENT` excluded from public gallery — root `/` never resolves to `DRAFT`/`PRE_EVENT`). Root `/` uses latest `LIVE` (fallback
 latest `ARCHIVED`) as `exhibition_id` default.
 
 #### `GET /api/exhibitions/:slug` (public, cuid2 or slug)
 
-Detail with `postsCount` (published only for public; all for ADMIN).
-Includes `poster` url.
+**Response `200 OK`:** `{ id, title, slug, description, phase, poster_url, location, start_date, end_date, posts_count }`.
+`posts_count: integer` — `APPROVED`+visible works only for public;
+all non-deleted works for `ADMIN`. Includes `poster` url.
+Errors: `404 NOT_FOUND` (unknown slug; `DRAFT` slug is `404` for non-ADMIN).
 
 #### `GET /api/exhibitions/:id/posts` (public)
 
 Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that
-exhibition (see [[gallery-discovery]]).
+exhibition, same cursor contract (see [[gallery-discovery]]).
 
 #### `POST /api/exhibitions` (ADMIN)
 
-Create: `{ title, slug, description, location, poster_s3_key,
-start_date, end_date, phase }` → `id=cuid2`. Slug unique.
+**Request Body:** `{ title*, slug*, start_date*, end_date*, description?, location?, poster_s3_key?, phase? }`
+(`*` required; `phase` defaults to `PRE_EVENT`; `slug` unique, kebab-case).
+
+**Response `201 Created`:** the created exhibition (cuid2 `id`) with `posts_count: 0`.
+Errors: `400 VALIDATION_ERROR` (missing field, bad date range `end_date <= start_date`, slug collision).
 
 > Poster upload: **dedicated endpoint** `POST /api/admin/exhibitions/:id/poster-upload-url`
 > (ADMIN-only, `phase != ARCHIVED` on `:id`; `DRAFT`/`PRE_EVENT`/`LIVE` allowed).
 > Body `{ filename, contentType, fileSizeBytes }` (single file, same
-> allowlist/size rules as photos, key prefix `posters/` — never
+> allowlist/size rules as photos, key prefix `posters/`, `expiresIn: 900` — never
 > `POST /api/posts/upload-url`, which is photographer-accessible and
 > scoped to `raw-uploads/`). Response `{ uploadUrl, s3Key, expiresIn }`,
 > then `PATCH /api/admin/exhibitions/:id { "poster_s3_key":
@@ -77,10 +84,13 @@ start_date, end_date, phase }` → `id=cuid2`. Slug unique.
 
 #### `PATCH /api/admin/exhibitions/:id` (ADMIN, cuid2)
 
-Update `title`/`slug`/`description`/`location`/`poster_s3_key`/
-`start_date`/`end_date`/`phase`. Phase change audited
-(`admin_audit_logs.action=exhibition.phase_change`). Manual `ARCHIVED`
+Partial body — any of `title`/`slug`/`description`/`location`/`poster_s3_key`/
+`start_date`/`end_date`/`phase` (at least one required).
+
+**Response `200 OK`:** the updated exhibition. Phase change audited
+(`admin_audit_logs.action=exhibition.phase_change`, `payload: {from, to, via:"manual"}`). Manual `ARCHIVED`
 triggers same freeze logic as cron.
+Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (slug collision, bad date range).
 
 ## 4. Scheduler (BullMQ cron `exhibition-scheduler`, hourly `0 * * * *`)
 
@@ -101,10 +111,11 @@ async handle() {
 ## 5. ARCHIVED freeze (read-only archive)
 
 When `phase === 'ARCHIVED'`: gallery stays visible (`/archive`,
-`/exhibition/$slug`), but `POST /upload-url`, `POST /posts`,
-`POST /likes`, `POST /comments`, reorder, replace, revert →
+`/exhibition/$slug`), but `POST /api/posts/upload-url`, `POST /api/posts`,
+`POST /api/posts/:id/like`, `POST /api/posts/:id/comments`, reorder, replace, revert →
 `403 {code:"ARCHIVED"}`. Curation reorder blocked for that exhibition.
-Likes/comments already stored stay readable (`likesCount` etc.).
+Likes/comments already stored stay readable (`likesCount` etc.);
+`DELETE /api/posts/:id/like` (unlike) stays `204`.
 
 ## 6. Frontend (`/`, `/archive`, `/exhibition/$slug`, `/admin/exhibitions`)
 
@@ -154,3 +165,4 @@ No image work. Scheduler lives in API (shares Redis). Note in
 - [ ] `ARCHIVED`: upload/like/comment/reorder/replace → `403 ARCHIVED`
 - [ ] `DRAFT` invisible publicly, visible to ADMIN with `?phase=DRAFT`
 - [ ] Poster picker round-trips through dedicated presign (`POST /api/admin/exhibitions/:id/poster-upload-url` → PUT `posters/` → `PATCH {poster_s3_key}`)
+- [ ] Manual `PATCH .../exhibitions/:id {phase}` flips phase + writes `exhibition.phase_change` audit (`via:"manual"`)

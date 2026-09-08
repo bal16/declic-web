@@ -110,7 +110,7 @@ s3://declic/
 
 - **Aspect ratio:** Preserved `100%` without cropping — `fit: 'contain'`.
 - **Color Profile:** Original ICC profile is precisely converted to **sRGB** for universal web display compatibility.
-- **Naming:** `derivatives/{photoItemId}/{variant}.webp` (or `.avif` for lightbox if AVIF is chosen).
+- **Naming:** `derivatives/{photoItemId}/thumb.webp|web.webp|lightbox.webp` (short form of `variant`; `.avif` for lightbox is post-1.0).
 - **Metadata `photo_derivatives`:** `width`, `height`, `size_bytes`, `s3_key`, `url` (public CDN/MinIO URL) must be filled per variant, FK `photo_item_id`.
 
 ---
@@ -206,7 +206,12 @@ export class ImageProcessorConsumer extends WorkerHost {
 // identically and `posts.status` aggregation remains PENDING → PENDING
 ```
 
-> **Note:** The `Bun.Image` API above is conceptual per the source PRD. Adjust to the final `Bun.Image` signature in the Bun version used (resize/toFormat/toBuffer).
+> **Locked assumption (v1):** the sketch above is the contract —
+> `new Bun.Image(buffer)` → `.resize({ width, fit: 'contain' })` →
+> `.toFormat('webp', { quality })` → `.toBuffer()`, sRGB output, WebP for
+> all three variants (AVIF lightbox is post-1.0). The implementor adapts
+> only the call signature to the pinned Bun version; no behavior change
+> without a PRD amendment.
 
 ### 3.3 Database Transactions
 
@@ -225,10 +230,11 @@ COMMIT;
 
 ```sql
 -- executed after each frame commit, with row-level lock on posts
+-- (skips withdrawn works: a concurrent DELETE sets deleted_at, see [[withdraw-work]])
 SELECT COUNT(*) FROM photo_items WHERE post_id = :postId AND blurhash IS NULL;
 -- if 0 and no missing derivatives:
 UPDATE posts SET status = 'PENDING', updated_at = now()
-WHERE id = :postId AND status = 'PROCESSING';
+WHERE id = :postId AND status = 'PROCESSING' AND deleted_at IS NULL;
 ```
 
 If any frame fails, rollback for that frame only — sibling frames still succeed; post stays `PROCESSING` until retry succeeds.

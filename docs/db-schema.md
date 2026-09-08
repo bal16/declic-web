@@ -18,8 +18,8 @@ updated: 2026-09-01
 > Root `/` always shows the **latest `LIVE` exhibition** (fallback latest `ARCHIVED`; `DRAFT`/`PRE_EVENT` never public, ordered by `start_date DESC`).
 > A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`).
 > Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`.
-> **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `feature_flags.id=1`.
-> Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (1-row, `id=1`)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
+> **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `site_settings.id=1`.
+> Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (row-per-flag, `key` PK)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
 
 ---
 
@@ -205,7 +205,7 @@ erDiagram
 
 - **Multi-exhibition:** `exhibitions` is the top-level container (`slug`, `phase`, `start_date`, `end_date`, `location`, `poster`). Root `/` = latest `LIVE` `exhibitions` by `start_date DESC` (fallback latest `ARCHIVED` when no `LIVE`; `DRAFT`/`PRE_EVENT` never public); older at `/archive` and `/exhibition/[slug]`. `posts.exhibition_id` FK, `NOT NULL`.
 - **Phase lifecycle per exhibition:** `PRE_EVENT` to `LIVE` to `ARCHIVED` via BullMQ `exhibition-scheduler` (hourly) when `end_date <= now()`. `system_settings` deleted — phase lives only in `exhibitions.phase`.
-- **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /posts` + `POST /likes` + `POST /comments` → `403` (read-only). Curation reorder + `photo_item.replace` blocked for that exhibition.
+- **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /api/posts` + `POST /api/posts/:id/like` + `POST /api/posts/:id/comments` → `403 {code:"ARCHIVED"}` (read-only; `DELETE /api/posts/:id/like` stays `204`). Curation reorder + `photo_item.replace` blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.
 - **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED` or frame mid-processing (`FRAME_PROCESSING`); stack-of-single-levels revert via `POST /api/admin/posts/:postId/frames/:itemId/revert` (IN for 1.0, `postId` ↔ `itemId` validated).
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
@@ -215,7 +215,7 @@ erDiagram
 - **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
 - **DRAFT phase:** `exhibitions.phase='DRAFT'` is invisible-to-public (excluded by default from `GET /api/exhibitions` and all public gallery queries; ADMIN bypass via `?phase=DRAFT`).
 - **IDs:** `users` untouched (Better Auth); domain tables `text` cuid2 app-generated, cursor pagination via `created_at` plus `id` opaque, never raw cuid2 sort.
-- **Feature flags:** `feature_flags` row-per-flag (`key PK`, `enabled bool`) — scalable, add flag via `INSERT` without migration; kill-switch for `series_enabled` and `threaded_comments_enabled`.
+- **Feature flags:** `feature_flags` row-per-flag (`key PK`, `enabled bool`) — scalable, add flag via `INSERT` without migration; kill-switches for `series_enabled`, `threaded_comments_enabled`, and `comments_enabled`.
 - **Site settings:** `site_settings` singleton `id=1` holds `max_series_size` (global limit, `CHECK 1..20`, grandfathering), `site_title`, `maintenance_mode`; seed `id=1`.
 - **Grandfathering:** `max_series_size` lowered from 10 to 5 does **not** invalidate existing SERIES with 10 frames — only new `POST /api/posts` validated against current value.
 

@@ -48,7 +48,11 @@ scope), [[curator-replace-revert]] (frame-level curation)
 `prevDisplayOrder` and `nextDisplayOrder`, then `UPDATE posts SET
 display_order = :newRank WHERE id = :postId` atomically (O(1), no full
 table rebalance). Legacy field `photoId` accepted as alias for
-`postId`. Blocked when exhibition is `ARCHIVED` (`403 ARCHIVED`).
+`postId`. Blocked when exhibition is `ARCHIVED` (`403 {code:"ARCHIVED"}`).
+
+**Response `200 OK`:** `{ "postId": "cuid-post", "display_order": "0|hzzzzz:" }`.
+Errors: `404 NOT_FOUND` (unknown `postId`); `400 VALIDATION_ERROR` (rank
+outside the exhibition scope, i.e. `postId` belongs to another exhibition).
 
 ## 3. API — `PATCH /api/admin/posts/:id/moderate` (cuid2)
 
@@ -76,7 +80,11 @@ table rebalance). Legacy field `photoId` accepted as alias for
 - **Audit:** Insert into `admin_audit_logs` (`id=cuid2`,
   `target_id=cuid-post`, `action='post.moderate'`).
 
-**Alias:** `PATCH /api/admin/photos/:id/moderate` (deprecated).
+**Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "display_order": "0|hzzzzz:" }`
+(`display_order` present only for `APPROVE`; `REJECT` returns `rejection_reason` instead).
+Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (`REJECT` without reason).
+
+**Alias:** `PATCH /api/admin/photos/:id/moderate` (deprecated, removed post-1.0).
 
 ## 4. API — `DELETE /api/admin/comments/:id` (cuid2)
 
