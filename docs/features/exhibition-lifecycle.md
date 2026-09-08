@@ -87,8 +87,8 @@ Errors: `400 VALIDATION_ERROR` (missing field, bad date range `end_date <= start
 Partial body — any of `title`/`slug`/`description`/`location`/`poster_s3_key`/
 `start_date`/`end_date`/`phase` (at least one required).
 
-**Response `200 OK`:** the updated exhibition. Phase change audited
-(`admin_audit_logs.action=exhibition.phase_change`, `payload: {from, to, via:"manual"}`). Manual `ARCHIVED`
+**Response `200 OK`:** the updated exhibition. Phase change emits
+`AuditRequestedEvent` (`action=exhibition.phase_change`, `payload: {from, to, via:"manual"}`). Manual `ARCHIVED`
 triggers same freeze logic as cron.
 Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (slug collision, bad date range).
 
@@ -102,7 +102,8 @@ async handle() {
     .where(and(eq(exhibitions.phase,'LIVE'), lte(exhibitions.end_date, new Date())));
   for (const ex of toArchive) {
     await db.update(exhibitions).set({ phase:'ARCHIVED', updated_at: new Date() }).where(eq(exhibitions.id, ex.id));
-    await db.insert(admin_audit_logs).values({ id:createId(), admin_id:null, action:'exhibition.phase_change', target_id: ex.id, payload:{from:'LIVE', to:'ARCHIVED', via:'cron'}});
+    // audit via event (best-effort) — never a direct insert (ADR-005 Rule 2)
+    this.events.emit(new AuditRequestedEvent({ action:'exhibition.phase_change', adminId:null, targetId: ex.id, payload:{from:'LIVE', to:'ARCHIVED', via:'cron'}}));
     // no mirror — phase lives only in exhibitions table
   }
 }

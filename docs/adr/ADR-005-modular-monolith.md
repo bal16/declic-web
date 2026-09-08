@@ -68,7 +68,7 @@ Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
 | `engagement` | `likes`, `comments` (plus `posts.likes_count`/`comments_count` in its own tx) |
 | `feature-flags` | `feature_flags` |
 | `site-settings` | `site_settings` |
-| `audit` | `admin_audit_logs` (append-only; others request via event) |
+| `audit` | `admin_audit_logs` (append-only; others request **only** via `AuditRequestedEvent`, never direct inserts) |
 | `curation` / `moderation` | **no tables** — operate on `posts` only through the `posts` facade (`setDisplayOrder`, `setStatus`), never raw Drizzle writes |
 | `storage` / `queue` | no tables — MinIO presign / BullMQ enqueue facades |
 | `auth` / `users` | Better Auth-owned tables + `users.role` elevation |
@@ -76,21 +76,37 @@ Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
 `packages/db` (Drizzle schema, seeded from `docs/seed.ts`) is shared
 readable schema; **writes** follow the ownership map.
 
-### Rule 3 — Async seam is domain events
+### Rule 3 — Sync by default, events for fire-and-forget audit only
 
-`@nestjs/event-emitter` (to be installed) is the only async
-cross-module channel. Sync cross-module reads go through facades.
+CRUD flows go through facades synchronously: enqueue via the `queue`
+facade, freeze via `ExhibitionPhaseGuard`, `PENDING` promotion via the
+worker callback writing through `posts`. In-memory events are not
+durable — a crash between emit and handle loses the event without a
+trace — and a freeze must be immediate, not eventual. So the only
+cross-module event is audit:
 
 | Event | Emitter | Listener | Effect |
 |---|---|---|---|
-| `PostCreatedEvent { postId, photoItemIds[] }` | `posts` | `queue` | enqueue N `image-processing` jobs |
-| `FrameReadyEvent { postId, photoItemId }` | worker callback via `posts` | `posts` | promote `posts.status` to `PENDING` when all siblings ready |
-| `ExhibitionArchivedEvent { exhibitionId }` | `exhibitions` (cron) | `engagement` | freeze likes/comments (`403 ARCHIVED`) |
-| `PhotoItemReplacedEvent { postId, photoItemId, s3Key, curated: true }` | `posts` | `queue` | enqueue 1 replacement job (same pipeline) |
-| `PhotoItemRevertedEvent { postId, photoItemId }` | `posts` | `queue` | enqueue 1 revert job |
+| `AuditRequestedEvent { action, adminId, targetId, payload }` | any module (moderation, curation, exhibitions cron, users, flags/settings) | `audit` | append one `admin_audit_logs` row, best-effort |
 
-Payloads use cuid2 `text` ids (`{ postId, photoItemId, s3Key,
-curated }`); `users` ids stay Better Auth-managed.
+One generic event (not per-action classes): all 9 audit actions share
+the same no-retry behavior, so per-action classes would be boilerplate
+with no behavioral difference; adding an action never changes the contract.
+
+**Failure semantics (best-effort + visibility):** the request succeeds
+first; the listener writes behind it. A listener failure is Pino-logged
++ metered and never fails the request. Rationale: for an exhibition
+admin trail the work state is critical and its note is not — reversing
+that priority (failing a valid approve over a trail write) is worse
+than a losable row. Durable outbox is post-1.0.
+
+Retired from the original 5-event catalog (all re-expressed as facade
+calls): `PostCreatedEvent`, `FrameReadyEvent` (fictitious self-loop —
+the worker writes through `posts` directly and cannot emit into api
+modules), `ExhibitionArchivedEvent`, `PhotoItemReplaced/RevertedEvent`.
+
+Payloads use cuid2 `text` ids; `users` ids stay Better Auth-managed;
+`adminId` is `NULL` for cron (`via: "cron"` in payload).
 
 ### Rule 4 — Shared kernel only
 
@@ -137,7 +153,8 @@ Split posts/engagement/moderation into separate deployables now.
 
 ### C. This ADR (modular monolith) — accepted
 
-One deployable, enforced boundaries, event seam. Keeps Bun/NestJS
+One deployable, enforced boundaries, facade-sync CRUD with an
+audit-only event seam. Keeps Bun/NestJS
 DX and [[ADR-001-monorepo-mirror|ADR-001]] release flow (`vX.Y.Z` single tag) unchanged while
 preserving a later split path.
 
@@ -161,8 +178,9 @@ preserving a later split path.
   `examples/` + `common/` + `*.test.ts` cross-imports allowed until real
   modules land).
 * Unit test per module covers facade contract; one integration
-  test traces `PostCreatedEvent` → queued job → `FrameReadyEvent`
-  → `PENDING` without importing internals across modules.
+  test traces `POST /api/posts` → queued jobs → worker frames →
+  `PENDING` without importing internals across modules, plus one test
+  proving a failed audit listener never fails the request.
 * `bun run coverage` stays ≥90% lines per app ([[ADR-002-release-tagging|ADR-002]] gate).
 
 ## 6. Addendum — layered boundary gate (2026-09-08)

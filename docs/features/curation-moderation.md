@@ -77,8 +77,8 @@ outside the exhibition scope, i.e. `postId` belongs to another exhibition).
   — whole work rejected (no per-frame moderation in v1).
 - `UNPUBLISH` (admin hide during `LIVE`) → `posts.status = UNPUBLISHED` via same endpoint (`action: "UNPUBLISH"`, no reason required). Public gallery excludes `UNPUBLISHED`. Re-publish via `APPROVE` again (idempotent).
 - `PUBLISHED` is a legacy alias of `APPROVED` + `LIVE` (gallery treats both as visible); new writes use `APPROVED`/`UNPUBLISHED` only.
-- **Audit:** Insert into `admin_audit_logs` (`id=cuid2`,
-  `target_id=cuid-post`, `action='post.moderate'`).
+- **Audit:** emits `AuditRequestedEvent` (`target_id=cuid-post`,
+  `action='post.moderate'`) — never a direct insert ([[ADR-005-modular-monolith|ADR-005]] Rule 2).
 
 **Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "display_order": "0|hzzzzz:" }`
 (`display_order` present only for `APPROVE`; `REJECT` returns `rejection_reason` instead).
@@ -90,11 +90,13 @@ Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (`REJECT` without reason).
 
 **Access:** `ADMIN`, `CURATOR`.
 
-Soft moderation (verb kept as idempotent hide) — `UPDATE comments SET is_hidden = true`.
+Soft moderation (verb kept as idempotent hide) — via the `engagement`
+facade (`hideComment`, same tx as the `comments_count` decrement),
+never a raw Drizzle write ([[ADR-005-modular-monolith|ADR-005]] Rule 2).
 Idempotent: hiding an already-hidden comment → `204`, no double decrement.
 `posts.comments_count` decremented only if the comment was previously
 counted (`is_hidden=false AND deleted_at IS NULL`). Admin reads still
-include hidden rows. Audited (`action='comment.hide'`).
+include hidden rows. Emits `AuditRequestedEvent` (`action='comment.hide'`).
 
 ## 5. API — `GET /api/admin/audit-logs` (ADMIN + CURATOR, read-only)
 

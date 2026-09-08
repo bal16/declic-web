@@ -149,8 +149,9 @@ is the Better Auth user id, **not** cuid2).
   `409 {code:"ROLE_CHANGE_DENIED", details:{reason:"last_admin"}}`
   (counted in the same tx).
 - No-op (same role) → `200`, no audit row, cache untouched.
-- Effect (one tx): `UPDATE users SET role=:role WHERE id=:id` + audit
-  `user.role_change` (`payload:{before,after}`) + `RoleCache`
+- Effect (one tx): `UPDATE users SET role=:role WHERE id=:id` + emit
+  `AuditRequestedEvent` (`action='user.role_change'`,
+  `payload:{before,after}`) + `RoleCache`
   invalidation for `:id`. Visible on the target's very next request.
 - Only the `users` module writes `users.role` (sole writer,
   [[ADR-005-modular-monolith|ADR-005]] Rule 2).

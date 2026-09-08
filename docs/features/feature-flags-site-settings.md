@@ -54,7 +54,8 @@ public, max-age=10, stale-while-revalidate=60`.
 #### `PATCH /api/admin/feature-flags/:key` (ADMIN, row-per-flag)
 
 Body `{ "enabled": false }`. Validates `key` exists; invalidates cache
-immediately; `updated_at` + `updated_by` auto-set; audits
+immediately; `updated_at` + `updated_by` auto-set; emits
+`AuditRequestedEvent`
 (`action: feature_flag.toggle`, `payload: {key, before, after}`).
 
 **Response `200 OK`:** `{ "key": "series_enabled", "enabled": false, "updated_at": "..." }`.
@@ -91,7 +92,7 @@ Partial body (e.g. `{ "max_series_size": 8 }`). `CHECK` enforced.
 Errors: `400 VALIDATION_ERROR` (`max_series_size` outside `1..20`).
 **Grandfathering:** lowering `10` → `5` never invalidates existing
 10-frame SERIES — only new `POST /api/posts` validates against the
-current value. Audits (`action: site_settings.update`).
+current value. Emits `AuditRequestedEvent` (`action: site_settings.update`).
 
 ## 5. Guards & caching
 

@@ -63,9 +63,10 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
    CDN; recommended over keep-until-overwrite).
 6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId,
    s3Key, curated: true }` (same pipeline as [[PRD-Worker]]).
-7. Insert `admin_audit_logs` `{ id:cuid2, admin_id,
-   action:'photo_item.replace', target_id:itemId, payload:{ postId,
-   old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }`.
+7. Emit `AuditRequestedEvent` `{ action:'photo_item.replace',
+   admin_id, target_id:itemId, payload:{ postId,
+   old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }`
+   (never a direct insert — [[ADR-005-modular-monolith|ADR-005]] Rule 2).
 
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }` —
 gallery shows old derivatives until worker completes (then new cover if
@@ -99,8 +100,8 @@ is linear, the latest entry is by definition the correct one).
 7. Enqueue **one** job `{ postId, photoItemId: itemId, s3Key: old_s3_key,
    curated: false, revert: true }` (`revert:true` is audit/logging
    signal only).
-8. Insert `admin_audit_logs` `{ id:cuid2, admin_id,
-   action:'photo_item.revert', target_id:itemId, payload:{ postId,
+8. Emit `AuditRequestedEvent` `{ action:'photo_item.revert',
+   admin_id, target_id:itemId, payload:{ postId,
    restored_s3_key: old_s3_key, restored_source: old_source,
    from_audit_id } }`.
 

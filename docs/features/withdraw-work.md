@@ -43,7 +43,8 @@ depth; status gate already implies it).
 Effects (one tx): set `deleted_at`; cancel pending BullMQ jobs for its
 `photo_items`; keep `likes`/`comments` rows (hidden by existing
 `deleted_at IS NULL` filter); keep MinIO objects (orphan cleanup
-deferred post-1.0, see §7). Audit: `post.withdraw` row.
+deferred post-1.0, see §7). Emits `AuditRequestedEvent`
+(`action='post.withdraw'`).
 
 Error shape: see [[PRD-API]] §4.0 (canonical `{code,message,details?}`).
 
@@ -57,7 +58,7 @@ Error shape: see [[PRD-API]] §4.0 (canonical `{code,message,details?}`).
 ## 4. Worker
 
 No change. In-flight frame jobs for a withdrawn work complete harmlessly
-(`FrameReadyEvent` aggregation skips `deleted_at IS NOT NULL` posts);
+(worker `tryPromoteToPending` aggregation skips `deleted_at IS NOT NULL` posts);
 cancellation is best-effort via BullMQ `job.remove()`.
 
 ## 5. Schema touch
