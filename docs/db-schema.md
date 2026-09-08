@@ -179,7 +179,7 @@ erDiagram
 
 **Caching — no DB hit per page open:**
 
-> Both tables are tiny (`feature_flags` 2 rows, `site_settings` 1 row). API caches **in-memory 10s TTL** per instance (`Map` from `SELECT *`) and invalidates on `PATCH`. Public `GET` is **CDN-cacheable** (`max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` `staleTime: 10_000`. No DB query per page view — only every 10s per instance + on toggle.
+> Both tables are tiny (`feature_flags` 3 rows, `site_settings` 1 row). API caches **in-memory 10s TTL** per instance (`Map` from `SELECT *`) and invalidates on `PATCH`. Public `GET` is **CDN-cacheable** (`max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` `staleTime: 10_000`. No DB query per page view — only every 10s per instance + on toggle.
 
 **Indexes and constraints:**
 
@@ -195,7 +195,7 @@ erDiagram
 
 **Better Auth tables (not visualized):** `sessions`, `accounts`, `verification` (`uuid` or `text`, unchanged).
 
-- **Singletons:** `feature_flags` = 2 rows (`series_enabled`, `threaded_comments_enabled`), cache `SELECT *` 10s TTL; `site_settings` = 1 row (`id=1`, `max_series_size` etc.).
+- **Singletons:** `feature_flags` = 3 rows (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`), cache `SELECT *` 10s TTL; `site_settings` = 1 row (`id=1`, `max_series_size` etc.).
 
 **History:** v1.0 `photos uuid` flat → v1.1 `posts uuid plus photo_items` → v1.2 cuid2 + `feature_flags` KV → v1.3 `exhibitions` → v1.4 row-per-flag `feature_flags` + `site_settings` singleton + `system_settings` deleted (phase only in `exhibitions`).
 

@@ -35,7 +35,8 @@ updated: 2026-09-07
 - `feature_flags` — **row-per-flag** (`key` PK, `enabled` bool,
   `description`, `updated_at`, `updated_by` FK). New flag = `INSERT`,
   no migration. Seeds: `series_enabled=true`,
-  `threaded_comments_enabled=false` (see `docs/seed.ts`).
+  `threaded_comments_enabled=false`, `comments_enabled=true`
+  (see `docs/seed.ts`).
 - `site_settings` — **singleton** (`id=1` CHECK): `site_title`,
   `site_description`, `max_series_size` (`CHECK 1..20`, default 10),
   `maintenance_mode`, `contact_email`, `instagram_url`, `updated_at`,
@@ -60,6 +61,13 @@ immediately; `updated_at` + `updated_by` auto-set; audits
 |---|---|---|
 | `series_enabled` | `true` | `POST /api/posts` SERIES → `403 FEATURE_DISABLED` |
 | `threaded_comments_enabled` | `false` | `POST` comments with `parentId` → `400 FEATURE_DISABLED` |
+| `comments_enabled` | `true` | `POST /api/posts/:id/comments` → `403 FEATURE_DISABLED` (reads stay open; spam-emergency kill-switch) |
+
+**Guard order on `POST /api/posts/:id/comments`:** `ExhibitionPhaseGuard`
+first (exhibition-specific `ARCHIVED` freeze), then
+`FeatureFlagGuard('comments_enabled')` (global emergency), then
+`FeatureFlagGuard('threaded_comments_enabled')` for `parentId`. The
+response `code` follows the first failing gate.
 
 ## 4. API — site settings
 
@@ -90,8 +98,14 @@ current value. Audits (`action: site_settings.update`).
 - Upload form hides SERIES toggle when `series_enabled=false` (+
   `FEATURE_DISABLED` toast path); `max_series_size` drives the drop
   limit (see [[series-upload]] §6).
-- **`/admin/settings` (IN for 1.0, minimal):** two toggles
-  (`series_enabled`, `threaded_comments_enabled`) + one number input
+- Comment inputs everywhere (gallery, lightbox, `/post/$postId`) are
+  disabled with a frozen tooltip when `comments_enabled=false`,
+  reusing the `ARCHIVED` frozen UI (see [[engagement]] §5); reads
+  remain. No new endpoint — status comes from the cached
+  `GET /api/feature-flags`.
+- **`/admin/settings` (IN for 1.0, minimal):** three toggles
+  (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`)
+  + one number input
   (`max_series_size` 1–20) over the existing `PATCH` endpoints;
   `TanStack Query` `staleTime: 10_000`; error mapping
   (`FEATURE_DISABLED`/`VALIDATION_ERROR` toasts); link to the audit
@@ -117,11 +131,21 @@ drain with the values at enqueue).
 
 - per-exhibition limits; flag targeting/rollout
   percentages; `maintenance_mode` enforcement middleware (`maintenance_mode`
-  is banner-only in 1.0, see §4).
+  is banner-only in 1.0, see §4). A `likes_enabled` flag is explicitly
+  rejected (like storms are absorbed by the composite PK + CDN; low
+  blast radius). Worker flag consumption stays out (see §7).
 
-## 11. Acceptance checklist
+## 11. Flag retirement (short-lived by default)
+
+Every flag ships with an owner and an evaluation date. `threaded_comments_enabled`
+is evaluated ship-or-kill; any flag permanently `true` for more than one
+release must have its branch removed from code (not left as a dead `if`).
+Retirement is verified by `grep` finding no reference to the retired key.
+
+## 12. Acceptance checklist
 
 - [ ] `series_enabled=false` → new SERIES `403`, existing readable
+- [ ] `comments_enabled=false` → new comments `403 FEATURE_DISABLED`, reads ok
 - [ ] Lower limit `10`→`5` → old 10-frame SERIES still valid
 - [ ] Toggle invalidates cache immediately (no 10s wait)
 - [ ] `GET` endpoints carry CDN cache headers

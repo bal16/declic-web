@@ -56,6 +56,11 @@ export const featureFlagsSeed = [
     enabled: false,
     description: 'When false, POST /api/posts/:id/comments with parentId → 400. UI flat',
   },
+  {
+    key: 'comments_enabled' as const,
+    enabled: true,
+    description: 'Kill-switch comment creation. When false, POST /api/posts/:id/comments → 403 FEATURE_DISABLED (spam emergency)',
+  },
 ] as const;
 
 // ── Site settings — singleton id=1, global wide limits (not flags) ──
@@ -89,7 +94,7 @@ export const exhibitionsSeed = [
 // await db.insert(siteSettings).values(siteSettingsSeed).onConflictDoNothing({ target: siteSettings.id });
 // await db.insert(exhibitions).values(exhibitionsSeed).onConflictDoNothing({ target: exhibitions.slug });
 
-// Caching: both tables are tiny (2 + 1 rows) — cache in-memory 10s TTL + invalidate on PATCH.
+// Caching: both tables are tiny (3 + 1 rows) — cache in-memory 10s TTL + invalidate on PATCH.
 // See PRD-API §2.9, features/feature-flags-site-settings.md §5 and db-schema §1 for cache + invalidation details.
 ```
 <!-- sync:seed end -->

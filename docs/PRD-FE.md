@@ -78,7 +78,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
 | `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [[auth-rbac]] §7. | `ADMIN` |
-| `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Two flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [[feature-flags-site-settings]] §6. | `ADMIN` |
+| `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [[feature-flags-site-settings]] §6. | `ADMIN` |
 
 > All routes under `/dashboard/*` and `/admin/*` are protected by an **Auth Guard** (Middleware + HOC) that verifies the Better Auth session and `role` before rendering.
 

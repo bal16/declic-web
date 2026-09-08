@@ -248,7 +248,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false` — see `featureFlagsSeed` in `docs/seed.ts` |
 | `site_settings` | `id=1, site_title='Déclic — Pameran UKM CLIC UNNES', max_series_size=10` — see `siteSettingsSeed` in `docs/seed.ts` |
 
-> **Caching (so every page open does not hit DB):** Both tables are tiny (`feature_flags` 2 rows, `site_settings` 1 row) — **cached in-memory 10s TTL** per API instance (or Redis) and invalidated on `PATCH /api/admin/feature-flags/:key` / `PATCH /api/admin/site-settings`. Public `GET /api/feature-flags` + `GET /api/site-settings` are **CDN-cacheable** (`Cache-Control: public, max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` 10s `staleTime`. No DB hit per page view.
+> **Caching (so every page open does not hit DB):** Both tables are tiny (`feature_flags` 3 rows, `site_settings` 1 row) — **cached in-memory 10s TTL** per API instance (or Redis) and invalidated on `PATCH /api/admin/feature-flags/:key` / `PATCH /api/admin/site-settings`. Public `GET /api/feature-flags` + `GET /api/site-settings` are **CDN-cacheable** (`Cache-Control: public, max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` 10s `staleTime`. No DB hit per page view.
 
 ---
 
