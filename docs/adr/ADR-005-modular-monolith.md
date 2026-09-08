@@ -157,13 +157,32 @@ preserving a later split path.
 
 * `bun run --filter "@declic/api" typecheck` clean with
   `@nestjs/event-emitter` installed.
-* `scripts/check-boundaries.ts` green on the tree (only
-  `examples/` + `common/` cross-imports allowed until real
+* `bun run boundaries` green on the tree (only
+  `examples/` + `common/` + `*.test.ts` cross-imports allowed until real
   modules land).
 * Unit test per module covers facade contract; one integration
   test traces `PostCreatedEvent` → queued job → `FrameReadyEvent`
   → `PENDING` without importing internals across modules.
 * `bun run coverage` stays ≥90% lines per app ([[ADR-002-release-tagging|ADR-002]] gate).
+
+## 6. Addendum — layered boundary gate (2026-09-08)
+
+Agreed via grilling: benchmark `check-boundaries.ts` at `0.05s`
+(measured, equivalent to oxlint) invalidates the "pre-commit is slow"
+assumption, so the gate runs at every layer. `ci.yml` auto-trigger
+stays deferred (planning/docs still churn on `main`).
+
+* **Local:** `bun run boundaries` (`package.json` script over
+  `scripts/check-boundaries.ts`) + Lefthook pre-commit (full-tree scan,
+  no `stage_fixed` — the gate re-stages nothing).
+* **Release:** `release.yml` job `verify` runs the boundary step between
+  `Lint` and `Format check` (never trusts `main`'s status).
+* **Script scope:** Rule A covers relative (`./`, `../`) and alias
+  (`@/`, `~/`, `src/`) specs; Rule B forbids
+  `apps/worker/src` → `apps/api/src` (worker consumes queue payload
+  only; shared code via `packages/contracts`, `packages/db`).
+  Allowlist: `common/`, `packages/*` / `@declic/*`, bare imports,
+  `*.test.ts`, `modules/examples/`.
 
 ---
 

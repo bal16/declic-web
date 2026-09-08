@@ -35,7 +35,7 @@ Start here. Every note below is linked with `[[wikilinks]]` (Obsidian graph + Ma
 | [ADR-002](adr/ADR-002-release-tagging.md) | Single `vX.Y.Z` tag, rc-only, deploy deferred | accepted |
 | [ADR-003](adr/ADR-003-zod-dto-strategy.md) | Zod as DTO source of truth via `nestjs-zod` | accepted |
 | [ADR-004](adr/ADR-004-direct-pino-logging.md) | Structured logging via direct Pino (no `nestjs-pino` on Bun) | accepted |
-| [ADR-005](adr/ADR-005-modular-monolith.md) | Modular monolith boundaries + `check-boundaries.ts` gate | accepted |
+| [ADR-005](adr/ADR-005-modular-monolith.md) | Modular monolith boundaries + `check-boundaries.ts` gate | accepted + addendum 2026-09-08 (layered gate) |
 
 ## Ops
 

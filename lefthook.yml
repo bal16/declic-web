@@ -18,3 +18,5 @@ pre-commit:
         - 'docs/**'
       stage_fixed: true
       run: bunx oxfmt {staged_files}
+    boundaries:
+      run: bun run boundaries
