@@ -195,7 +195,7 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 ### 5.4 Typical dev loop (target flow, wires landing incrementally)
 
 1. Start apps (§5.3) and, once Compose lands, `podman-compose up` + seed.
-2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to MinIO, then `POST /api/posts` enqueues one job per frame).
+2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to S3 Compatible Object Storage uploads, then `POST /api/posts` enqueues one job per frame).
 3. Watch the worker generate thumbnail/web/lightbox derivatives + blurhash; the work flips `PROCESSING → PENDING`.
 4. Approve in `/admin/moderation`, check ordering in `/admin/curate`, browse at `/`.
 
@@ -325,7 +325,7 @@ From [PRD](../specs/PRD.md) §8.5: web and API must share one registrable domain
 | `podman build` fails resolving `oven/bun` | Short-name needs `registries.conf` | Dockerfiles already use fully-qualified `docker.io/oven/bun:1.4.2` |
 | Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §9.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
 | Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
-| MinIO presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |
+| Object Storage presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |
 
 ---
 

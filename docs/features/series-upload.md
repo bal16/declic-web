@@ -68,7 +68,7 @@ batch size `1..N` where `N <= site_settings.max_series_size`.
 ```
 
 **Storage note:** `storage` module generates Presigned PUT URLs via Bun
-native S3 (`S3_ENDPOINT`, `S3_BUCKET`; path-style verified against MinIO).
+native S3 (`S3_ENDPOINT`, `S3_BUCKET`; path-style verified against Object Storage).
 `s3Key` incorporates `cuid2` for uniqueness.
 
 ## 3. API — `POST /api/posts`
@@ -133,7 +133,7 @@ same gate).
    `400 VALIDATION_ERROR` ("no writable exhibition" — `DRAFT` writes require `ADMIN`).
 2. Validate cardinality + size: `SINGLE` ⇒ exactly 1 item, `SERIES` ⇒
    `2..max_series_size` (mismatched `type`/count → `400 VALIDATION_ERROR`).
-3. Verify each `s3Key` exists in MinIO (HEAD) — optional but recommended.
+3. Verify each `s3Key` exists in Object Storage (HEAD) — optional but recommended.
    Keys are single-use (bound to one presign): re-uploads must presign
    anew — reusing a withdrawn work's key aliases two works to one object
    and is rejected with `400 VALIDATION_ERROR` (duplicate `s3Key`).
@@ -207,7 +207,7 @@ Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §3.2):
 - **Upload:** SINGLE/SERIES toggle (auto-switch on drop count),
   `feature_flags.series_enabled` + exhibition `phase` gating, per-file
   validation (type/size/`1920px`), zero-CPU `URL.createObjectURL`
-  previews, sortable frame list, batch MinIO PUTs with progress, then
+  previews, sortable frame list, batch Object Storage PUTs with progress, then
   `POST /api/posts`.
 - **EXIF:** `exifr` per file → shared work `title`/`caption` + per-frame
   `exif_metadata` (badge `Auto-filled from EXIF`).

@@ -100,7 +100,7 @@ Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (slug collision, bad date range)
 
 > No `DELETE` in v1 — exhibitions are never deleted (`ARCHIVED` is the
 > terminal state; use `DRAFT` for mistaken/test rows). Deletion would
-> need cascade-vs-block answers for works, derivatives, MinIO objects
+> need cascade-vs-block answers for works, derivatives, Object Storage objects
 > (`raw-uploads/`, `derivatives/`, `posters/`), and dangling
 > `phase_change` audit rows — deferred post-1.0 with a retention policy.
 

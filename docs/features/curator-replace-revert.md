@@ -53,7 +53,7 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
 **API Actions (transactional):**
 
 1. Validate `photo_items.post_id == :postId` (mismatch → `404 {code:"NOT_FOUND"}`).
-2. Verify `s3Key` exists in MinIO (HEAD).
+2. Verify `s3Key` exists in Object Storage (HEAD).
 3. Fetch old `photo_items` row; capture `old_s3_key`, `old_source`,
    `old_exif_metadata`.
 4. `UPDATE photo_items SET original_s3_key=:s3Key, source='CURATED',
@@ -93,7 +93,7 @@ unreverted `photo_item.replace` audit row; no `from_audit_id` is accepted
    `409 {code:"NOTHING_TO_REVERT"}` (all replaces already undone, or never replaced).
 3. If frame mid-processing (`photo_items.blurhash IS NULL`) →
    `409 {code:"FRAME_PROCESSING"}`.
-4. Verify audited `old_s3_key` exists in MinIO (HEAD); if gone →
+4. Verify audited `old_s3_key` exists in Object Storge (HEAD); if gone →
    `409 {code:"ORIGINAL_MISSING"}`.
 5. `UPDATE photo_items SET original_s3_key=:old_s3_key,
    source=:old_source, exif_metadata=:old_exif_metadata, blurhash=NULL,

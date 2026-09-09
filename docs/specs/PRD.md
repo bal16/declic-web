@@ -260,7 +260,7 @@ just in the frontend UI. Runtime feature flags (`feature_flags` table, row-per-f
   without redesigning the auth architecture. Native mobile clients would
   use Better Auth's `bearer()` token plugin instead of cookies, calling the
   same REST endpoints directly.
-- **No vendor lock-in**: every stateful service (Postgres, Redis, MinIO)
+- **No vendor lock-in**: every stateful service (Postgres, Redis, MinIO/S3 Compatible Object Storage)
   runs self-hosted via Docker; CDN is the only piece with a soft dependency
   on a third party (Cloudflare), and even that is swappable for a
   self-hosted reverse proxy.

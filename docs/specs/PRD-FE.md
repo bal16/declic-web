@@ -11,10 +11,10 @@ updated: 2026-09-04
 ---
 # PRD Frontend: Déclic — Web Application
 
-**Version:** 0.4-draft (2026-09-08)  
+**Version:** 0.4-draft (2026-09-08)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** TanStack Start (TanStack Router + file-based routes, Vite), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr  
-**Target:** Web Client (Viewer, Photographer, Curator, Admin)  
+**Main Stack:** TanStack Start (TanStack Router + file-based routes, Vite), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr
+**Target:** Web Client (Viewer, Photographer, Curator, Admin)
 **Status:** Draft
 **Last updated:** 2026-09-04
 
@@ -62,7 +62,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 | Route | Description | Guard |
 |---|---|---|
 | `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress (derived: `blurhash NULL` + parent `PROCESSING` = in-flight, + parent `FAILED_PROCESSING` = failed). `REJECTED` cards render `rejectionReason` (available to owner via detail endpoint). Each `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner alongside the button (withdraw cancels worker jobs best-effort). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
-| `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch MinIO Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from `site_settings`. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
+| `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch S3 Compatible Object Storage Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from `site_settings`. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
 | `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (`FAILED_PROCESSING` allows title/caption edit + Retry, reorder stays `PENDING`-only; exhibition not `ARCHIVED`). | Owner only |
 
 ### 2.2.1 Exhibition Selection
@@ -73,7 +73,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to Object Storage (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
@@ -140,7 +140,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
   - Size: max **50MB** per file (configurable, inline error per file)
   - Minimum dimensions: e.g. `1920px` on the longest side — checked async via `new Image()` after `URL.createObjectURL(file)`
 - **Instant Local Preview:** `URL.createObjectURL(file)` renders instantly in a sortable list (no canvas re-encode) — guarantees ICC profile and original integrity, zero-CPU. User can **drag to reorder** frames to set `item_order`, remove/replace a frame, and see per-frame status.
-- **Progress:** Batch progress bar (overall + per file) during MinIO PUTs.
+- **Progress:** Batch progress bar (overall + per file) during Object Storage PUTs.
 
 #### Auto-Extract EXIF Metadata (`exifr`, per frame)
 
@@ -158,7 +158,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 - Work-level fields (`title`, `caption`) are **shared**; per-frame EXIF is stored on `photo_items.exif_metadata` and shown in the lightbox per frame.
 - `Auto-filled from EXIF` badge (shadcn `<Badge />`) marks auto-populated per-frame fields.
 
-#### Direct MinIO Upload via Presigned URLs (batch)
+#### Direct S3 Compatible Object Storage Upload via Presigned URLs (batch)
 
 ```text
 [Browser] --(1) POST /api/posts/upload-url {files: [{filename, contentType, fileSizeBytes} x N]}--> [NestJS API]
@@ -167,7 +167,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 [Browser] --(4) POST /api/posts {exhibitionId: "cuid-exhibition", type, title, caption, items: [{s3Key, exifMetadata} x N]}--> [NestJS API] -> BullMQ x N jobs
 ```
 
-- Step (3) goes directly browser → MinIO (saves server bandwidth), N PUTs in parallel (with concurrency limit).
+- Step (3) goes directly browser → Object Storage (saves server bandwidth), N PUTs in parallel (with concurrency limit).
 - Step (4) triggers **N** `image-processing` jobs (one per `photo_item`). Work status starts `PROCESSING`, dashboard shows per-frame progress and promotes to `PENDING` → `APPROVED`/`REJECTED` as a whole.
 
 #### 3.2.1 Curator Replacement (Admin, Option C)
@@ -220,25 +220,25 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
   /* Slate/Zinc Dark Exhibition Theme */
   --background: 240 10% 4%;        /* #0A0A0C Dark Gallery Canvas */
   --foreground: 0 0% 96%;           /* #F5F5F7 Main Text */
-  
+
   --card: 240 6% 8%;               /* #131316 Card Container */
   --card-foreground: 0 0% 96%;
-  
+
   --popover: 240 6% 8%;
   --popover-foreground: 0 0% 96%;
-  
+
   --primary: 43 74% 49%;           /* #D4AF37 Warm Gold Accent */
   --primary-foreground: 240 10% 4%;
-  
+
   --secondary: 240 4% 16%;         /* Muted Slate Button/Borders */
   --secondary-foreground: 0 0% 98%;
-  
+
   --muted: 240 4% 16%;
   --muted-foreground: 240 5% 65%;  /* Secondary Text / EXIF Data */
-  
+
   --accent: 240 4% 20%;
   --accent-foreground: 0 0% 98%;
-  
+
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
 

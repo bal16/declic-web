@@ -8,7 +8,7 @@ with older editions kept as a permanent archive.
 Status: pre-release (`0.x`). Product spec is at draft `0.4-draft`.
 App version `1.0.0` ships at the first exhibition launch.
 
-## Stack
+## Stack (Development)
 
 - Runtime: Bun 1.4 (monorepo workspaces `apps/*`, `packages/*`)
 - Frontend: TanStack Start (`apps/web`)

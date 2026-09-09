@@ -11,10 +11,10 @@ updated: 2026-09-01
 ---
 # PRD Backend API: Déclic — Core REST API Server & Authentication System
 
-**Version:** 0.4-draft (2026-09-01)  
+**Version:** 0.4-draft (2026-09-01)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** NestJS, Bun 1.4, PostgreSQL, Drizzle ORM / TypeORM, Better Auth, Bun native S3, BullMQ  
-**Target:** Core REST API Server & Authentication System  
+**Main Stack:** NestJS, Bun 1.4, PostgreSQL, Drizzle ORM / TypeORM, Better Auth, Bun native S3, BullMQ
+**Target:** Core REST API Server & Authentication System
 **Status:** Draft
 **Last updated:** 2026-09-01
 
@@ -41,7 +41,7 @@ src/
 │   ├── curation/      # Layout ordering at post level per exhibition (LexoRank)
 │   ├── moderation/    # Work approval workflow per exhibition (Approve/Reject per post)
 │   ├── engagement/    # Likes & Comments on posts (freeze when exhibition ARCHIVED)
-│   ├── storage/       # MinIO / S3 SDK integration (Presigned URL generation)
+│   ├── storage/       # S3 Compatible Object Storage uploads integration (Presigned URL generation)
 │   ├── queue/         # BullMQ producer (per photo_item) + scheduler (exhibition-scheduler)
 │   ├── feature-flags/ # Row-per-flag feature_flags (key, enabled) — scalable, no migration
 │   ├── site-settings/ # Singleton site_settings (id=1, max_series_size, site_title, maintenance_mode)
@@ -55,7 +55,7 @@ src/
 
 - Mount Better Auth (`@thallesp/nestjs-better-auth`) — single source of truth for `users`, `sessions`, `accounts` (ids remain Better Auth-managed, not cuid2).
 - Validate **per-exhibition phase** (`exhibitions.phase`) and **feature flags** (`feature_flags` table) on all mutation endpoints via `ExhibitionPhaseGuard` + `FeatureFlagGuard`.
-- Generate Presigned URLs (MinIO/S3) — direct client → MinIO upload bypassing the API (batch for SERIES).
+- Generate Presigned URLs (MinIO/S3) — direct client → Object Storage upload bypassing the API (batch for SERIES).
 - Create `posts` + `photo_items` transactionally scoped to `exhibitions.id` (ids `cuid2` via app), then push **one BullMQ job per photo_item** to `image-processing`.
 - Run **BullMQ cron** `exhibition-scheduler` (hourly) to auto `LIVE` → `ARCHIVED` when `end_date <= now()`.
 - Enforce RBAC via `SessionGuard` + `RolesGuard` + `FeatureFlagGuard` + `ExhibitionPhaseGuard` at the API layer.
@@ -94,7 +94,7 @@ src/
 | `slug` | `varchar(255)` | NOT NULL, UNIQUE | URL slug (`declic-2026`), used in `/exhibition/[slug]` |
 | `description` | `text` | NULLABLE | Curatorial statement |
 | `phase` | `enum` | NOT NULL, DEFAULT `'PRE_EVENT'` | `'PRE_EVENT'`, `'LIVE'`, `'ARCHIVED'`, `'DRAFT'` — per-exhibition lifecycle |
-| `poster_s3_key` | `text` | NULLABLE | Poster image path in MinIO (`posters/` prefix; single file, no derivatives, no worker). Presigned via `POST /api/admin/exhibitions/:id/poster-upload-url` (same allowlist/size rules as photos, `expiresIn: 900`); gated on `phase != ARCHIVED` |
+| `poster_s3_key` | `text` | NULLABLE | Poster image path in Object Storage (`posters/` prefix; single file, no derivatives, no worker). Presigned via `POST /api/admin/exhibitions/:id/poster-upload-url` (same allowlist/size rules as photos, `expiresIn: 900`); gated on `phase != ARCHIVED` |
 | `location` | `varchar(255)` | NULLABLE | Venue (e.g. “Gedung CLIC UNNES”) |
 | `start_date` | `timestamp` | NOT NULL | Exhibition start — used to order `latest` |
 | `end_date` | `timestamp` | NOT NULL | Exhibition end — **cron trigger** `LIVE` → `ARCHIVED` when `end_date <= now()` |
@@ -136,7 +136,7 @@ Indexes: `exhibition_id`, `display_order`, `status`, `photographer_id`, `created
 | `id` | `text` | PK, `cuid2` (app-generated) | Frame ID |
 | `post_id` | `text` | FK → `posts.id`, ON DELETE CASCADE | Parent work |
 | `item_order` | `integer` | NOT NULL | Order inside SERIES (0-based) |
-| `original_s3_key` | `text` | NOT NULL | Original file path in MinIO (`raw-uploads/...`, curated replacement overwrites but old kept in audit `payload.old_s3_key`) |
+| `original_s3_key` | `text` | NOT NULL | Original file path in Object Storage (`raw-uploads/...`, curated replacement overwrites but old kept in audit `payload.old_s3_key`) |
 | `source` | `enum` | NOT NULL, DEFAULT `'ORIGINAL'` | `'ORIGINAL'` (photographer) or `'CURATED'` (admin replacement) — non-destructive, original file remains in `raw-uploads/` |
 | `blurhash` | `varchar(100)` | NULLABLE | Visual placeholder (per frame, regenerated on replace) |
 | `exif_metadata` | `jsonb` | NULLABLE | Camera, Lens, FNumber, Exposure, ISO, etc. (per frame, updated on replace if provided) |
@@ -154,8 +154,8 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | `id` | `text` | PK, `cuid2` (app-generated) | Derivative ID |
 | `photo_item_id` | `text` | FK → `photo_items.id`, ON DELETE CASCADE | Parent frame |
 | `variant` | `enum` | NOT NULL | `'thumbnail'`, `'web'`, `'lightbox'` — file names use the short form (`thumb.webp`, `web.webp`, `lightbox.webp` under `derivatives/{photo_item_id}/`) |
-| `s3_key` | `text` | NOT NULL | Derivative MinIO path (`derivatives/{photo_item_id}/...`) |
-| `url` | `text` | NOT NULL | Public CDN / MinIO URL |
+| `s3_key` | `text` | NOT NULL | Derivative Object Storage path (`derivatives/{photo_item_id}/...`) |
+| `url` | `text` | NOT NULL | Public CDN / Object Storage URL |
 | `width` | `integer` | NOT NULL | Pixel width |
 | `height` | `integer` | NOT NULL | Pixel height |
 | `size_bytes` | `bigint` | NOT NULL | File size in bytes |
@@ -328,9 +328,9 @@ export class FeatureFlagGuard implements CanActivate {
 
 ## 4. API Specification & Endpoints
 
-Base path: `/api`  
-Auth: Better Auth session cookie or `Authorization: Bearer <token>` (mobile).  
-Canonical resource: `/api/posts`. Alias `/api/photos` → `/api/posts` (deprecated).  
+Base path: `/api`
+Auth: Better Auth session cookie or `Authorization: Bearer <token>` (mobile).
+Canonical resource: `/api/posts`. Alias `/api/photos` → `/api/posts` (deprecated).
 All cuid2 ids are `text` (e.g. `k8x9p2...`), opaque strings — never sort by `id`.
 
 ### 4.0 Cross-Cutting Contracts
@@ -371,7 +371,7 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `WITHDRAW_CLOSED` | 409 | `DELETE /api/posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`) |
 | `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
 | `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
-| `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |
+| `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in Object Storage |
 | `EDIT_CLOSED` | 409 | `PATCH /api/posts/:id` outside `PENDING`/`FAILED_PROCESSING`, or frame-reorder outside `PENDING` |
 | `ROLE_CHANGE_DENIED` | 409 | `PATCH /api/admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
 
@@ -437,7 +437,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 | **Pagination** | Cursor-based on `created_at` + `id` (opaque, base64) — not lexicographic `cuid2` sort; stable for `curated` sort that is frequently reordered |
 | **ID Generation** | Domain tables use app-generated `cuid2` (`text` PK, e.g. Drizzle `$defaultFn(() => createId())`); `users` stays Better Auth-managed; no `gen_random_uuid()` for domain tables |
 | **Security** | RBAC + `FeatureFlagGuard` (row-per-flag) + `ExhibitionPhaseGuard` at API layer; all Admin endpoints require `RolesGuard`; flag & site_settings toggles audit-logged |
-| **Portability** | All stateful services self-hosted via Docker (Postgres, Redis, MinIO); no vendor lock-in |
+| **Portability** | All stateful services self-hosted via Docker (Postgres, Redis, Object); no vendor lock-in |
 | **CORS** | Better Auth `trustedOrigins` + NestJS CORS must be in sync; cookie `SameSite=Lax`, `Secure`, `HTTP-Only` |
 | **Series Limits** | `photo_items` per post capped by `site_settings.max_series_size` (default 10, globally, grandfathered); `POST /api/posts` validates `1 <= items.length <= max` |
 

@@ -44,7 +44,7 @@ depth; status gate already implies it).
 
 Effects (one tx): set `deleted_at`; cancel pending BullMQ jobs for its
 `photo_items`; keep `likes`/`comments` rows (hidden by existing
-`deleted_at IS NULL` filter); keep MinIO objects (orphan cleanup
+`deleted_at IS NULL` filter); keep Object Storage objects (orphan cleanup
 deferred post-1.0, see §7). Emits `AuditRequestedEvent`
 (`action='post.withdraw'`).
 
@@ -84,7 +84,7 @@ no new columns, no migration.
 
 ## 7. Out of scope (post-1.0)
 
-- Restore/un-withdraw; hard delete + MinIO orphan GC; author-visible
+- Restore/un-withdraw; hard delete + Object Storage orphan GC; author-visible
   tombstone ("you withdrew X"); withdrawing `APPROVED` via author request
   flow (currently admin-only unpublish).
 

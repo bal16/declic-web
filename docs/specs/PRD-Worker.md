@@ -11,10 +11,10 @@ updated: 2026-09-01
 ---
 # PRD Image Worker: Déclic — Asynchronous Image Processing Pipeline
 
-**Version:** 0.4-draft (2026-09-01)  
+**Version:** 0.4-draft (2026-09-01)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** NestJS, Bun 1.4, BullMQ + Redis, Bun native S3, Bun.Image (native), blurhash, cuid2  
-**Target:** Worker Consumer for derivative generation, blurhash, and work status updates (per photo_item, cuid2 ids)  
+**Main Stack:** NestJS, Bun 1.4, BullMQ + Redis, Bun native S3, Bun.Image (native), blurhash, cuid2
+**Target:** Worker Consumer for derivative generation, blurhash, and work status updates (per photo_item, cuid2 ids)
 **Status:** Draft
 **Last updated:** 2026-09-01
 
@@ -45,7 +45,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
     1. Fetch Job Payload (postId, photoItemId, s3Key)
               │
               ▼
-    2. Download Original Image Buffer (MinIO GetObject by s3Key)
+    2. Download Original Image Buffer (Object Storage GetObject by s3Key)
               │
               ▼
     3. Generate Blurhash Placeholder
@@ -57,7 +57,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
        └── Lightbox  (Max width 2048px, WebP/AVIF 88%)
               │
               ▼
-    5. Upload Derivatives to MinIO Bucket (derivatives/{photoItemId}/...)
+    5. Upload Derivatives to Object Storage Bucket (derivatives/{photoItemId}/...)
               │
               ▼
     6. Database Update (PostgreSQL Transaction, per frame)
@@ -86,7 +86,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 
 > For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. **Curator revert** enqueues a single job with `curated:false, revert:true` — worker regenerates derivatives from `original_s3_key` (see [curator-replace-revert](../features/curator-replace-revert.md) §6). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
 
-**MinIO bucket layout (cuid2 s3Key):**
+**Object Storage bucket layout (cuid2 s3Key):**
 
 ```text
 s3://declic/
@@ -112,7 +112,7 @@ s3://declic/
 - **Aspect ratio:** Preserved `100%` without cropping — `fit: 'contain'`.
 - **Color Profile:** Original ICC profile is precisely converted to **sRGB** for universal web display compatibility.
 - **Naming:** `derivatives/{photoItemId}/thumb.webp|web.webp|lightbox.webp` (short form of `variant`; `.avif` for lightbox is post-1.0).
-- **Metadata `photo_derivatives`:** `width`, `height`, `size_bytes`, `s3_key`, `url` (public CDN/MinIO URL) must be filled per variant, FK `photo_item_id`.
+- **Metadata `photo_derivatives`:** `width`, `height`, `size_bytes`, `s3_key`, `url` (public CDN/Object Storage URL) must be filled per variant, FK `photo_item_id`.
 
 ---
 
@@ -168,7 +168,7 @@ export class ImageProcessorConsumer extends WorkerHost {
       .toFormat('webp', { quality: 88 })
       .toBuffer();
 
-    // 6. Upload derivatives to MinIO (per photo_item)
+    // 6. Upload derivatives to Object Storage (per photo_item)
     const webKey = `derivatives/${photoItemId}/web.webp`;
     const thumbKey = `derivatives/${photoItemId}/thumb.webp`;
     const lightboxKey = `derivatives/${photoItemId}/lightbox.webp`;
