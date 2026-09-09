@@ -76,6 +76,18 @@ generated files (`routeTree.gen.ts`, `.output/`) never hand-edited.
 - Errors branch on `code` (never message text) → toasts per
   [DESIGN](./DESIGN.md) §6 copy table.
 
+```mermaid
+sequenceDiagram
+    participant C as Component
+    participant Q as TanStack Query
+    participant A as API
+    C->>Q: useQuery(key) / mutate()
+    Q->>A: GET / POST
+    A-->>Q: payload + nextCursor
+    Q-->>C: render / reconcile
+    Note over C,Q: onMutate optimistic → rollback on error
+```
+
 ## 3. Guards + Auth Wall
 
 - `beforeLoad` on layout routes (fast path) + API guards as final
@@ -87,6 +99,15 @@ generated files (`routeTree.gen.ts`, `.output/`) never hand-edited.
 - Role gates: `/dashboard/*` → `PHOTOGRAPHER|ADMIN`; `/admin/*` →
   `CURATOR|ADMIN` or `ADMIN` per route; insufficient role → 403 page.
   Roles come from the session union in contracts (never raw strings).
+
+```mermaid
+flowchart TD
+    NAV["navigation"] --> BL["beforeLoad (fast path)"]
+    BL -->|no session| MODAL["Auth Wall modal (state preserved)"]
+    BL -->|session| ROLE{"role sufficient?"}
+    ROLE -->|no| F403["403 page"]
+    ROLE -->|yes| API["API guards — final authority"]
+```
 
 ## 4. Env + config
 

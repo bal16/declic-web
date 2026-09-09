@@ -24,6 +24,7 @@ Start here. Every note below is linked with standard markdown links (relative pa
 - [PRD-FE](./PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
 - [PRD-Worker](./PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
 - [frontend](./frontend.md) — web app organization (structure, data flow, guards, tests). Draft.
+- [backend](./backend.md) — api app organization (module anatomy, lifecycle, testing). Draft.
 - [DESIGN](./DESIGN.md) — design system contract (tokens, components, a11y, i18n, states). Draft.
 
 ## Features (1 file per feature — acceptance index)
