@@ -19,7 +19,7 @@ Start here. Every note below is linked with standard markdown links (relative pa
 ## Specs (vertical slices share these contracts — defined once, referenced everywhere)
 
 - [PRD-API](./specs/PRD-API.md) — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
-- [db-schema](./data/db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
+- [db-schema](./data/db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/data/seed.ts`).
 - [contracts](./specs/contracts.md) — normative cross-module/cross-app shapes (cursor, errors, queue, roles, audit actions). Planning scope: materializes into `packages/contracts/src/` when implementation starts.
 - [PRD-FE](./specs/PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
 - [PRD-Worker](./specs/PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
@@ -51,8 +51,8 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 | Note | Source of truth | Sync |
 |---|---|---|
-| [docker-compose](./ops/docker-compose.md) | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
-| [seeds](./data/seeds.md) | `docs/seed.ts` | same |
+| [docker-compose](./ops/docker-compose.md) | `docs/ops/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
+| [seeds](./data/seeds.md) | `docs/data/seed.ts` | same |
 | [env](./ops/env.md) | root `.env.example` | same |
 
 ## Conventions used in these notes

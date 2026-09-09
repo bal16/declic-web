@@ -15,7 +15,7 @@ updated: 2026-09-07
 **Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `feature-flags`, `site-settings`, `audit`
 **Related:** [PRD-API](../specs/PRD-API.md) §2.9 + §4.6, [db-schema](../data/db-schema.md) (tables + seeds),
-`docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`),
+`docs/data/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`),
 [series-upload](./series-upload.md) (consumes `series_enabled`, `max_series_size`),
 [engagement](./engagement.md) (consumes `threaded_comments_enabled`)
 
@@ -36,11 +36,11 @@ updated: 2026-09-07
   `description`, `updated_at`, `updated_by` FK). New flag = `INSERT`,
   no migration. Seeds: `series_enabled=true`,
   `threaded_comments_enabled=false`, `comments_enabled=true`
-  (see `docs/seed.ts`).
+  (see `docs/data/seed.ts`).
 - `site_settings` — **singleton** (`id=1` CHECK): `site_title`,
   `site_description`, `max_series_size` (`CHECK 1..20`, default 10),
   `maintenance_mode`, `contact_email`, `instagram_url`, `updated_at`,
-  `updated_by`. Seed `id=1` (see `docs/seed.ts`).
+  `updated_by`. Seed `id=1` (see `docs/data/seed.ts`).
 - `system_settings` KV table is **deleted** (phase lives in
   `exhibitions.phase`; flags/limits live here). See [db-schema](../data/db-schema.md).
 
@@ -130,7 +130,7 @@ drain with the values at enqueue).
 ## 8. Schema touch
 
 `feature_flags` + `site_settings` tables as specified (see
-[db-schema](../data/db-schema.md)). Seeds in `docs/seed.ts`. No other tables.
+[db-schema](../data/db-schema.md)). Seeds in `docs/data/seed.ts`. No other tables.
 
 ## 9. Edge cases
 

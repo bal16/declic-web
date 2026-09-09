@@ -240,14 +240,14 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
 > `max_series_size` moved here from `feature_flags` because it is a **limit, not an on/off kill-switch**. `POST /api/posts` validates `1 <= items.length <= (SELECT max_series_size FROM site_settings WHERE id=1)`. **Grandfathering:** existing `SERIES` with 10 frames remain valid when `max_series_size` is later lowered to 5 — only **new** `POST /api/posts` are validated against the new limit. Old works are never retroactively invalidated.
 
-**Seeds — see `docs/seed.ts` (source of truth, idempotent):**
+**Seeds — see `docs/data/seed.ts` (source of truth, idempotent):**
 
-> Seeds are defined in `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT (key) DO NOTHING` / `ON CONFLICT (id) DO NOTHING`. PRD keeps only the **summary table** above; do not duplicate `INSERT` SQL here. Run `bun docs/seed.ts`.
+> Seeds are defined in `docs/data/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT (key) DO NOTHING` / `ON CONFLICT (id) DO NOTHING`. PRD keeps only the **summary table** above; do not duplicate `INSERT` SQL here. Run `bun docs/data/seed.ts`.
 
 | Table | Seed keys / values |
 |---|---|
-| `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false`, `comments_enabled=true` — see `featureFlagsSeed` in `docs/seed.ts` |
-| `site_settings` | `id=1, site_title='Déclic — Pameran UKM CLIC UNNES', max_series_size=10` — see `siteSettingsSeed` in `docs/seed.ts` |
+| `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false`, `comments_enabled=true` — see `featureFlagsSeed` in `docs/data/seed.ts` |
+| `site_settings` | `id=1, site_title='Déclic — Pameran UKM CLIC UNNES', max_series_size=10` — see `siteSettingsSeed` in `docs/data/seed.ts` |
 
 > **Caching (so every page open does not hit DB):** Both tables are tiny (`feature_flags` 3 rows, `site_settings` 1 row) — **cached in-memory 10s TTL** per API instance (or Redis) and invalidated on `PATCH /api/admin/feature-flags/:key` / `PATCH /api/admin/site-settings`. Public `GET /api/feature-flags` + `GET /api/site-settings` are **CDN-cacheable** (`Cache-Control: public, max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` 10s `staleTime`. No DB hit per page view.
 

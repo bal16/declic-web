@@ -2,7 +2,7 @@
 
 # Root compose file for "Déclic" — MATERIALIZED COPY
 
-# Source of truth: docs/docker-compose.yml. Do not diverge: port every
+# Source of truth: docs/ops/docker-compose.yml. Do not diverge: port every
 
 # change back to the spec, then copy this file over (or diff to verify)
 

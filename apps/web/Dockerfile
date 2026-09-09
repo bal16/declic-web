@@ -5,7 +5,7 @@
 #
 # Two stages: builder compiles client + Nitro server output, runner serves
 # .output with production deps only (Bun runs the Nitro server entry).
-# Vercel deploys from the declic-web mirror instead (docs/DEVELOPMENT.md §7.1).
+# Vercel deploys from the declic-web mirror instead (docs/guides/DEVELOPMENT.md §7.1).
 
 FROM docker.io/oven/bun:1.4.2 AS builder
 WORKDIR /srv/declic

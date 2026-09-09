@@ -4,16 +4,16 @@ aliases:
 tags:
   - declic
   - adr
-status: proposed
+status: accepted
 updated: 2026-09-09
 ---
 # ADR-008: Docs Root Regroup (Full Migration Map)
 
-**Status:** Proposed (not approved — read the cost section before approving)
+**Status:** Accepted (executed 2026-09-09 — tag `pre-docs-reorg`, 3 commits)
 **Date:** 2026-09-09
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [README](../README.md) (100% index coverage today)
+**Related:** [README](../README.md) (index; regrouped layout below)
 
 ---
 
@@ -25,7 +25,9 @@ Discoverability is currently carried by the index
 markdown-link edges. This ADR records the *complete* migration map so
 the regroup can be executed without guesswork — or rejected on evidence.
 
-Recommendation (unchanged): **stay flat** unless §5 convinces otherwise.
+Recommendation at write time: **stay flat** unless §5 convinces otherwise.
+Owner overrode (collaborators fine, earlier-is-cheaper in planning phase,
+cost accepted) — executed as mapped below on 2026-09-09.
 
 ## 2. Target tree
 

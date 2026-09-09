@@ -172,9 +172,9 @@ erDiagram
 | `maintenance_mode` | `false` | |
 | `updated_at` / `updated_by` | `now()` / `cuid or uuid` | FK `users.id` |
 
-**Seeds — see `docs/seed.ts` (source of truth):**
+**Seeds — see `docs/data/seed.ts` (source of truth):**
 
-> Seeds are in `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT DO NOTHING` idempotent. Summary table above is the spec; do not duplicate `INSERT` SQL here. Run `bun docs/seed.ts`.
+> Seeds are in `docs/data/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT DO NOTHING` idempotent. Summary table above is the spec; do not duplicate `INSERT` SQL here. Run `bun docs/data/seed.ts`.
 
 > `system_settings` **deleted**. No `event_phase` row — phase lives only in `exhibitions.phase`. Flags are in **typed table `feature_flags`**, not `jsonb` KV. `GET /api/feature-flags` (public, `Cache-Control: public, max-age=10, stale-while-revalidate=60`) + `PATCH /api/admin/feature-flags/:key` (admin) replace `GET/PATCH /api/system/settings` (legacy deleted).
 

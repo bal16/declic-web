@@ -27,15 +27,20 @@ interface Mirror {
 const MIRRORS: Mirror[] = [
   {
     key: 'compose',
-    src: 'docs/docker-compose.yml',
-    dst: 'docs/docker-compose.md',
+    src: 'docs/ops/docker-compose.yml',
+    dst: 'docs/ops/docker-compose.md',
     lang: 'yaml',
   },
-  { key: 'seed', src: 'docs/seed.ts', dst: 'docs/seeds.md', lang: 'ts' },
+  {
+    key: 'seed',
+    src: 'docs/data/seed.ts',
+    dst: 'docs/data/seeds.md',
+    lang: 'ts',
+  },
   // Single source: root .env.example is what runtimes read (Compose,
-  // bun --env-file, Vite envDir); docs/env.md only mirrors it for
+  // bun --env-file, Vite envDir); docs/ops/env.md only mirrors it for
   // Obsidian readability (decision 9a, audit 2026-09-08).
-  { key: 'env', src: '.env.example', dst: 'docs/env.md', lang: 'bash' },
+  { key: 'env', src: '.env.example', dst: 'docs/ops/env.md', lang: 'bash' },
 ];
 
 /** Wrap source text in a fenced code block for the companion note. */

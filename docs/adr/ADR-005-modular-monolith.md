@@ -74,7 +74,7 @@ Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
 | `storage` / `queue` | no tables — MinIO presign / BullMQ enqueue facades |
 | `auth` / `users` | Better Auth-owned tables + `users.role` elevation |
 
-`packages/db` (Drizzle schema, seeded from `docs/seed.ts`) is shared
+`packages/db` (Drizzle schema, seeded from `docs/data/seed.ts`) is shared
 readable schema; **writes** follow the ownership map.
 
 ### Rule 3 — Sync by default, events for fire-and-forget audit only

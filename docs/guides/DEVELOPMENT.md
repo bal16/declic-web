@@ -64,7 +64,7 @@ declic/                              # bal16/declic (private monorepo)
 │       # (next) image-processing consumer per PRD-Worker.md §3
 ├── packages/
 │   ├── contracts/                   # @declic/contracts — zod (src/index.ts, src/posts.ts)
-│   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/seed.ts
+│   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/data/seed.ts
 │   └── tsconfig/base.json           # shared strict TS config (decorator metadata on)
 ├── scripts/
 │   ├── mirror.sh                    # builds C1 mirror branches (used by mirror.yml)
@@ -112,7 +112,7 @@ declic-api/ (mirror content, generated)
 
 ## 4. Environment
 
-Root `.env.example` is the single source of truth (mirrored into `docs/env.md` for Obsidian). Copy it before first run:
+Root `.env.example` is the single source of truth (mirrored into `docs/ops/env.md` for Obsidian). Copy it before first run:
 
 ```bash
 cp .env.example .env
@@ -146,7 +146,7 @@ Notes: remote is HTTPS (via `gh auth`), not SSH. `bun run --filter "@declic/*" b
 
 ### 5.2 Infra via Compose, apps on host (default) or full-stack in containers
 
-The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
+The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/ops/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
 
 ```bash
 cp .env.example .env          # once
@@ -162,7 +162,7 @@ docker compose --profile apps up -d
 
 Image builds (when needed) use root context (`podman build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
 
-Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, site settings, and the demo exhibition. `docs/seed.ts` is the current source of truth.
+Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, site settings, and the demo exhibition. `docs/data/seed.ts` is the current source of truth.
 
 ### 5.3 Per-app commands (Bun workspaces)
 

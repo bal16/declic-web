@@ -304,7 +304,7 @@ S3_BUCKET=declic
 S3_FORCE_PATH_STYLE=true
 ```
 
-`worker` service: see `docs/docker-compose.yml` (canonical spec;
+`worker` service: see `docs/ops/docker-compose.yml` (canonical spec;
 root `docker-compose.yml` is materialized from it) — `oven/bun`-based
 image, `depends_on` redis/postgres/minio healthy, no inbound ports.
 

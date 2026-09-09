@@ -1,6 +1,6 @@
 // Client-exposed web config. Only VITE_*-prefixed vars reach the browser
 // (Vite convention); server-only secrets must never use that prefix.
-// Defaults point at the local compose API (docs/DEVELOPMENT.md §4).
+// Defaults point at the local compose API (docs/guides/DEVELOPMENT.md §4).
 
 export const DEFAULT_API_URL = 'http://localhost:3001';
 

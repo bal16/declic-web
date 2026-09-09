@@ -1,7 +1,7 @@
 /**
  * Seed — Déclic (PRD 0.4-draft)
  * Source of truth for initial data referenced by PRD-API §2.9 and db-schema §1.
- * Run: `bun docs/seed.ts` (idempotent, ON CONFLICT DO NOTHING) — or `bun run seed` via apps/api.
+ * Run: `bun docs/data/seed.ts` (idempotent, ON CONFLICT DO NOTHING) — or `bun run seed` via apps/api.
  *
  * Tables:
  * - feature_flags (row-per-flag, key PK, enabled bool)

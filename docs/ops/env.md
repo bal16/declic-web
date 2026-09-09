@@ -30,7 +30,7 @@ Copy to root `.env` before first run: `cp .env.example .env`
 <!-- sync:env start -->
 ```bash
 # Copy this file to .env before running `bun install` / `docker compose up`.
-# See docs/DEVELOPMENT.md §4. Never commit .env with real secrets.
+# See docs/guides/DEVELOPMENT.md §4. Never commit .env with real secrets.
 
 # Postgres
 POSTGRES_USER=declic

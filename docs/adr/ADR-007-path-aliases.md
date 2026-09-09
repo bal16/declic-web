@@ -27,7 +27,7 @@ Explored 2026-09-08. Findings (verified, not assumed):
 * **Zero alias usage.** Every import in `apps/*/src` and
   `packages/contracts/src` is bare (`@nestjs/*`, `@declic/contracts` via
   `workspace:*`) or relative (`./`, `../`). The single `@/` mention in the
-  repo is an aspirational example in `docs/PRD-FE.md:299`
+  repo is an aspirational example in `docs/specs/PRD-FE.md:299`
   (`@/lib/auth-client`, file does not exist yet).
 * **Three toolchains must agree.** An alias in this repo resolves in three
   independent places: `tsc` (`paths`), Vite (`resolve.alias`, web only —
@@ -60,7 +60,7 @@ in all three apps at once:
    api `./app.service`, worker `./logger`) so each toolchain's resolution
    is exercised, not just declared. No mass migration — short relative
    imports stay relative.
-4. Convention locked in `docs/DEVELOPMENT.md` §6: intra-app `@/*`,
+4. Convention locked in `docs/guides/DEVELOPMENT.md` §6: intra-app `@/*`,
    inter-package `@declic/*`, `~/` and `src/` prefixes are not used.
 
 Rejected explicitly:

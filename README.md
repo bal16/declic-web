@@ -60,7 +60,7 @@ docker compose --profile apps up -d
 
 Development happens in this monorepo only (`bal16/declic`, private).
 Per-app read-only mirrors (`declic-web`, `declic-api`, `declic-worker`)
-are generated automatically — see `docs/DEVELOPMENT.md`.
+are generated automatically — see `docs/guides/DEVELOPMENT.md`.
 
 ## Scripts
 
@@ -79,18 +79,18 @@ Git hooks: `bunx lefthook install` once per clone (staged `oxlint --fix` + `oxfm
 
 ## Docs
 
-Start with `docs/DEVELOPMENT.md` for the dev loop, environment, mirrors,
+Start with `docs/guides/DEVELOPMENT.md` for the dev loop, environment, mirrors,
 and releases.
 
-| Doc                  | Contents                                             |
-| -------------------- | ---------------------------------------------------- |
-| `docs/PRD.md`        | Vision, roles, exhibition lifecycle, archive rules   |
-| `docs/PRD-API.md`    | Modules, schema text, cursor/error/flag contracts    |
-| `docs/PRD-FE.md`     | Routes, upload/lightbox/curation UI, auth guards     |
-| `docs/PRD-Worker.md` | Per-frame pipeline, retry/DLQ, memory budget         |
-| `docs/db-schema.md`  | Canonical ER diagram + seeds summary                 |
-| `docs/features/`     | One acceptance file per feature (vertical slice)     |
-| `docs/adr/`          | Architecture decisions (monorepo, releases, logging) |
+| Doc                        | Contents                                             |
+| -------------------------- | ---------------------------------------------------- |
+| `docs/specs/PRD.md`        | Vision, roles, exhibition lifecycle, archive rules   |
+| `docs/specs/PRD-API.md`    | Modules, schema text, cursor/error/flag contracts    |
+| `docs/specs/PRD-FE.md`     | Routes, upload/lightbox/curation UI, auth guards     |
+| `docs/specs/PRD-Worker.md` | Per-frame pipeline, retry/DLQ, memory budget         |
+| `docs/data/db-schema.md`   | Canonical ER diagram + seeds summary                 |
+| `docs/features/`           | One acceptance file per feature (vertical slice)     |
+| `docs/adr/`                | Architecture decisions (monorepo, releases, logging) |
 
 Note: files under `docs/` use Obsidian-style `[[wikilinks]]` for the
 internal knowledge graph. This root README intentionally stays plain

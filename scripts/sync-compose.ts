@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Materialize the root docker-compose.yml body from the spec
- * (docs/docker-compose.yml). The root file keeps its own header;
+ * (docs/ops/docker-compose.yml). The root file keeps its own header;
  * everything from the `services:` line on is copied from the spec,
  * then normalized with oxfmt (single quotes, canonical whitespace).
  *
@@ -16,7 +16,7 @@
 
 import { $ } from 'bun';
 
-const SPEC = 'docs/docker-compose.yml';
+const SPEC = 'docs/ops/docker-compose.yml';
 const ROOT = 'docker-compose.yml';
 // Hidden temp file inside the repo so oxfmt picks up .oxfmtrc.jsonc.
 const TMP = '.compose-materialized.tmp.yml';

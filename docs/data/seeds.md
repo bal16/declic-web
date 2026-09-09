@@ -11,7 +11,7 @@ status: living
 
 # Seeds
 
-Initial data for a fresh database. Run `bun docs/seed.ts` (idempotent,
+Initial data for a fresh database. Run `bun docs/data/seed.ts` (idempotent,
 `ON CONFLICT DO NOTHING`) — or `bun run seed` once `packages/db` lands
 (see [DEVELOPMENT](../guides/DEVELOPMENT.md) §5.2).
 
@@ -24,7 +24,7 @@ Initial data for a fresh database. Run `bun docs/seed.ts` (idempotent,
 Contract: [db-schema](./db-schema.md) §1, flags/limits: [PRD-API](../specs/PRD-API.md) §2.9. Lowering
 `max_series_size` later never invalidates existing SERIES (grandfathering).
 
-> [!warning] Source of truth is `docs/seed.ts`, not this note.
+> [!warning] Source of truth is `docs/data/seed.ts`, not this note.
 > Edit that file, then run `bun scripts/sync-docs-mirrors.ts`.
 
 <!-- sync:seed start -->
@@ -32,7 +32,7 @@ Contract: [db-schema](./db-schema.md) §1, flags/limits: [PRD-API](../specs/PRD-
 /**
  * Seed — Déclic (PRD 0.4-draft)
  * Source of truth for initial data referenced by PRD-API §2.9 and db-schema §1.
- * Run: `bun docs/seed.ts` (idempotent, ON CONFLICT DO NOTHING) — or `bun run seed` via apps/api.
+ * Run: `bun docs/data/seed.ts` (idempotent, ON CONFLICT DO NOTHING) — or `bun run seed` via apps/api.
  *
  * Tables:
  * - feature_flags (row-per-flag, key PK, enabled bool)
