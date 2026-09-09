@@ -37,6 +37,8 @@ depth; status gate already implies it).
 |---|---|
 | `status IN (PENDING, REJECTED, PROCESSING, FAILED_PROCESSING, UNPUBLISHED)` | `204`, `deleted_at=now()` (for `PROCESSING`: BullMQ jobs cancelled best-effort via `job.remove()`; in-flight jobs complete harmlessly, aggregation skips `deleted_at IS NOT NULL`) |
 | `APPROVED`/`PUBLISHED` | `409 {code:"WITHDRAW_CLOSED"}` |
+| Exhibition `ARCHIVED` + status never-published (`PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`) | `204` (targeted exception — the freeze protects public content; an unpublished work has none. Owner cleanup path so `ARCHIVED` with in-flight works never dead-ends) |
+| Exhibition `ARCHIVED` + `APPROVED`/`PUBLISHED` | `403 {code:"ARCHIVED"}` |
 | unknown `id` | `404 {code:"NOT_FOUND"}` |
 | repeat call | `204` (idempotent) |
 
@@ -69,8 +71,10 @@ no new columns, no migration.
 ## 6. Edge cases
 
 - Withdraw during worker mid-flight → **allowed** (`PROCESSING` withdrawable, jobs cancelled best-effort); `FAILED_PROCESSING` offers Retry or withdraw + re-upload.
-- Withdraw in `ARCHIVED` exhibition → unreachable in practice (works are
-  `PUBLISHED` by then) but guarded → `403 {code:"ARCHIVED"}`.
+- Withdraw in `ARCHIVED` exhibition → `403 {code:"ARCHIVED"}` for
+  `APPROVED`/`PUBLISHED` works, but `204` for never-published works (see
+  table — owner cleanup path, so a work left `PENDING`/`FAILED_PROCESSING`
+  when its exhibition archives never dead-ends).
 - `GET /api/posts/mine` excludes withdrawn (owner sees clean list).
 
 ## 7. Out of scope (post-1.0)

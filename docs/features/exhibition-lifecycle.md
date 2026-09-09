@@ -92,6 +92,12 @@ Partial body — any of `title`/`slug`/`description`/`location`/`poster_s3_key`/
 triggers same freeze logic as cron.
 Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (slug collision, bad date range).
 
+> No `DELETE` in v1 — exhibitions are never deleted (`ARCHIVED` is the
+> terminal state; use `DRAFT` for mistaken/test rows). Deletion would
+> need cascade-vs-block answers for works, derivatives, MinIO objects
+> (`raw-uploads/`, `derivatives/`, `posters/`), and dangling
+> `phase_change` audit rows — deferred post-1.0 with a retention policy.
+
 ## 4. Scheduler (BullMQ cron `exhibition-scheduler`, hourly `0 * * * *`)
 
 ```typescript
@@ -116,7 +122,10 @@ When `phase === 'ARCHIVED'`: gallery stays visible (`/archive`,
 `POST /api/posts/:id/like`, `POST /api/posts/:id/comments`, reorder, replace, revert →
 `403 {code:"ARCHIVED"}`. Curation reorder blocked for that exhibition.
 Likes/comments already stored stay readable (`likesCount` etc.);
-`DELETE /api/posts/:id/like` (unlike) stays `204`.
+`DELETE /api/posts/:id/like` (unlike) stays `204`. Exception: owner
+withdraw of never-published works stays `204` (cleanup path, see
+[withdraw-work](./withdraw-work.md) §2) — the freeze protects public
+content, and an unpublished work has none.
 
 ## 6. Frontend (`/`, `/archive`, `/exhibition/$slug`, `/admin/exhibitions`)
 

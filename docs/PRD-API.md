@@ -381,7 +381,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 
 > **Moved to [series-upload](./features/series-upload.md)** — single source of truth lives there; this section is an index pointer only.
 >
-> Endpoints: `POST /api/posts/upload-url`, `POST /api/posts`, `PATCH /api/posts/:id` (new), `PATCH /api/posts/:id/items/reorder`.
+> Endpoints: `POST /api/posts/upload-url`, `POST /api/posts`, `PATCH /api/posts/:id` (new), `PATCH /api/posts/:id/items/reorder`, `POST /api/posts/:id/retry` (new).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.2 Gallery & Discovery (Public Read API)

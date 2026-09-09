@@ -97,6 +97,10 @@ Key → endpoint binding (owner checks live in the service, not the guard):
 `POST .../frames/:itemId/revert`; like/comment creation needs session
 only (freeze enforced by `ExhibitionPhaseGuard` + `FeatureFlagGuard`).
 
+> Ownership is a row fact (`photographer_id`), not a role: a user whose
+> role changed (e.g. `PHOTOGRAPHER` → `CURATOR`) keeps owner rights on
+> works they shot — the guard passes on owner-match **or** role-allowlist.
+
 Changing one rule = editing one row here. If the mapping ever moves to
 DB (hybrid pattern), only this map's source changes (const → cached
 query); no controller is touched. `users` module stays the sole writer
@@ -139,16 +143,17 @@ is the Better Auth user id, **not** cuid2).
 { "role": "PHOTOGRAPHER" }
 ```
 
-**Rules:**
+**Rules (evaluated top-down — guards before shortcuts):**
 
 - Caller must be `ADMIN` (else `403 FORBIDDEN`).
 - **Self-demotion forbidden** — admin cannot change their own role →
   `409 {code:"ROLE_CHANGE_DENIED", details:{reason:"self"}}`
-  (prevents accidental lockout).
+  (prevents accidental lockout; wins over the no-op rule below — even a
+  same-role self-`PATCH` is `409`).
 - **Last-admin protection** — demoting the final `ADMIN` →
   `409 {code:"ROLE_CHANGE_DENIED", details:{reason:"last_admin"}}`
   (counted in the same tx).
-- No-op (same role) → `200`, no audit row, cache untouched.
+- No-op (same role, other user) → `200`, no audit row, cache untouched.
 - Effect (one tx): `UPDATE users SET role=:role WHERE id=:id` + emit
   `AuditRequestedEvent` (`action='user.role_change'`,
   `payload:{before,after}`) + `RoleCache`

@@ -184,7 +184,7 @@ admin action).
 
 Allows photographer to reorder frames inside a SERIES before moderation:
 `{ "orderedItemIds": ["cuid-2","cuid-1","cuid-3"] }` → updates
-`photo_items.item_order`. Owner-only while `posts.status='PENDING'`
+`photo_items.item_order`. Owner or `ADMIN` while `posts.status='PENDING'`
 (title/caption edit in §4 additionally allows `FAILED_PROCESSING`);
 `403 {code:"ARCHIVED"}` when archived. Validates the id set equals the work's
 current items (no drops/adds — that is withdraw + re-upload).
@@ -229,6 +229,18 @@ stay valid when lowered).
 - Edit/reorder on `PROCESSING` work → `409` (wait for `PENDING` or `FAILED_PROCESSING`; title edit opens at `FAILED_PROCESSING`, reorder stays `PENDING`-only).
 - `FAILED_PROCESSING` (after 3 worker attempts) → dashboard shows Retry (re-enqueue frames with `blurhash IS NULL`) + title edit + withdraw; reorder stays blocked until `PENDING`.
 
+## 9b. API — `POST /api/posts/:id/retry` (NEW for 1.0, owner or `ADMIN`, cuid2)
+
+Re-enqueues worker jobs for failed frames only (`photo_items` with
+`blurhash IS NULL` under this `postId`); sibling frames with valid
+derivatives are untouched. Allowed only from `FAILED_PROCESSING`
+(otherwise `409`, no-op); `ARCHIVED` exhibition → `403 {code:"ARCHIVED"}`
+(Retry does not bypass the freeze — withdraw the work instead, see
+[withdraw-work](./withdraw-work.md) §2). Success replays the normal
+pipeline: all frames green → `PENDING` (reorder re-opens); exhausted
+again → `FAILED_PROCESSING`. Emits `AuditRequestedEvent`
+(`action='post.retry'`). `PATCH` never re-enqueues (explicit non-goal).
+
 ## 10. Out of scope (post-1.0)
 
 - Photographer frame replacement (withdraw + re-upload is the path);
@@ -243,3 +255,4 @@ stay valid when lowered).
 - [ ] `PATCH` title on PENDING → `200`; on PUBLISHED → `409`
 - [ ] Frame reorder persists `item_order`; mismatched id set → `400`
 - [ ] `FAILED_PROCESSING` → dashboard Retry re-enqueues only `blurhash IS NULL` frames; success promotes to `PENDING`
+- [ ] `POST /:id/retry` on PENDING → `409`; in `ARCHIVED` → `403`

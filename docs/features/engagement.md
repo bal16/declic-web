@@ -68,8 +68,10 @@ Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": tru
 
 Paginated per [PRD-API](../PRD-API.md) §4.0 cursor (`created_at` + `id`, `limit` default `20` max `50`):
 `{ data: [{id, postId, content, parentId, createdAt}], nextCursor }`.
-List with `is_hidden = false AND deleted_at IS NULL` for public; Admin
-sees all (including hidden). Flat sorted by `created_at` (not `id`);
+List with `is_hidden = false AND deleted_at IS NULL` for public; `ADMIN`
+and `CURATOR` see all (including hidden — curators own moderation);
+authors see their own hidden comments flagged `isHidden: true`.
+Flat sorted by `created_at` (not `id`);
 `parentId` returned for future nested assembly, but v1 clients render
 flat (nested UI is post-1.0 intent, see §9).
 
@@ -77,7 +79,7 @@ flat (nested UI is post-1.0 intent, see §9).
 
 Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.1): Like button with optimistic
 update + rollback (`TanStack Query onMutate`); comment thread with Auth
-Wall for guests; like/comment creation disabled with frozen tooltip
+Wall modal for guests (uniform modal, preserves draft — see [PRD-FE](../PRD-FE.md) §6.3); like/comment creation disabled with frozen tooltip
 when `ARCHIVED`, **unlike stays enabled** (removing your own like);
 INP `< 150ms`.
 

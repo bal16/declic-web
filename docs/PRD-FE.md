@@ -35,7 +35,7 @@ The web app serves **four roles** within a **single unified TanStack Start app**
 | **Viewer** (default, incl. anon browsing) | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions) | Public, Auth Wall for actions |
 | **Photographer** | Personal dashboard, upload SINGLE/SERIES works, edit Pending works (reorder frames) | `SessionGuard` + `Role=PHOTOGRAPHER` |
 | **Curator** | Moderation per work, curation canvas (order works), frame replace/revert, comment moderation, audit read | `SessionGuard` + `Role=CURATOR` |
-| **Admin** | Everything a curator can do, plus exhibitions CRUD, user management, settings | `SessionGuard` + `Role=ADMIN` |
+| **Admin** | Everything a curator can do, plus exhibitions (create/edit/phase-override/poster, no delete in v1), user management, settings | `SessionGuard` + `Role=ADMIN` |
 
 A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N frames). Likes/comments/curation attach to the **work**; derivatives/blurhash/exif are per **frame**. Gallery grid shows a work as one card (cover = first frame).
 
@@ -67,13 +67,13 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 ### 2.2.1 Exhibition Selection
 
-Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (`GET /api/exhibitions`) lets photographer pick active `PRE_EVENT`/`LIVE` exhibition; `ARCHIVED` exhibitions appear disabled with `"Archived — read only"` tooltip. `POST /api/posts` requires `exhibitionId` (or defaults to latest active).
+Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (`GET /api/exhibitions`) lets photographer pick active `PRE_EVENT`/`LIVE` exhibition; `ARCHIVED` exhibitions stay selectable but read-only (works listed, actions disabled with `"Archived — read only"` tooltip — the underlying `/mine` list is always cross-exhibition, the dropdown only filters client-side). `POST /api/posts` requires `exhibitionId` (or defaults to latest active).
 
 ### 2.3 Admin / Curator Area
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](./features/exhibition-lifecycle.md) §3). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](./features/exhibition-lifecycle.md) §3). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
@@ -320,7 +320,10 @@ const { data: session, isPending } = useSession();
 // - /dashboard/*  → requires session + role PHOTOGRAPHER|ADMIN
 // - /admin/moderation, /admin/curate, /admin/comments → role ADMIN|CURATOR
 // - /admin/exhibitions, /admin/users, /admin/settings → role ADMIN
-// - If not logged in → redirect to /login or show Auth Wall modal
+// - If not logged in → Auth Wall modal (uniform on every surface:
+//   gallery grid, lightbox, work detail, dashboard, upload). The modal
+//   preserves state (file-drop, draft comment, pending like). Redirect to
+//   /login happens only for direct navigation to /login itself.
 // - If insufficient role → 403 page
 ```
 

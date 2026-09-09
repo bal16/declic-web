@@ -90,14 +90,19 @@ updated: 2026-09-07
 
 ## 3. API — `GET /api/posts/mine` & `GET /api/posts/:id`
 
-- **`/mine`:** `PHOTOGRAPHER` (own data), `ADMIN` (all data). All
-  statuses owned by the user, nested `items` (cuid2 ids). Same cursor
-  contract as §2 (`recent` default). Powers
-  `/dashboard` (see [series-upload](./series-upload.md) §6).
-- **`/:id` (cuid2):** public if `status IN (APPROVED, PUBLISHED)` and parent exhibition `phase IN ('LIVE','ARCHIVED')`, owner/admin any status. All
+- **`/mine`:** `PHOTOGRAPHER` (own data), `ADMIN` (all data, with
+  optional `?photographerId` filter — without it, cross-owner mixed list).
+  Always cross-exhibition, all **non-deleted** statuses owned by the user
+  (withdrawn excluded — there is no read path for withdrawn works),
+  nested `items` (cuid2 ids). Same cursor contract as §2 (`recent`
+  default). Powers `/dashboard`, whose exhibition dropdown filters this
+  list client-side (see [series-upload](./series-upload.md) §6).
+- **`/:id` (cuid2):** public if `status IN (APPROVED, PUBLISHED)` and parent exhibition `phase IN ('LIVE','ARCHIVED')`, owner/admin/`CURATOR` any status (phase bypassed — ownership and curation duties outrank the phase gate for reads). All
   `photo_items` ordered by `item_order` with derivatives. Non-public
-  fields (`rejection_reason`, `display_order`) are stripped for
-  non-owner public reads.
+  fields (`rejectionReason`, `displayOrder`) are stripped for
+  non-owner, non-curator, non-admin public reads. Withdrawn
+  (`deleted_at IS NOT NULL`) → `404` for everyone, owner included (no
+  tombstone in v1).
 - **Alias:** `GET /api/photos/:id` → `GET /api/posts/:id` (deprecated, removed post-1.0).
 
 ## 4. Frontend (`/`, `/archive`, `/post/$postId`, `/og/$postId`)

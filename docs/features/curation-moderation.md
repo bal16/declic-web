@@ -34,6 +34,18 @@ scope), [curator-replace-revert](./curator-replace-revert.md) (frame-level curat
 
 **Access:** `ADMIN`, `CURATOR`. Orders **works**, not frames. Uses cuid2 `postId`.
 
+**Definition:** `display_order` is the key of the default (`curated`) sort
+— sorts are independent (`most_liked` reads `likes_count`, `recent`
+reads `created_at`; neither reads `display_order`). There is exactly one
+rank order per exhibition (global, not per-filter): any neighbor pair
+yields a valid rank, and neighbors are interpreted in curated sequence
+(the `/admin/curate` canvas is the curated view, so this holds by
+construction — including drags inside a filter).
+
+**Validation:** any non-deleted status may be ranked (effect lands when
+the work is `APPROVED`); withdrawn (`deleted_at IS NOT NULL`) → `404`;
+exhibition `ARCHIVED` → `403 {code:"ARCHIVED"}`.
+
 **Request Body (Fractional Indexing / LexoRank):**
 
 ```json
@@ -77,6 +89,20 @@ outside the exhibition scope, i.e. `postId` belongs to another exhibition).
   — whole work rejected (no per-frame moderation in v1).
 - `UNPUBLISH` (admin hide during `LIVE`) → `posts.status = UNPUBLISHED` via same endpoint (`action: "UNPUBLISH"`, no reason required). Public gallery excludes `UNPUBLISHED`. Re-publish via `APPROVE` again (idempotent).
 - `PUBLISHED` is a legacy alias of `APPROVED` + `LIVE` (gallery treats both as visible); new writes use `APPROVED`/`UNPUBLISHED` only.
+
+**Allowed transitions (from-status → action → result):**
+
+| From \ Action | `APPROVE` | `REJECT` | `UNPUBLISH` |
+|---|---|---|---|
+| `PENDING` | → `APPROVED` | → `REJECTED` | `409` (nothing public to hide — `REJECT` instead) |
+| `REJECTED` | → `APPROVED` | idempotent `200` | `409` (not public) |
+| `APPROVED` | idempotent `200` | → `REJECTED` | → `UNPUBLISHED` |
+| `PUBLISHED` (legacy alias) | idempotent `200` (as `APPROVED`) | → `REJECTED` | → `UNPUBLISHED` |
+| `UNPUBLISHED` | → `APPROVED` (re-publish) | → `REJECTED` | idempotent `200` |
+| `PROCESSING` / `FAILED_PROCESSING` | `409` (work not ready — wait or Retry) | `409` | `409` |
+
+Validation notes: `action: "PUBLISHED"` is rejected with `400 VALIDATION_ERROR` (legacy alias, never a write); `rejectionReason` sent with `APPROVE`/`UNPUBLISH` is ignored (not stored, no error); `REJECT` without reason → `400`.
+
 - **Audit:** emits `AuditRequestedEvent` (`target_id=cuid-post`,
   `action='post.moderate'`) — never a direct insert ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
@@ -95,15 +121,15 @@ facade (`hideComment`, same tx as the `comments_count` decrement),
 never a raw Drizzle write ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 Idempotent: hiding an already-hidden comment → `204`, no double decrement.
 `posts.comments_count` decremented only if the comment was previously
-counted (`is_hidden=false AND deleted_at IS NULL`). Admin reads still
-include hidden rows. Emits `AuditRequestedEvent` (`action='comment.hide'`).
+counted (`is_hidden=false AND deleted_at IS NULL`). `ADMIN` and `CURATOR`
+reads still include hidden rows (see [engagement](./engagement.md) §4). Emits `AuditRequestedEvent` (`action='comment.hide'`).
 
 ## 5. API — `GET /api/admin/audit-logs` (ADMIN + CURATOR, read-only)
 
 Read-only trail over `admin_audit_logs`. Query params: `targetId`
 (cuid2, e.g. frame for replace/revert chain), `action` (e.g.
 `photo_item.replace`, `photo_item.revert`, `post.withdraw`,
-`post.moderate`, `comment.hide`, `exhibition.phase_change`,
+`post.retry`, `post.moderate`, `comment.hide`, `exhibition.phase_change`,
 `feature_flag.toggle`, `site_settings.update`, `user.role_change`),
 `limit` (default `20`, max `50`), `cursor` (§4.0 schema,
 `ORDER BY created_at, id`). Response: `{ data: [{id, adminId, action,

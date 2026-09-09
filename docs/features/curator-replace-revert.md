@@ -76,26 +76,30 @@ gallery shows old derivatives until worker completes (then new cover if
 
 **Access:** `ADMIN`, `CURATOR`. **Blocked when parent exhibition is
 `ARCHIVED`** (`403 {code:"ARCHIVED"}`). Stack of single-levels: each call undoes exactly the
-**latest** replace (repeatable — call again to walk further back).
+**latest not-yet-undone** replace (repeatable — call again to walk further back).
 
 **Request Body:** empty (`{}`). The server always resolves the latest
-`photo_item.replace` audit row; no `from_audit_id` is accepted (history
-is linear, the latest entry is by definition the correct one).
+unreverted `photo_item.replace` audit row; no `from_audit_id` is accepted
+(history is linear — chaining is tracked server-side, see step 2).
 
 **API Actions (transactional):**
 
 1. Validate `photo_items.post_id == :postId` (mismatch → `404 {code:"NOT_FOUND"}`).
 2. Fetch the latest `admin_audit_logs` row with
-   `action='photo_item.replace'` and `target_id=:itemId`. If none →
-   `409 {code:"NOTHING_TO_REVERT"}`.
+   `action='photo_item.replace'` and `target_id=:itemId` that has **no**
+   matching `photo_item.revert` row (server links each revert to the
+   replace it undoes via `payload.from_audit_id` — written server-side,
+   never accepted from input). If none →
+   `409 {code:"NOTHING_TO_REVERT"}` (all replaces already undone, or never replaced).
 3. If frame mid-processing (`photo_items.blurhash IS NULL`) →
    `409 {code:"FRAME_PROCESSING"}`.
 4. Verify audited `old_s3_key` exists in MinIO (HEAD); if gone →
    `409 {code:"ORIGINAL_MISSING"}`.
 5. `UPDATE photo_items SET original_s3_key=:old_s3_key,
    source=:old_source, exif_metadata=:old_exif_metadata, blurhash=NULL,
-  updated_at=now() WHERE id=:itemId`. Each call undoes one replace;
-  repeat the call to walk further back; each revert writes its own audit row.
+   updated_at=now() WHERE id=:itemId`. Each call undoes one unreverted replace;
+   repeat the call to walk further back; each revert writes its own audit row
+   (with `payload.from_audit_id` pointing at the consumed replace row).
 6. Delete current `photo_derivatives` for that `photo_item_id`.
 7. Enqueue **one** job `{ postId, photoItemId: itemId, s3Key: old_s3_key,
    curated: false, revert: true }` (`revert:true` is audit/logging
