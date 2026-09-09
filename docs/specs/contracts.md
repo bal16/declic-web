@@ -5,13 +5,13 @@ aliases:
 tags:
   - declic
   - contracts
-status: draft
+status: living
 updated: 2026-09-09
 ---
 
 # Shared Contracts (Cross-Module & Cross-App)
 
-**Status:** Draft (planning scope — no code in `packages/` yet)
+**Status:** Living (implemented in `packages/contracts/src/` — planning scope closed)
 **Related:** [ADR-003](../adr/ADR-003-zod-dto-strategy.md), [ADR-005](../adr/ADR-005-modular-monolith.md), [PRD-API](./PRD-API.md) §4.0, [db-schema](../data/db-schema.md)
 
 Normative definitions for every surface crossed by more than one
@@ -19,10 +19,10 @@ module or app. Other documents **reference, never redefine** — on any
 shape question, this file wins (behavioral rules stay in their feature
 files). Module call rules (layering, DI, method registry) live in
 [ADR-005](../adr/ADR-005-modular-monolith.md) §7, not here — this file
-is data shapes only, so it can materialize cleanly. When implementation starts (first real module, `posts`), each
-§ below materializes line-by-line into `packages/contracts/src/`
-(`cursor.ts`, `errors.ts`, `queue.ts`, `roles.ts`, `audit.ts`); the
-event class itself stays api-internal (`audit` module).
+is data shapes only. Each § below is implemented line-by-line in
+`packages/contracts/src/` (`cursor.ts`, `errors.ts`, `queue.ts`,
+`roles.ts`, `audit.ts`); the event class itself stays api-internal
+(`audit` module).
 
 ---
 
@@ -35,7 +35,7 @@ event class itself stays api-internal (`audit` module).
   (`{ action, adminId, targetId, payload }`); `payload` mirrors source
   names (DB columns / S3 keys stay snake inside snapshots).
 
-## 2. Cursor (`cursor.ts` later)
+## 2. Cursor (`cursor.ts`)
 
 ```ts
 const cursorSchema = z.object({
@@ -50,7 +50,7 @@ Cursor internals are per-endpoint (`created_at` + `id`,
 `start_date` + `id`); the envelope above is shared. Canonical table:
 [PRD-API](./PRD-API.md) §4.0.
 
-## 3. Queue payload (`queue.ts` later)
+## 3. Queue payload (`queue.ts`)
 
 ```ts
 const imageProcessingJobSchema = z.object({
@@ -69,7 +69,7 @@ Fresh uploads send `curated: false, revert: false`; replace sends
 replays the frame's `original_s3_key`. Canonical flow:
 [PRD-Worker](./PRD-Worker.md) §1.
 
-## 4. Error envelope (`errors.ts` later)
+## 4. Error envelope (`errors.ts`)
 
 ```ts
 const errorSchema = z.object({
@@ -83,7 +83,7 @@ Canonical code table: [PRD-API](./PRD-API.md) §4.0
 (`FEATURE_DISABLED` is `400` for flag-gated shapes, `403` for
 flag-gated actions).
 
-## 5. Roles (`roles.ts` later)
+## 5. Roles (`roles.ts`)
 
 ```ts
 const roleSchema = z.enum(['VIEWER', 'PHOTOGRAPHER', 'CURATOR', 'ADMIN']);
@@ -94,7 +94,7 @@ Single-role enum. Api source of truth is `ROLE_MATRIX`
 from contracts for guards (never redefines). Matrix:
 [auth-rbac](../features/auth-rbac.md) §3.
 
-## 6. Audit actions (`audit.ts` later — names only; event class stays api-internal)
+## 6. Audit actions (`audit.ts` — names only; event class stays api-internal)
 
 ```ts
 const auditActionSchema = z.enum([
