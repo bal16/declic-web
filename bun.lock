@@ -36,6 +36,7 @@
         "postgres": "^3.4.9",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
+        "zod": "^4.5.4",
       },
       "devDependencies": {
         "@nestjs/testing": "^12.0.1",
@@ -53,9 +54,11 @@
       "dependencies": {
         "@tanstack/react-router": "^1.170.32",
         "@tanstack/react-start": "^1.168.49",
+        "better-auth": "^1.7.2",
         "nitro": "^3.0.260903-beta",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
+        "zod": "^4.5.4",
       },
       "devDependencies": {
         "@tailwindcss/vite": "^4.3.3",

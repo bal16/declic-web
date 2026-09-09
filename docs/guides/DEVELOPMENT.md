@@ -144,6 +144,8 @@ bun run lint && bun run format:check && bun run --filter "@declic/*" typecheck
 
 Notes: remote is HTTPS (via `gh auth`), not SSH. `bun run --filter "@declic/*" build` runs each workspace's `build` script and silently skips workspaces that do not define one (`contracts/db/tsconfig` have no build step).
 
+Dependency convention: libraries use caret ranges (`^`, one range shared across workspaces so the lock resolves a single copy); only runtimes/toolchains pin exact (`bun`, `oxlint`, `oxfmt` — patch behavior can break). Determinism comes from `bun.lock` + frozen CI, never from pinning libraries.
+
 ### 5.2 Infra via Compose, apps on host (default) or full-stack in containers
 
 The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/ops/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
@@ -197,6 +199,24 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 3. Watch the worker generate thumbnail/web/lightbox derivatives + blurhash; the work flips `PROCESSING → PENDING`.
 4. Approve in `/admin/moderation`, check ordering in `/admin/curate`, browse at `/`.
 
+### 5.5 Branching (issues → branch → PR → squash)
+
+* One branch per vertical slice: `feat/<issue>-<slug>`, `fix/…`,
+  `docs/…`, `chore/…` (no-issue `chore/*` allowed only for <5-line
+  non-behavior changes). Small PRs, squash-merge, delete the branch
+  after merge. `mirror-*` is reserved for automation; `main` is the
+  only long-lived branch.
+* **Stale branch: always rebase, never merge.** Linear history rejects
+  merge commits — the web "Update branch" button included. When GitHub
+  marks a PR out-of-date:
+  `git fetch origin && git rebase origin/main && git push --force-with-lease`.
+  Rebase drops existing approvals (dismiss-stale, by design) — request
+  review when the PR is final, and keep branches under ~3 days so
+  staleness rarely bites.
+* Direct-to-main ended when the contracts slice merged (see
+  [ADR-006](../adr/ADR-006-branch-protection.md)). Every push to `main`
+  runs mirror fan-out when it touches the C1 slice (§7).
+
 ## 6. Code quality (oxlint + oxfmt, pre-commit)
 
 Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
@@ -205,7 +225,7 @@ Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
 * **Lint** (`.oxlintrc.json`): `correctness` = error everywhere, `react/hooks` baseline, plus an `apps/web/**` override block with stricter hooks rules (`react/rules-of-hooks`, `react/exhaustive-deps`) and test leniency (`no-explicit-any` off in tests).
 * **Known oxlint fact:** nested per-directory configs (e.g. `apps/web/.oxlintrc.json`) are silently ignored in 1.81 — per-app strictness lives in root `overrides`, verified empirically. Do not reintroduce nested configs without re-verifying.
 * **Gates:** Lefthook pre-commit (staged-only, `stage_fixed` so fixes land in the same commit; install per clone) and the `lint` job in `ci.yml`. Boundary gate (`bun run boundaries`, full-tree scan ~0.05s, no re-stage) runs in pre-commit alongside oxlint/oxfmt, in `ci.yml` verify, and in `release.yml` verify (see [ADR-005](../adr/ADR-005-modular-monolith.md) §6). VS Code uses `oxc.oxc-vscode` for format+fix on save; ESLint/Prettier extensions are disabled via settings + `unwantedRecommendations`.
-* **Imports:** intra-app `@/*` (= that app's `src`, per [ADR-007](adr/ADR-007-path-aliases.md); `~/` and `src/` prefixes are not used), inter-package `@declic/*` via `workspace:*`. DB columns stay `snake_case`; wire JSON is `camelCase`.
+* **Imports:** intra-app `@/*` (= that app's `src`, per [ADR-007](../adr/ADR-007-path-aliases.md); `~/` and `src/` prefixes are not used), inter-package `@declic/*` via `workspace:*`. DB columns stay `snake_case`; wire JSON is `camelCase`.
 * **JSON/YAML:** covered by oxfmt (it already normalizes `package.json` key order and workflow YAML). JSON *lint* (schemas) comes from `$schema` keys + editor support, not oxlint.
 
 ## 7. Mirrors (how the per-app repos stay updated)
