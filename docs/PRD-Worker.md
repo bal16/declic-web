@@ -310,9 +310,10 @@ image, `depends_on` redis/postgres/minio healthy, no inbound ports.
 
 **BullMQ cron** (runs in API, not worker, but shares Redis):
 `apps/api/src/modules/exhibitions/exhibition.scheduler.ts` —
-`@Cron('0 ** **')` exhibition-scheduler → `UPDATE exhibitions SET
-phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()` (hourly
-intent — confirm the 5-field cron form at implementation).
+`@Cron('0 * * * *')` exhibition-scheduler (hourly, canonical form in
+[exhibition-lifecycle](./features/exhibition-lifecycle.md) §4) →
+`UPDATE exhibitions SET
+phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()`.
 
 ---
 
