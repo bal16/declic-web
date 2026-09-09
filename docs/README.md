@@ -57,8 +57,9 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 ## Conventions used in these notes
 
-- Cross-note links use relative paths — `[PRD](./specs/PRD.md)` from this folder, `../PRD-API.md` from a subfolder (adjust `../` to your file's depth).
+- Cross-note links use relative paths — `[PRD](./specs/PRD.md)` from this folder, `../specs/PRD-API.md` from a subfolder (adjust `../` to your file's depth).
 - `[ADR-001](./adr/ADR-001-monorepo-mirror.md)` = short label for a long filename.
+- No per-folder indexes: this MOC covers navigation — a folder needing local rules gets a descriptively-named note, never a second README (keeps the Obsidian graph readable).
 - `> [!abstract]` = document summary; `> [!note]-` = collapsed side note; `> [!warning]` = do-not-break rule.
 - YAML frontmatter (`title`, `aliases`, `tags`, `status`, `updated`) powers Obsidian search/graph/Dataview.
 - Fenced code (mermaid, `docker-compose.yml` trees, shell, SQL/TS samples) is literal — never put doc links inside fences.
