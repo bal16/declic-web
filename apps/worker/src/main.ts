@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 
-import { PinoNestLogger } from './logger';
-import { WorkerModule } from './worker.module';
+import { PinoNestLogger } from '@/logger';
+import { WorkerModule } from '@/worker.module';
 
 async function bootstrap(): Promise<void> {
   // Standalone application context: no HTTP server. BullMQ connections

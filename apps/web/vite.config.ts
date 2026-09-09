@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
@@ -7,6 +9,13 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   server: {
     port: 3000,
+  },
+  // `@/*` = app src (see ADR-007). Mirrors tsconfig `paths` for the
+  // bundler; tsc and the Bun runtime resolve the same mapping.
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
   },
   // Vite reads .env from the project root (apps/web) by default — point it
   // at the workspace root instead, same contract as the api/worker dev
