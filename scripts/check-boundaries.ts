@@ -71,35 +71,26 @@ function isApiSrc(absPath: string): boolean {
 
 /**
  * Resolve an import specifier to an absolute file path.
- * Handles relative specs (./, ../), alias specs (@/, ~/, src/),
+ * Handles relative specs (./, ../) and the `@/` alias (anchored at the
+ * importer's app src — the single sanctioned spelling per ADR-007),
  * and returns null for bare imports or dangling paths.
  * Bare imports (including @declic/* workspace packages) are
  * out of scope — the allowlist permits them without resolution.
  */
 function resolveSpec(fromFile: string, spec: string): string | null {
   // Step 1: skip bare / workspace imports (allowlisted by design).
-  if (
-    !spec.startsWith('.') &&
-    !spec.startsWith('@/') &&
-    !spec.startsWith('~/') &&
-    !spec.startsWith('src/')
-  ) {
+  if (!spec.startsWith('.') && !spec.startsWith('@/')) {
     return null;
   }
-  // Step 2: map alias prefixes to a repo-anchored base.
-  // Alias roots depend on the importer: api files anchor at
+  // Step 2: map the @/ alias to a repo-anchored base.
+  // The alias root depends on the importer: api files anchor at
   // apps/api/src, worker files anchor at apps/worker/src.
   let anchored = spec;
-  if (spec.startsWith('@/') || spec.startsWith('~/')) {
+  if (spec.startsWith('@/')) {
     const base = fromFile.startsWith(resolve(WORKER_SRC))
       ? WORKER_SRC
       : API_SRC;
     anchored = join(base, spec.slice(2));
-  } else if (spec.startsWith('src/')) {
-    const base = fromFile.startsWith(resolve(WORKER_SRC))
-      ? WORKER_SRC
-      : API_SRC;
-    anchored = join(base, spec.slice(4));
   } else {
     // Step 3: plain relative import — resolve against the importer dir.
     anchored = resolve(dirname(fromFile), spec);
