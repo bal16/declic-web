@@ -13,7 +13,7 @@ updated: 2026-09-01
 
 **Version:** 0.4-draft (2026-09-01)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** NestJS, Bun 1.4, BullMQ + Redis, MinIO SDK, Bun.Image (native), blurhash, cuid2  
+**Main Stack:** NestJS, Bun 1.4, BullMQ + Redis, Bun native S3, Bun.Image (native), blurhash, cuid2  
 **Target:** Worker Consumer for derivative generation, blurhash, and work status updates (per photo_item, cuid2 ids)  
 **Status:** Draft
 **Last updated:** 2026-09-01
@@ -125,7 +125,7 @@ s3://declic/
 | Runtime | **Bun 1.4** | Same as API — single runtime |
 | Framework | **NestJS** + `@nestjs/bullmq` | `@Processor('image-processing')` consumer, `concurrency: 2` |
 | Queue | **BullMQ + Redis** | Self-hosted via Docker |
-| Storage | **MinIO SDK** (S3-compatible) | `getObject` / `putObject` |
+| Storage | **Bun native S3** (S3-compatible) | `exists` / read file / presigned URLs |
 | Image | **Bun.Image** (native, since Bun v1.3.14) | No `sharp` / ImageMagick binary |
 | Placeholder | `blurhash` | Computed from original buffer, stored on `photo_items.blurhash` |
 

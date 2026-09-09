@@ -13,7 +13,7 @@ updated: 2026-09-01
 
 **Version:** 0.4-draft (2026-09-01)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Main Stack:** NestJS, Bun 1.4, PostgreSQL, Drizzle ORM / TypeORM, Better Auth, MinIO SDK, BullMQ  
+**Main Stack:** NestJS, Bun 1.4, PostgreSQL, Drizzle ORM / TypeORM, Better Auth, Bun native S3, BullMQ  
 **Target:** Core REST API Server & Authentication System  
 **Status:** Draft
 **Last updated:** 2026-09-01

@@ -67,9 +67,9 @@ batch size `1..N` where `N <= site_settings.max_series_size`.
 }
 ```
 
-**Storage note:** `storage` module generates Presigned PUT URLs via MinIO
-SDK (`S3_ENDPOINT`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE`). `s3Key`
-incorporates `cuid2` for uniqueness.
+**Storage note:** `storage` module generates Presigned PUT URLs via Bun
+native S3 (`S3_ENDPOINT`, `S3_BUCKET`; path-style verified against MinIO).
+`s3Key` incorporates `cuid2` for uniqueness.
 
 ## 3. API — `POST /api/posts`
 

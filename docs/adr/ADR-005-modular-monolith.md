@@ -71,7 +71,7 @@ Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
 | `site-settings` | `site_settings` |
 | `audit` | `admin_audit_logs` (append-only; others request **only** via `AuditRequestedEvent`, never direct inserts) |
 | `curation` / `moderation` | **no tables** — operate on `posts` only through the `posts` facade (`setDisplayOrder`, `setStatus`), never raw Drizzle writes |
-| `storage` / `queue` | no tables — MinIO presign / BullMQ enqueue facades |
+| `storage` / `queue` | no tables — Bun S3 presign / BullMQ enqueue facades |
 | `auth` / `users` | Better Auth-owned tables + `users.role` elevation |
 
 `packages/db` (Drizzle schema, seeded from `docs/data/seed.ts`) is shared
