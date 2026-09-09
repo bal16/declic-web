@@ -1,0 +1,12 @@
+# Interim: the owner holds all areas (ADR-006 OQ-2). Split into
+# dedicated owners when they exist — one line per area, no other change.
+* @bal16
+/apps/web/ @bal16
+/apps/api/ @bal16
+/apps/worker/ @bal16
+/packages/ @bal16
+/docs/adr/ @bal16
+# Infra (single area: CI, compose, env)
+/.github/workflows/ @bal16
+/docker-compose* @bal16
+/.env* @bal16
