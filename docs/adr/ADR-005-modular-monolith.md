@@ -203,6 +203,141 @@ stays deferred (planning/docs still churn on `main`).
   Allowlist: `common/`, `packages/*` / `@declic/*`, bare imports,
   `*.test.ts`, `modules/examples/`.
 
+## 7. Addendum — inter-module contracts (2026-09-09)
+
+`public-api.ts` (Rule 1) says *through which door* modules call each
+other. This addendum closes the five gaps found in the 2026-09-09
+contract audit: direction, DI mechanics, validation scope, method
+names, and contract tests. Rule status: **accepted** (owner decision).
+
+### 7.1 Layering — depend down only, machine-checkable
+
+```mermaid
+flowchart TD
+    subgraph ORCH["Orchestration — depend down only"]
+        direction LR
+        CUR[curation]
+        MOD[moderation]
+    end
+    subgraph DOM["Domain — chain, no cycles"]
+        direction LR
+        ENG[engagement]
+        POS[posts]
+        EXH[exhibitions]
+    end
+    subgraph INFRA["Infra — sideways"]
+        direction LR
+        STO[storage]
+        QUE[queue]
+        FLG[flags]
+        SET[settings]
+        USR[users]
+        AUD[audit]
+    end
+    subgraph COMMON["Common kernel — imports no module"]
+        direction LR
+        KER[guards · role-matrix · RoleCache · DI tokens]
+    end
+    CUR -- "setDisplayOrder" --> POS
+    MOD -- "setStatus" --> POS
+    MOD -- "hideComment" --> ENG
+    ENG -- "counters (sole upward edge in domain)" --> POS
+    POS -- "scope / phase reads" --> EXH
+    EXH -. "alias = controller delegate, no import" .-> POS
+    POS -- "enqueue · presign · flag reads" --> QUE
+    POS -- "enqueue · presign · flag reads" --> STO
+    ANYM["any module"] -. "may depend on" .-> INFRA
+    INFRA -. "depends only on" .-> COMMON
+    EMIT["any emitter"] -. "AuditRequestedEvent (async, sole up-channel)" .-> AUD
+```
+
+Rules:
+
+* **Orchestration** (`curation`, `moderation`) depends **down only**.
+* **Domain** is a chain: `engagement → posts → exhibitions`.
+  The single upward edge *inside* domain is `engagement → posts`
+  counters (Rule 2 ownership exception) — recorded, not repeatable.
+* **Infra** (`storage`, `queue`, `flags`, `settings`, `users`,
+  `audit`) is sideways: anyone may depend on it; it depends only on
+  `common/`.
+* **`common/` imports no feature module, ever.** Guard needs are met
+  by dependency inversion: `common/` defines the token, the feature
+  module provides it.
+* **Cycle resolutions** (all five audit risks, closed):
+  1. `posts ↔ exhibitions` — the `:id/posts` alias is a
+     controller-level delegate, never a module import.
+  2. `posts ↔ audit` — reads go through the `audit` facade
+     (§7.4: `findLatestUnrevertedReplace`, `search`), never raw table
+     reads from other modules.
+  3. `users ↔ common` — `RoleCache` lives in `common/`; `users`
+     imports it for invalidation. One direction only.
+  4. `engagement → posts → moderation → engagement` — impossible by
+     layering: `engagement` never imports orchestration.
+  5. Scheduler ownership — the cron lives in the `exhibitions`
+     module and registers through `queue` infra (`exhibitions →
+     queue` is a legal down-to-sideways edge; `queue` never imports
+     `exhibitions`).
+* The layer map is designed for `check-boundaries.ts` to enforce
+  mechanically (direction check on top of the entry-point check) —
+  follow-up, not this addendum.
+
+### 7.2 DI mechanics — facades are concrete, not types
+
+Interfaces erase at runtime, so a facade is always a concrete
+`@Injectable()` class:
+
+* Provider module `exports:` the facade; consumer module `imports:`
+  the provider module; `public-api.ts` is the barrel re-exporting the
+  facade class + its input/output types (which come from
+  `@declic/contracts` wherever a cross-app shape is involved).
+* `common/` tokens (e.g. role resolution) are defined in `common/`,
+  provided by the feature module — never the reverse import.
+
+### 7.3 Validation scope — trust inside, parse at 3 cross-process points
+
+* **Inside one process** (facade → facade): trust the types. No Zod
+  parse per method — the HTTP pipe (`ZodValidationPipe`) plus
+  contract tests (§7.5) already guarantee shapes.
+* **`parse` is mandatory at exactly 3 points**, where data is born
+  outside the process:
+  1. **Queue consume (worker)** — `imageProcessingJobSchema`
+     ([contracts](../contracts.md) §3), shared with the producer.
+  2. **Cron scheduler** — phase-enum guard on rows acted upon.
+  3. **Audit listener** — `AuditRequestedEvent` envelope schema.
+
+### 7.4 Facade method registry
+
+Existing names stand; `*` = proposed here (spec-first, code later).
+Signatures abbreviated — full shapes in feature files + [contracts](../contracts.md).
+
+| Caller → Callee | Method | Status |
+|---|---|---|
+| `curation` → `posts` | `setDisplayOrder(postId, prevDisplayOrder, nextDisplayOrder)` | specified |
+| `moderation` → `posts` | `setStatus(postId, action, rejectionReason?)` | specified |
+| `moderation` → `engagement` | `hideComment(commentId)` | specified |
+| `posts` → `queue` | `enqueueImageJob(payload)` / `cancelJobsForPost(postId)` * | proposed |
+| `posts` → `storage` | `presignPut(input)` * | proposed |
+| `*` → `flags` | `getFlag(key)` (cached map underneath) * | proposed, replaces stale `SystemService` name |
+| `*` → `settings` | `getMaxSeriesSize()` * | proposed |
+| `*` → `exhibitions` | `getPhase(id)`, `resolveLatest(kind)` * | proposed |
+| `*` → `users` | `RoleCache.get/invalidate` via `common/` | specified |
+| `*` → `audit` (read) | `findLatestUnrevertedReplace(itemId)`, `search(filters)` * | proposed |
+| `auth` | `validateSession()` (used by `SessionGuard`) * | proposed |
+| `*` → `common` | `ROLE_MATRIX` const | specified |
+| worker → `posts` | direct DB via `packages/db` (promotion SQL in [PRD-Worker](../PRD-Worker.md) §3.3 — no facade, no HTTP, no import) | specified mechanism |
+| cron → `exhibitions` | `archiveOverdue()` (cron goes through the facade, never direct `db.update`) * | proposed |
+
+### 7.5 Contract tests — `contract` block in co-located `*.test.ts`
+
+No new file convention. Each `public-api` method gets a
+`describe('contract', …)` block in its module's co-located test file
+asserting inputs, outputs, and documented errors from the feature
+spec (e.g. `hideComment` idempotency + count rule; `enqueue` payload
+shape vs. [contracts](../contracts.md) §3; `getFlag` invalidation).
+The generic ADR-005 verification (facade contract per module +
+`POST → queue → worker → PENDING` trace + audit-never-fails test)
+stays; this makes it enumerable.
+
 ---
 
 ## Cross references

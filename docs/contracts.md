@@ -17,7 +17,9 @@ updated: 2026-09-09
 Normative definitions for every surface crossed by more than one
 module or app. Other documents **reference, never redefine** — on any
 shape question, this file wins (behavioral rules stay in their feature
-files). When implementation starts (first real module, `posts`), each
+files). Module call rules (layering, DI, method registry) live in
+[ADR-005](./adr/ADR-005-modular-monolith.md) §7, not here — this file
+is data shapes only, so it can materialize cleanly. When implementation starts (first real module, `posts`), each
 § below materializes line-by-line into `packages/contracts/src/`
 (`cursor.ts`, `errors.ts`, `queue.ts`, `roles.ts`, `audit.ts`); the
 event class itself stays api-internal (`audit` module).

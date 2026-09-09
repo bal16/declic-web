@@ -137,11 +137,10 @@ ROT faster than the saved config lines. All-at-once was chosen.
 1. **Bun version pin in Docker — resolved 2026-09-08.** All runtimes
    pin `1.4.2` (`packageManager`, `setup-bun` ×2, Dockerfile `FROM`s,
    compose spec); the rule lives in [DEVELOPMENT](../DEVELOPMENT.md) §3.
-2. **Gate spelling cleanup.** Remove `~/` / `src/` handling from
-   `check-boundaries.ts` so exactly one alias spelling exists.
-3. **`nestia`/`typia` evaluation.** Would reopen the `ttsc` (samchon)
-   question and likely force a build step for api/worker. Out of scope
-   until proposed separately.
+2. **Gate spelling cleanup — resolved 2026-09-09.** `check-boundaries.ts`
+   resolves exactly one alias spelling (`@/`); `~/` / `src/` support removed.
+3. **`nestia`/`typia` evaluation — cancelled 2026-09-09** (owner
+   decision, no trigger). The `ttsc` (samchon) question is closed with it.
 
 ---
 
