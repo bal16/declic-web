@@ -134,10 +134,9 @@ ROT faster than the saved config lines. All-at-once was chosen.
 
 ## 6. Open questions / follow-ups (not blocking)
 
-1. **Bun version pin in Docker.** Dockerfiles use floating `oven/bun:1.4`
-   while CI pins `1.4.2` (`packageManager` agrees). With no build step,
-   the runtime *is* the compiler — versions should be identical
-   everywhere. Proposed: pin `oven/bun:1.4.2` in all three Dockerfiles.
+1. **Bun version pin in Docker — resolved 2026-09-08.** All runtimes
+   pin `1.4.2` (`packageManager`, `setup-bun` ×2, Dockerfile `FROM`s,
+   compose spec); the rule lives in [DEVELOPMENT](../DEVELOPMENT.md) §3.
 2. **Gate spelling cleanup.** Remove `~/` / `src/` handling from
    `check-boundaries.ts` so exactly one alias spelling exists.
 3. **`nestia`/`typia` evaluation.** Would reopen the `ttsc` (samchon)

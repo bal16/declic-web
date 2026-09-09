@@ -104,8 +104,9 @@ declic-api/ (mirror content, generated)
 
 ## 3. Prerequisites
 
-* Bun 1.4 (`bun --version`), Git, `gh` CLI (authed as repo owner for mirror/release ops).
-* Container runtime: **Podman** (verified: all three images build + boot-test under podman 6). Plain `docker` works wherever Docker runs — Dockerfiles use the fully-qualified `docker.io/oven/bun:1.4` base for both.
+* Bun 1.4.2 (`bun --version`), Git, `gh` CLI (authed as repo owner for mirror/release ops).
+* Container runtime: **Podman** (verified: all three images build + boot-test under podman 6). Plain `docker` works wherever Docker runs — Dockerfiles use the fully-qualified `docker.io/oven/bun:1.4.2` base for both.
+* **Bun version rule:** one version everywhere — `packageManager`, `setup-bun` (ci + release), Dockerfile `FROM`s, and the compose spec all pin the same `1.4.2`. The runtime *is* the compiler here (api/worker run from source, no build step), so a floating tag would let CI-tested code run on an untested transpiler. Bump all five places together, then re-run both syncs.
 * OAuth credentials for Google/GitHub (only needed to test login later; nothing needs them yet).
 * No global Nest/Vite CLIs — everything runs through Bun. One install per clone: `bunx lefthook install` (git hooks; local-only).
 
@@ -263,7 +264,7 @@ podman build -f apps/worker/Dockerfile -t declic-worker:local .
 podman build -f apps/web/Dockerfile -t declic-web:local .
 ```
 
-All three have been built and boot-tested under podman 6 (api `/health` → ok, worker context ready, web serves SSR HTML with 200). Base image is `docker.io/oven/bun:1.4` (fully qualified — bare short-names fail podman resolution without `registries.conf`). Or pull release images from GHCR instead of building. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into images.
+All three have been built and boot-tested under podman 6 (api `/health` → ok, worker context ready, web serves SSR HTML with 200). Base image is `docker.io/oven/bun:1.4.2` (fully qualified — bare short-names fail podman resolution without `registries.conf`). Or pull release images from GHCR instead of building. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into images.
 
 ### 9.1.1 Prod-like runs via compose (prebuilt apps)
 
@@ -301,7 +302,7 @@ From [PRD](./PRD.md) §8.5: web and API must share one registrable domain (for e
 | `vite build` produces no `.output/` | Missing `nitro()` plugin in `vite.config.ts` | Current Start requires the separate `nitro/vite` plugin |
 | `routeTree.gen.ts` type errors on fresh clone | Generated file missing | Run `bun run --filter @declic/web build` once (file is committed, regenerates deterministically) |
 | Per-app oxlint config ignored | Nested `.oxlintrc.json` files are silently ignored (verified 1.81) | Express per-app rules in root `overrides`, never nested files |
-| `podman build` fails resolving `oven/bun` | Short-name needs `registries.conf` | Dockerfiles already use fully-qualified `docker.io/oven/bun:1.4` |
+| `podman build` fails resolving `oven/bun` | Short-name needs `registries.conf` | Dockerfiles already use fully-qualified `docker.io/oven/bun:1.4.2` |
 | Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §9.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
 | Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
 | MinIO presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |

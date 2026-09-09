@@ -21,9 +21,9 @@ same images (`apps/*/Dockerfile`, see [DEVELOPMENT](./DEVELOPMENT.md) §9).
 | `redis`      | `redis:7-alpine`     | `6379`                    | — (healthy: `ping`)                   |
 | `minio`      | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | `9000` S3, `9001` console | —                                     |
 | `minio-init` | `minio/mc:RELEASE.2025-08-13T08-35-41Z`    | —                         | `minio` healthy (creates bucket once) |
-| `api`        | `oven/bun:1.4`       | `3001`                    | postgres, redis, minio healthy        |
-| `worker`     | `oven/bun:1.4`       | —                         | redis, minio healthy                  |
-| `web`        | `oven/bun:1.4`       | `3000`                    | `api`                                 |
+| `api`        | `oven/bun:1.4.2`     | `3001`                    | postgres, redis, minio healthy        |
+| `worker`     | `oven/bun:1.4.2`     | —                         | redis, minio healthy                  |
+| `web`        | `oven/bun:1.4.2`     | `3000`                    | `api`                                 |
 
 Three modes (`api`/`worker`/`web` carry `profiles: ["apps"]`).
 Run from the repo root (`cp .env.example .env` once):
@@ -142,7 +142,7 @@ services:
   # ── NestJS API (Bun) ───────────────────────────────────────────
   api:
     profiles: ["apps"]
-    image: docker.io/oven/bun:1.4
+    image: docker.io/oven/bun:1.4.2
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run start:dev"
@@ -180,7 +180,7 @@ services:
   # ── Image-processing worker (NestJS + @nestjs/bullmq + Bun.Image) ──
   worker:
     profiles: ["apps"]
-    image: docker.io/oven/bun:1.4
+    image: docker.io/oven/bun:1.4.2
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run start:dev"
@@ -207,7 +207,7 @@ services:
   # ── TanStack Start frontend (Bun + Vite) ──────────────────────────
   web:
     profiles: ["apps"]
-    image: docker.io/oven/bun:1.4
+    image: docker.io/oven/bun:1.4.2
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run dev"

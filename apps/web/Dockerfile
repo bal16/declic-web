@@ -7,7 +7,7 @@
 # .output with production deps only (Bun runs the Nitro server entry).
 # Vercel deploys from the declic-web mirror instead (docs/DEVELOPMENT.md §7.1).
 
-FROM docker.io/oven/bun:1.4 AS builder
+FROM docker.io/oven/bun:1.4.2 AS builder
 WORKDIR /srv/declic
 
 COPY package.json bun.lock bunfig.toml ./
@@ -28,7 +28,7 @@ ARG VITE_API_URL=http://localhost:3001
 ARG VITE_BETTER_AUTH_URL=http://localhost:3001
 RUN bun run build
 
-FROM docker.io/oven/bun:1.4 AS runner
+FROM docker.io/oven/bun:1.4.2 AS runner
 WORKDIR /srv/declic
 ENV NODE_ENV=production
 
