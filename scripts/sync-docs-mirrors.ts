@@ -32,7 +32,10 @@ const MIRRORS: Mirror[] = [
     lang: 'yaml',
   },
   { key: 'seed', src: 'docs/seed.ts', dst: 'docs/seeds.md', lang: 'ts' },
-  { key: 'env', src: 'docs/env.example', dst: 'docs/env.md', lang: 'bash' },
+  // Single source: root .env.example is what runtimes read (Compose,
+  // bun --env-file, Vite envDir); docs/env.md only mirrors it for
+  // Obsidian readability (decision 9a, audit 2026-09-08).
+  { key: 'env', src: '.env.example', dst: 'docs/env.md', lang: 'bash' },
 ];
 
 /** Wrap source text in a fenced code block for the companion note. */

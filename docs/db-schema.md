@@ -12,13 +12,13 @@ updated: 2026-09-01
 
 **Version:** 0.4-draft (2026-09-01)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
-**Source of truth:** [PRD-API](./PRD-API.md) §2 (Database Schema & Data Model)
+**Source of truth for structure:** this file (columns, types, constraints — the Mermaid diagram in §1 is canonical). [PRD-API](./PRD-API.md) §2 specifies **behavior** over these tables and never redefines columns.
 **Last updated:** 2026-09-01
 
 > Root `/` always shows the **latest `LIVE` exhibition** (fallback latest `ARCHIVED`; `DRAFT`/`PRE_EVENT` never public, ordered by `start_date DESC`).
 > A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`).
 > Frames are `photo_items`. Likes/comments/curation attach to `posts`; derivatives/blurhash/exif are per `photo_items`.
-> **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`, `feature_flags` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `site_settings.id=1`.
+> **IDs:** `users` stays Better Auth-managed (`uuid` or `text`); all domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs` and FKs) use **`text` cuid2 generated in app** (`@paralleldrive/cuid2`) except `site_settings.id=1`. `feature_flags` uses `key` PK (flag names, not cuid2).
 > Ordering/pagination uses `created_at` plus `display_order`, never lexicographic `id`. Feature flags live in **typed table `feature_flags` (row-per-flag, `key` PK)**, not in `system_settings`. Phase lives only in `exhibitions.phase`. `system_settings` is **deleted**.
 
 ---
@@ -52,7 +52,7 @@ erDiagram
     EXHIBITIONS {
         string id PK "cuid2"
         string title
-        string slug UK "declic 2026"
+        string slug UK "declic-2026"
         string description "curatorial statement"
         string phase "PRE_EVENT LIVE ARCHIVED DRAFT"
         string poster_s3_key "nullable"
@@ -101,7 +101,7 @@ erDiagram
         string url "CDN url"
         int width
         int height
-        int size_bytes
+        bigint size_bytes
     }
 
     LIKES {
@@ -158,6 +158,7 @@ erDiagram
 |---|---|---|
 | `series_enabled` | `true` | `POST /api/posts` `SERIES` → `403 FEATURE_DISABLED` when `false` |
 | `threaded_comments_enabled` | `false` | `POST /api/posts/:id/comments` `parentId` → `400` when `false` |
+| `comments_enabled` | `true` | `POST /api/posts/:id/comments` → `403 FEATURE_DISABLED` when `false` (spam-emergency kill-switch; reads stay open) |
 
 > Add new flag via `INSERT INTO feature_flags (key, enabled) VALUES ('new_flag', false)` — **no migration**. Cache `SELECT * FROM feature_flags` → `Map`.
 
@@ -208,11 +209,12 @@ erDiagram
 - **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /api/posts` + `POST /api/posts/:id/like` + `POST /api/posts/:id/comments` → `403 {code:"ARCHIVED"}` (read-only; `DELETE /api/posts/:id/like` stays `204`). Curation reorder + `photo_item.replace` blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.
 - **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED` or frame mid-processing (`FRAME_PROCESSING`); stack-of-single-levels revert via `POST /api/admin/posts/:postId/frames/:itemId/revert` (IN for 1.0, `postId` ↔ `itemId` validated).
+- **Per-frame processing state is derived, not stored:** there is no status column on `photo_items`; `FRAME_PROCESSING` (replace/revert guard) means `photo_items.blurhash IS NULL` (worker mid-flight). The `status:"PROCESSING"` in replace/revert responses is transient, not a persisted value.
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
 - **FKs:** `likes.post_id` and `comments.post_id` on works; `photo_derivatives.photo_item_id` per frame.
-- **Threading reserved:** `comments.parent_id` exists but `threaded_comments_enabled=false` in v1 so UI is flat.
+- **Threading implemented (backend):** `comments.parent_id` is fully stored and returned; v1 clients render flat (nested UI is post-1.0 intent, see [engagement](./features/engagement.md) §9).
 - **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `photo_item.replace` (with `old_s3_key`), `photo_item.revert`, `post.withdraw`, `post.moderate`, `comment.hide`, `feature_flag.toggle`, `site_settings.update`, `user.role_change`. Read via `GET /api/admin/audit-logs` (defined in [curation-moderation](./features/curation-moderation.md) §5; pointer at [PRD-API](./PRD-API.md) §4.7).
-- **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
+- **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
 - **DRAFT phase:** `exhibitions.phase='DRAFT'` is invisible-to-public (excluded by default from `GET /api/exhibitions` and all public gallery queries; ADMIN bypass via `?phase=DRAFT`).
 - **IDs:** `users` untouched (Better Auth); domain tables `text` cuid2 app-generated, cursor pagination via `created_at` plus `id` opaque, never raw cuid2 sort.
 - **Feature flags:** `feature_flags` row-per-flag (`key PK`, `enabled bool`) — scalable, add flag via `INSERT` without migration; kill-switches for `series_enabled`, `threaded_comments_enabled`, and `comments_enabled`.
@@ -223,7 +225,7 @@ erDiagram
 
 ## 3. Cross References
 
-- [PRD-API](./PRD-API.md) §2 — textual schema spec (authoritative), §2.2 `exhibitions`, §2.9 flags/settings; endpoints live in `features/` ([exhibition-lifecycle](./features/exhibition-lifecycle.md) for exhibitions + scheduler).
+- [PRD-API](./PRD-API.md) §2 — behavioral spec over these tables (§2.2 `exhibitions`, §2.9 flags/settings; structure authoritative here, not there); endpoints live in `features/` ([exhibition-lifecycle](./features/exhibition-lifecycle.md) for exhibitions + scheduler).
 - [PRD](./PRD.md) §1, §3, §4, §6, §8.4 — latest at root, per-exhibition lifecycle, ARCHIVED freeze, cron.
 - [PRD-FE](./PRD-FE.md) §2 to §3, §6 — latest vs archive routes, exhibition-gated upload and frozen notice.
 - [PRD-Worker](./PRD-Worker.md) §1 to §4 — per-frame processing, post aggregation, flag-aware ingestion, scheduler note.

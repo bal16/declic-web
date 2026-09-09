@@ -30,7 +30,7 @@ updated: 2026-09-07
 - As a viewer, I see a `CURATED` badge on corrected frames (honesty:
   what I see is not exactly the shutter file).
 
-## 2. API — `POST /api/admin/posts/:postId/frames/:itemId/replace` (ADMIN + CURATOR, cuid2)
+## 2. API — `POST /api/admin/posts/:postId/frames/:itemId/replace` (NEW for 1.0, ADMIN + CURATOR, cuid2)
 
 **Access:** `ADMIN`, `CURATOR`. **Blocked when parent exhibition is
 `ARCHIVED`** (`403 ARCHIVED`). **Blocked while the frame is
@@ -72,7 +72,7 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
 gallery shows old derivatives until worker completes (then new cover if
 `item_order=0`).
 
-## 3. API — `POST /api/admin/posts/:postId/frames/:itemId/revert` (ADMIN + CURATOR, cuid2)
+## 3. API — `POST /api/admin/posts/:postId/frames/:itemId/revert` (NEW for 1.0, ADMIN + CURATOR, cuid2)
 
 **Access:** `ADMIN`, `CURATOR`. **Blocked when parent exhibition is
 `ARCHIVED`** (`403 {code:"ARCHIVED"}`). Stack of single-levels: each call undoes exactly the
@@ -106,8 +106,8 @@ is linear, the latest entry is by definition the correct one).
    from_audit_id } }`.
 
 **Response `202 Accepted`:** `{ photoItemId, status:"PROCESSING" }`.
-History: `GET /api/admin/audit-logs?target_id=:itemId` (see
-[curation-moderation](./curation-moderation.md) § Audit trail).
+History: `GET /api/admin/audit-logs?targetId=:itemId` (see
+[curation-moderation](./curation-moderation.md) §5).
 
 ## 4. Frontend (`/admin/moderation`)
 

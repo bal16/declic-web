@@ -29,13 +29,15 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 ## Decisions
 
-| ADR | Subject | Status |
-|---|---|---|
-| [ADR-001](adr/ADR-001-monorepo-mirror.md) | Monorepo source of truth + per-app read-only mirrors | accepted |
-| [ADR-002](adr/ADR-002-release-tagging.md) | Single `vX.Y.Z` tag, rc-only, deploy deferred | accepted |
-| [ADR-003](adr/ADR-003-zod-dto-strategy.md) | Zod as DTO source of truth via `nestjs-zod` | accepted |
-| [ADR-004](adr/ADR-004-direct-pino-logging.md) | Structured logging via direct Pino (no `nestjs-pino` on Bun) | accepted |
-| [ADR-005](adr/ADR-005-modular-monolith.md) | Modular monolith boundaries + `check-boundaries.ts` gate | accepted + addendum 2026-09-08 (layered gate) |
+| ADR                                           | Subject                                                      | Status                                        |
+| --------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| [ADR-001](adr/ADR-001-monorepo-mirror.md)     | Monorepo source of truth + per-app read-only mirrors         | accepted                                      |
+| [ADR-002](adr/ADR-002-release-tagging.md)     | Single `vX.Y.Z` tag, rc-only, deploy deferred                | accepted                                      |
+| [ADR-003](adr/ADR-003-zod-dto-strategy.md)    | Zod as DTO source of truth via `nestjs-zod`                  | accepted                                      |
+| [ADR-004](adr/ADR-004-direct-pino-logging.md) | Structured logging via direct Pino (no `nestjs-pino` on Bun) | accepted                                      |
+| [ADR-005](adr/ADR-005-modular-monolith.md)    | Modular monolith boundaries + `check-boundaries.ts` gate     | accepted + addendum 2026-09-08 (layered gate) |
+| [ADR-006](adr/ADR-006-branch-protection.md) | Phased branch protection (strict on trigger)                 | proposed                                      |
+| [ADR-007](adr/ADR-007-path-aliases.md)      | Per-app `@/*` path alias (app `src` anchor)                  | accepted                                      |
 
 ## Ops
 
@@ -47,7 +49,7 @@ Start here. Every note below is linked with standard markdown links (relative pa
 |---|---|---|
 | [docker-compose](./docker-compose.md) | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
 | [seeds](./seeds.md) | `docs/seed.ts` | same |
-| [env](./env.md) | `docs/env.example` | same |
+| [env](./env.md) | root `.env.example` | same |
 
 ## Conventions used in these notes
 

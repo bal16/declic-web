@@ -100,6 +100,21 @@ the slice in `scripts/mirror.sh` are two sources of truth by
 Github-Actions design (triggers must be static); they are kept in sync
 via a comment cross-reference in `mirror.yml`.
 
+## 7. Addendum — deploy targets undecided, mirrors unprotected (2026-09-08)
+
+Two corrections to §2/§4, recorded without rewriting history:
+
+* **Web deploy target is TBD — Vercel explicitly out**
+  ([DEVELOPMENT](../DEVELOPMENT.md) §9.2). The `Vercel` cell in the §2
+  table is superseded; per-app destinations stay undecided until the
+  `deploy` job in `release.yml` is filled in.
+* **Mirror repos carry no branch protection by design.** §4's
+  "branch protection on mirrors" guardrail is superseded: any PR/check/
+  push restriction would block the automation's force-pushes. Trust
+  comes from the read-only convention (generated README), sole-writer
+  deploy keys, and full rebuilds from `main` (see
+  [ADR-006](./ADR-006-branch-protection.md)).
+
 ---
 
 ## Cross references

@@ -15,7 +15,7 @@ updated: 2026-09-01
 **Owner:** TBD
 **Last updated:** 2026-09-01
 
-> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, revert `POST /api/admin/posts/:postId/frames/:itemId/revert` (stack of single-levels), audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED` or frame mid-processing `FRAME_PROCESSING`). See [PRD-API](./PRD-API.md) §2.4, [curator-replace-revert](./features/curator-replace-revert.md), [db-schema](./db-schema.md) `PHOTO_ITEMS.source`, [PRD-FE](./PRD-FE.md) §3.2.1, [PRD-Worker](./PRD-Worker.md) `curated:true` payload.
+> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, revert `POST /api/admin/posts/:postId/frames/:itemId/revert` (stack of single-levels), audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED` or frame mid-processing `FRAME_PROCESSING`). See [PRD-API](./PRD-API.md) §4.4, [curator-replace-revert](./features/curator-replace-revert.md), [db-schema](./db-schema.md) `PHOTO_ITEMS.source`, [PRD-FE](./PRD-FE.md) §3.2.1, [PRD-Worker](./PRD-Worker.md) `curated:true` payload.
 
 ---
 
@@ -127,7 +127,7 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 
 - Browse the **latest exhibition at `/`** (grid/gallery view, individual work view) — a **SERIES** appears as one card (cover frame) in the grid; detail/lightbox shows a carousel of its frames. Browse older exhibitions at `/archive` and `/exhibition/[slug]`.
 - Like/react to a published **work** (requires login) — one like per work, not per frame. **Frozen when its exhibition is `ARCHIVED`** (read-only archive, shows frozen notice).
-- Comment on a published **work** (requires login) — thread is per work (`comments.post_id`); optional `parent_id` for v1 is reserved but UI is flat. **Frozen when `ARCHIVED`.**
+- Comment on a published **work** (requires login) — thread is per work (`comments.post_id`); `parent_id` stored nullable (v1 UI renders flat, nested post-1.0). **Frozen when `ARCHIVED`.**
 - View work details (photographer credit, caption, per-frame metadata panel) — always allowed even in `ARCHIVED`.
 - View exhibition metadata (title, poster, `start_date`/`end_date`, location) on `/exhibition/[slug]` header.
 
@@ -137,9 +137,12 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 - Upload **works** (with metadata: title, caption, etc.):
   - **SINGLE:** one image + metadata.
   - **SERIES:** 2–N images uploaded together as one work (max configurable, e.g. 10), sharing title/caption/moderation status; per-frame `item_order`, `exif_metadata`, and preview are kept on `photo_items`.
-- View the moderation status of each **work** (`posts.status`: pending / approved /
-  rejected) — individual frames have no independent status.
-- Edit or withdraw a **work** while it's still pending (reorder frames within a series, replace a frame, edit title/caption).
+- View the moderation status of each **work** (`posts.status`: full machine
+  in §8.2 — `PROCESSING → PENDING → APPROVED/REJECTED`, plus
+  `FAILED_PROCESSING`, `UNPUBLISHED`, and the `PUBLISHED` legacy alias)
+  — individual frames have no independent status.
+- Edit or withdraw a **work** while it is `PENDING`, `REJECTED`,
+  `PROCESSING`, `FAILED_PROCESSING`, or `UNPUBLISHED` (reorder frames within a series, replace a frame, edit title/caption; withdraw is photographer + admin, see [withdraw-work](./features/withdraw-work.md)).
 
 ### 4.3 Admin
 
@@ -214,7 +217,7 @@ Work model: `exhibitions` (phase, start/end, slug, poster) → `posts` (exhibiti
 Roles are enforced at the API layer based on the authenticated session, not
 just in the frontend UI. Runtime feature flags (`feature_flags` table, row-per-flag: `series_enabled`, `threaded_comments_enabled`, `comments_enabled`) plus global limits (`site_settings` singleton: `max_series_size`) provide a **kill-switch without deploy** — e.g. disabling new `SERIES` creation while keeping existing SERIES readable.
 
-**ID generation:** Domain tables (`posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`) use **cuid2** (`text` PK, app-generated via `@paralleldrive/cuid2`); `users` stays Better Auth-managed (`uuid`/`text`). Ordering/pagination uses `created_at` + `display_order`, never lexicographic `id`.
+**ID generation:** Domain tables (`exhibitions`, `posts`, `photo_items`, `photo_derivatives`, `comments`, `admin_audit_logs`) use **cuid2** (`text` PK, app-generated via `@paralleldrive/cuid2`); `users` stays Better Auth-managed (`uuid`/`text`). Ordering/pagination uses `created_at` + `display_order`, never lexicographic `id`.
 
 ---
 

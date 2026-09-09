@@ -32,13 +32,13 @@ updated: 2026-09-07
 
 **Access:** Public (no auth). If a session exists, additional field
 `isLiked` is included. **Scoped to an exhibition** — defaults to latest
-published exhibition (see [exhibition-lifecycle](./exhibition-lifecycle.md)).
+`LIVE` exhibition (fallback latest `ARCHIVED`, see [exhibition-lifecycle](./exhibition-lifecycle.md)).
 
 **Query Parameters:**
 
 | Param | Type | Default | Description |
 |---|---|---|---|
-| `exhibition_id` | `cuid2` | latest exhibition | Filter by exhibition; omit for latest (`start_date DESC`) |
+| `exhibitionId` | `cuid2` | latest exhibition | Filter by exhibition; omit for latest (`start_date DESC`) |
 | `exhibition_slug` | `string` | — | Alternative (e.g. `declic-2026`) |
 | `sort` | `enum` | `curated` | `curated` (by `posts.display_order`), `most_liked` (by `likes_count`), `recent` (by `posts.created_at` — **not** `id`) |
 | `search` | `string` | — | Substring match on `posts.title` or `users.name` |
@@ -86,7 +86,7 @@ published exhibition (see [exhibition-lifecycle](./exhibition-lifecycle.md)).
 
 **Performance:** `< 50ms` (composite index `(exhibition_id, status)`
 
-- `likes_count`/`comments_count` cache + CDN). Publicly visible only `status IN (APPROVED, PUBLISHED) AND deleted_at IS NULL` **within exhibitions with `phase IN ('LIVE','ARCHIVED')`** (`APPROVED` staged in `PRE_EVENT` stays hidden until `LIVE`; `UNPUBLISHED` never public; `PUBLISHED` is a legacy alias of visible `APPROVED`). Cover for SERIES is `items[0]`.
+- `likes_count`/`comments_count` cache + CDN). Publicly visible only `status IN (APPROVED, PUBLISHED) AND deleted_at IS NULL` **within exhibitions with `phase IN ('LIVE','ARCHIVED')`** (`APPROVED` staged in `PRE_EVENT` stays hidden until `LIVE`; `UNPUBLISHED` never public; `PUBLISHED` is a legacy alias of `APPROVED` + `LIVE`). Cover for SERIES is `items[0]`.
 
 ## 3. API — `GET /api/posts/mine` & `GET /api/posts/:id`
 

@@ -87,7 +87,7 @@ export const ROLE_MATRIX = {
   'posts:own':       ['ADMIN', 'PHOTOGRAPHER'],
 } as const;
 // usage: @Require('moderate:write')  (likes/comments need session only;
-// public gallery is @Public() — see matrix in [[PRD-API]] §3.2)
+// public gallery is @Public() — see matrix in [PRD-API](../PRD-API.md) §3.2)
 ```
 
 Key → endpoint binding (owner checks live in the service, not the guard):

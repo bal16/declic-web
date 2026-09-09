@@ -11,7 +11,7 @@ updated: 2026-09-04
 ---
 # PRD Frontend: Déclic — Web Application
 
-**Version:** 0.4-draft (2026-09-01)  
+**Version:** 0.4-draft (2026-09-08)  
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
 **Main Stack:** TanStack Start (TanStack Router + file-based routes, Vite), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, dnd-kit, exifr  
 **Target:** Web Client (Viewer, Photographer, Curator, Admin)  
@@ -49,7 +49,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 | Route | Description |
 |---|---|
-| `/` | **Gallery Home Page (latest exhibition)** — Immersive grid of **works from the latest `LIVE` exhibition** (fallback latest `ARCHIVED`; when neither exists — only `DRAFT`/`PRE_EVENT` — `200` empty-state "Pameran berikutnya sedang disiapkan."; resolved via `GET /api/exhibitions?limit=1` then `GET /api/posts` with the resolved `exhibition_id` (omitted `exhibition_id` also defaults to latest)). Shows exhibition header (title, poster, `start_date`/`end_date`, location) + justified layout by cover image, search (`title`/photographer), sorting (`Curated`, `Most Liked`, `Recent`). Filter `SINGLE`/`SERIES` pills optional. When latest is `ARCHIVED`, banner `"This exhibition is archived — browsing only"` and like/comment creation disabled (unlike stays enabled). |
+| `/` | **Gallery Home Page (latest exhibition)** — Immersive grid of **works from the latest `LIVE` exhibition** (fallback latest `ARCHIVED`; when neither exists — only `DRAFT`/`PRE_EVENT` — `200` empty-state "Pameran berikutnya sedang disiapkan."; resolved via `GET /api/exhibitions?limit=1` then `GET /api/posts` with the resolved `exhibitionId` (omitted `exhibitionId` also defaults to latest)). Shows exhibition header (title, poster, `startDate`/`endDate`, location) + justified layout by cover image, search (`title`/photographer), sorting (`Curated`, `Most Liked`, `Recent`). Filter `SINGLE`/`SERIES` pills optional. When latest is `ARCHIVED`, banner `"This exhibition is archived — browsing only"` and like/comment creation disabled (unlike stays enabled). |
 | `/archive` | **Archive List** — Grid/list of past `ARCHIVED` exhibitions (`GET /api/exhibitions?phase=ARCHIVED`) ordered by `start_date DESC`, with poster + title + date. |
 | `/exhibition/$slug` | **Exhibition Detail** — Gallery scoped to that `exhibitions.slug` (`GET /api/exhibitions/:slug` + `GET /api/posts?exhibition_slug=:slug`). Same grid/lightbox as `/` but header shows that exhibition’s metadata. `ARCHIVED` banner + frozen engagement if needed. |
 | `/post/$postId` + lightbox mask | **Work Lightbox (route-masked modal)** — Immersive modal over the grid without full page reload, synced with URL. Clicking a work navigates to the modal route while the URL bar keeps the gallery URL via TanStack Router **route masking**; refresh/share unmasks to `/post/$postId` detail. For `SERIES`, carousel of frames. Alias `/photo/$postId` → `/post/$postId`. Respects `ARCHIVED` freeze (like/comment buttons disabled with tooltip). |
@@ -61,7 +61,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 | Route | Description | Guard |
 |---|---|---|
-| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Each `PENDING`/`REJECTED`/`FAILED_PROCESSING` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner (withdraw opens once the worker settles). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
+| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Each `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner alongside the button (withdraw cancels worker jobs best-effort). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
 | `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch MinIO Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from `site_settings`. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
 | `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (`FAILED_PROCESSING` allows title/caption edit + Retry, reorder stays `PENDING`-only; exhibition not `ARCHIVED`). | Owner only |
 
@@ -73,8 +73,8 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {poster_s3_key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](./features/exhibition-lifecycle.md) §3). | `ADMIN` |
-| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibition_id=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
+| `/admin/exhibitions` | **Exhibition Management** — CRUD `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](./features/exhibition-lifecycle.md) §3). | `ADMIN` |
+| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
 | `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](./features/auth-rbac.md) §7. | `ADMIN` |
@@ -99,14 +99,14 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 - **Sorting Options:**
   - `Curated` (default) — based on `posts.display_order` (LexoRank)
-  - `Most Liked` — `ORDER BY posts.likes_count DESC` (denormalized, see PRD-API §2.2)
+  - `Most Liked` — `ORDER BY posts.likes_count DESC` (denormalized, see PRD-API §2.3)
   - `Recent` — `ORDER BY posts.created_at DESC`
 - **Search Bar:** Fast **debounced query** (300ms) by `posts.title` or `photographer.name`. Query is forwarded as `?search=` to `GET /api/posts`. Optional type filter `?type=SERIES` pills.
 - **Infinite Scrolling** remains via `TanStack Query` `useInfiniteQuery` with cursor on posts.
 
 #### Infinite Scrolling & Blurhash Placeholder
 
-- Uses **cursor-based pagination** via `TanStack Query` (`useInfiniteQuery`) — `cursor` + `limit` + `nextCursor` from `GET /api/posts?exhibition_id=...` (or `exhibition_slug`). Default `exhibition_id` is latest exhibition resolved on page load.
+- Uses **cursor-based pagination** via `TanStack Query` (`useInfiniteQuery`) — `cursor` + `limit` + `nextCursor` from `GET /api/posts?exhibitionId=...` (or `exhibitionSlug`). Default `exhibitionId` is latest exhibition resolved on page load.
 - Placeholder: **blurhash** from the cover frame's `photo_items.blurhash` to prevent **CLS** (see §5).
 - Plain `<img>` with responsive `sizes` + `loading="lazy"` (first 4 works use `fetchpriority="high"` instead of lazy). Derivatives are already CDN-cached per frame, so no framework image optimizer is needed.
 - **ARCHIVED banner:** When `exhibitions.phase === 'ARCHIVED'`, grid shows top banner `"This exhibition is archived — likes and comments are frozen"` and disables like/comment buttons (tooltip `ARCHIVED`).
@@ -120,7 +120,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 - **Gesture:** Swipe left/right navigates frames; swipe up/down or `Esc` closes.
 - **Interactions:**
   - **Like** button with **Optimistic UI Update** on the **work** (`posts.likes_count` + `isLiked` locally before response, rollback on failure — endpoint `POST /api/posts/:id/like` idempotent; **disabled + `403 ARCHIVED` when exhibition is `ARCHIVED`**).
-  - Interactive **comment** thread with **Auth Wall** — thread is per work (`comments.post_id`). Flat in v1; `parent_id` is returned but ignored. **Frozen when `ARCHIVED`** (input disabled, banner shown).
+  - Interactive **comment** thread with **Auth Wall** — thread is per work (`comments.post_id`). Flat in v1; `parent_id` is stored and returned for future nested assembly. **Frozen when `ARCHIVED`** (input disabled, banner shown).
   - **Metadata Panel Toggle** — Drawer/sidebar shows per-frame EXIF for the currently visible frame (`make`, `model`, `fNumber`, `exposureTime`, `iso`, `focalLength`, `DateTimeOriginal`), plus ability to switch frames and see each frame's metadata.
 - **Accessibility:** `Esc` to close, `←`/`→` to navigate frames/works, `Tab` trapped inside modal, `aria-modal`, carousel has `aria-roledescription="carousel"`.
 
@@ -136,7 +136,7 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 - **Upload mode toggle:** `SINGLE` (single file) vs `SERIES` (multiple files, 2–N). Toggle auto-switches if user drops N>1 files. Max per series configurable (e.g. 10) — validated both client and API.
 - **Validation per file:**
-  - File type: `image/jpeg`, `image/png`, `image/webp` (allowlist, synced with API `upload-url` validation)
+  - File type: `image/jpeg`, `image/png`, `image/webp`, `image/avif` (allowlist, synced with API `upload-url` validation)
   - Size: max **50MB** per file (configurable, inline error per file)
   - Minimum dimensions: e.g. `1920px` on the longest side — checked async via `new Image()` after `URL.createObjectURL(file)`
 - **Instant Local Preview:** `URL.createObjectURL(file)` renders instantly in a sortable list (no canvas re-encode) — guarantees ICC profile and original integrity, zero-CPU. User can **drag to reorder** frames to set `item_order`, remove/replace a frame, and see per-frame status.
@@ -184,7 +184,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 ```
 
 - UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (gold) on replaced frames; tooltip shows `audit` time.
-- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (latest one; repeatable) → `POST /api/admin/posts/:postId/frames/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?target_id=:itemId` rendered as a mini timeline under the frame.
+- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (latest one; repeatable) → `POST /api/admin/posts/:postId/frames/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?targetId=:itemId` rendered as a mini timeline under the frame.
 - Disabled when exhibition `ARCHIVED` with banner `"Archived — replacements frozen"`.
 
 ### 3.3 Admin Visual Layout Editor (`/admin/curate`)
@@ -309,7 +309,7 @@ const { data: session, isPending } = useSession();
 
 | Client | Mechanism | Configuration |
 |---|---|---|
-| **Web (TanStack Start)** | First-party cookie: `HTTP-Only`, `Secure`, `SameSite=Lax` | Web & API must share the same registrable domain (`app.declic.com` + `api.declic.com`) via `trustedOrigins` + CORS. Fallback: reverse-proxy `apps/web` proxies `/api/*` → API |
+| **Web (TanStack Start)** | First-party cookie: `HTTP-Only`, `Secure`, `SameSite=Lax` | Web & API must share the same registrable domain (`app.declic.example` + `api.declic.example`) via `trustedOrigins` + CORS. Fallback: reverse-proxy `apps/web` proxies `/api/*` → API |
 | **Mobile (future)** | `Authorization: Bearer <token>` via Better Auth `bearer()` plugin | No cookies, hits `api.*` directly |
 
 ### 6.3 Auth Guard Component
@@ -337,7 +337,7 @@ const { data: session, isPending } = useSession();
 ## 7. Cross References
 
 - **General PRD:** [PRD](./PRD.md) — vision, multi-exhibition (latest at `/`), SERIES works, per-exhibition lifecycle + `ARCHIVED` freeze + cron, system architecture.
-- **Backend API:** [PRD-API](./PRD-API.md) — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibition_id`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
+- **Backend API:** [PRD-API](./PRD-API.md) — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibitionId`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
 - **Image Worker:** [PRD-Worker](./PRD-Worker.md) — `image-processing` per `photo_item` (`cuid2`), aggregation to `posts.status`, scheduler note (no worker change for exhibitions).
 - **DB Schema:** [db-schema](./db-schema.md) — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
 - **Local Infra:** `docker-compose.yml` + `env.example` — services `web` (TanStack Start), `api` (NestJS), `worker`, `postgres`, `redis`, `minio`.

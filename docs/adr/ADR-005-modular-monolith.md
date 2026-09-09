@@ -57,7 +57,8 @@ code importable from anywhere.
 Enforcement: `scripts/check-boundaries.ts` CI gate (same pattern as
 `scripts/check-coverage.ts`), failing on imports matching
 `modules/<other-module>/*` except via `public-api`. Wired into
-`ci.yml` alongside the coverage gate.
+`ci.yml` verify and `release.yml` verify as the `boundaries` step
+(coverage stays a release-only gate — `ci.yml` has none).
 
 ### Rule 2 — Table ownership (one writer per table)
 

@@ -32,4 +32,8 @@ Conventions (see [Docs MOC](../README.md) for vault-wide rules): template is
 Stories → API → FE → Worker → Schema touch → Edge cases → Out of scope
 → Acceptance checklist. New endpoints since 0.4-draft are marked
 **(NEW for 1.0)** in their file: `PATCH /api/posts/:id`,
-`GET /api/admin/users`, `PATCH /api/admin/users/:id/role`.
+`PATCH /api/posts/:id/items/reorder`, `GET /api/admin/users`,
+`PATCH /api/admin/users/:id/role`,
+`POST /api/admin/posts/:postId/frames/:itemId/replace`,
+`POST /api/admin/posts/:postId/frames/:itemId/revert`,
+`POST /api/admin/exhibitions/:id/poster-upload-url`.

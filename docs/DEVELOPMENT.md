@@ -41,39 +41,37 @@ declic/                              # bal16/declic (private monorepo)
 ├── bun.lock                         # single lockfile at root (frozen in CI)
 ├── bunfig.toml                      # shared Bun config
 ├── .gitignore / .dockerignore / .editorconfig
-├── .env                             # local only, copied from .env.example (never committed)
-├── .env.example                     # merged root env (see §4)
+├── .env.example / .env.prod.example # local: copy to .env / .env.prod (never committed)
 ├── .oxlintrc.json                   # oxlint: correctness=error, web hooks override (§6)
 ├── .oxfmtrc.jsonc                   # oxfmt: width 80, single quotes, import+tailwind sort (§6)
-├── lefthook.yml                     # pre-commit: staged oxlint --fix + oxfmt (stage_fixed)
+├── lefthook.yml                     # pre-commit: oxfmt → oxlint --fix → boundaries (sequential)
+├── README.md                        # root readme
 ├── apps/
 │   ├── web/                         # TanStack Start (Vite) — @declic/web
 │   │   ├── package.json / tsconfig.json / vite.config.ts
 │   │   ├── Dockerfile               # two-stage, serves Nitro .output
-│   │   ├── src/
-│   │   │   ├── router.tsx           # getRouter() factory + Register augmentation
-│   │   │   ├── routes/__root.tsx + index.tsx
-│   │   │   ├── routeTree.gen.ts     # generated AND committed (typecheck needs it)
-│   │   │   ├── styles.css           # Tailwind v4 entry (oxfmt sort reference)
-│   │   │   └── lib/env.ts           # VITE_* config (VITE_API_URL, VITE_BETTER_AUTH_URL)
+│   │   ├── src/                     # router.tsx, routes/, routeTree.gen.ts (committed), styles.css, lib/env.ts
 │   │   └── test/home.e2e.test.ts    # boots Nitro build, fetches / over HTTP
 │   ├── api/                         # NestJS API + Better Auth — @declic/api
-│   │   ├── package.json / tsconfig.json / Dockerfile
-│   │   └── src/                     # main.ts, app.module.ts (+controller/service, /health)
-│   │       └── test/…               # unit (*.test.ts) + e2e (test/health.e2e.test.ts)
+│   │   ├── package.json / tsconfig.json / Dockerfile  # no build step: Bun runs src/main.ts
+│   │   ├── src/                     # main.ts, app.module.ts, docs.ts, logger.ts, modules/examples/ (living skeleton)
+│   │   └── test/                    # unit-adjacent e2e (health, docs, examples)
 │   │   # (next) feature modules per PRD-API.md §1.1 (auth, posts, queue, …)
 │   └── worker/                      # BullMQ consumer + Bun.Image — @declic/worker
-│       ├── package.json / tsconfig.json / Dockerfile (no EXPOSE)
-│       └── src/                     # main.ts (app context), worker.module.ts
-│           └── test/…               # unit + e2e (context lifecycle)
+│       ├── package.json / tsconfig.json / Dockerfile (no EXPOSE, no build step)
+│       ├── src/                     # main.ts, worker.module.ts, logger.ts
+│       └── test/context.e2e.test.ts # context lifecycle
 │       # (next) image-processing consumer per PRD-Worker.md §3
 ├── packages/
-│   ├── contracts/                   # @declic/contracts — zod (DTO source of truth, next: schemas)
+│   ├── contracts/                   # @declic/contracts — zod (src/index.ts, src/posts.ts)
 │   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/seed.ts
 │   └── tsconfig/base.json           # shared strict TS config (decorator metadata on)
 ├── scripts/
 │   ├── mirror.sh                    # builds C1 mirror branches (used by mirror.yml)
-│   └── check-coverage.ts            # coverage gate: ≥90% lines per app (used by release.yml)
+│   ├── check-coverage.ts            # coverage gate: ≥90% lines per app (used by release.yml)
+│   ├── check-boundaries.ts          # module boundaries gate (used by hook + ci + release)
+│   ├── sync-compose.ts              # materializes root docker-compose.yml from spec
+│   └── sync-docs-mirrors.ts         # embeds sources into docs/*.md companions
 ├── .github/workflows/
 │   ├── ci.yml                       # verify + leak-guard (workflow_dispatch only)
 │   ├── mirror.yml                   # push to main → update 3 mirrors (automatic)
@@ -82,11 +80,16 @@ declic/                              # bal16/declic (private monorepo)
 │   ├── settings.json                # oxc formatter/linter on save; eslint+prettier disabled
 │   └── extensions.json              # recommends oxc, tailwind, markdownlint, editorconfig
 └── docs/
-    ├── adr/ADR-001-monorepo-mirror.md + ADR-002-release-tagging.md
+    ├── adr/                         # ADR-001…ADR-007 (mirror, release, zod, pino, boundaries, branch protection, aliases)
     ├── DEVELOPMENT.md               # this file
+    ├── README.md                    # docs map of content
     ├── PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md
-    └── db-schema.md / seed.ts / docker-compose.yml / env.example
-├── docker-compose.yml             # root materialization of the docs/ spec (infra default, --profile apps for full stack)
+    ├── features/                    # 1 file per feature + README index (acceptance specs)
+    ├── db-schema.md / seeds.md / seed.ts
+    ├── docker-compose.md / docker-compose.yml (spec) / env.md
+    └── .obsidian/                   # vault config (local-only)
+├── docker-compose.yml               # root materialization of the docs/ spec (infra default, --profile apps for full stack)
+├── docker-compose.prod.yml          # prod-like overrides (profiles: prod, GHCR images)
 ```
 
 Each C1 mirror contains its app plus the `packages/*` slice it needs, plus the root build manifest, so a standalone clone builds without the monorepo. Example (`declic-api` mirror):
@@ -108,7 +111,7 @@ declic-api/ (mirror content, generated)
 
 ## 4. Environment
 
-Root `.env.example` merges `docs/env.example` plus service URLs. Copy it before first run:
+Root `.env.example` is the single source of truth (mirrored into `docs/env.md` for Obsidian). Copy it before first run:
 
 ```bash
 cp .env.example .env
@@ -123,6 +126,8 @@ cp .env.example .env
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | api | URL is `http://localhost:3001` in dev |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | api | Empty = OAuth login disabled, rest of app still runs |
 | `VITE_API_URL`, `VITE_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev (`VITE_` prefix = client-exposed) |
+| `LOG_LEVEL` | api, worker | `debug` dev default (commented), `info` prod default |
+| `PORT` | api (host runs) | `3001` (commented; Compose sets it per service) |
 
 ## 5. Development
 
@@ -178,7 +183,7 @@ environment (Docker/host), never from a file.
 bun run --filter "@declic/*" test       # unit tests (src/)
 bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build output first)
 bun run --filter "@declic/*" build      # per-app builds
-bun run coverage                        # coverage gate: >=90% lines per app (§8)
+bun run coverage                        # coverage gate: >=90% lines per app (release-only, §8)
 bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
 ```
 
@@ -199,6 +204,7 @@ Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
 * **Lint** (`.oxlintrc.json`): `correctness` = error everywhere, `react/hooks` baseline, plus an `apps/web/**` override block with stricter hooks rules (`react/rules-of-hooks`, `react/exhaustive-deps`) and test leniency (`no-explicit-any` off in tests).
 * **Known oxlint fact:** nested per-directory configs (e.g. `apps/web/.oxlintrc.json`) are silently ignored in 1.81 — per-app strictness lives in root `overrides`, verified empirically. Do not reintroduce nested configs without re-verifying.
 * **Gates:** Lefthook pre-commit (staged-only, `stage_fixed` so fixes land in the same commit; install per clone) and the `lint` job in `ci.yml`. Boundary gate (`bun run boundaries`, full-tree scan ~0.05s, no re-stage) runs in pre-commit alongside oxlint/oxfmt, in `ci.yml` verify, and in `release.yml` verify (see [ADR-005](./adr/ADR-005-modular-monolith.md) §6). VS Code uses `oxc.oxc-vscode` for format+fix on save; ESLint/Prettier extensions are disabled via settings + `unwantedRecommendations`.
+* **Imports:** intra-app `@/*` (= that app's `src`, per [ADR-007](adr/ADR-007-path-aliases.md); `~/` and `src/` prefixes are not used), inter-package `@declic/*` via `workspace:*`. DB columns stay `snake_case`; wire JSON is `camelCase`.
 * **JSON/YAML:** covered by oxfmt (it already normalizes `package.json` key order and workflow YAML). JSON *lint* (schemas) comes from `$schema` keys + editor support, not oxlint.
 
 ## 7. Mirrors (how the per-app repos stay updated)

@@ -45,22 +45,22 @@ updated: 2026-09-07
 
 ### `GET /api/exhibitions` (public)
 
-Paginated per [PRD-API](../PRD-API.md) §4.0 cursor (`start_date DESC` + `id` tiebreaker,
-`limit` default `20` max `50`): `{ data: [{id, title, slug, phase, poster_url, location, start_date, end_date, posts_count}], nextCursor }`.
+Paginated per [PRD-API](../PRD-API.md) §4.0 cursor pattern (`start_date DESC` + `id` tiebreaker,
+`limit` default `20` max `50`): `{ data: [{id, title, slug, phase, posterUrl, location, startDate, endDate, postsCount}], nextCursor }`.
 `?phase=LIVE|ARCHIVED` optional
 (`DRAFT` excluded by default; `PRE_EVENT` excluded from public gallery — root `/` never resolves to `DRAFT`/`PRE_EVENT`). Root `/` uses latest `LIVE` (fallback
-latest `ARCHIVED`) as `exhibition_id` default.
+latest `ARCHIVED`) as `exhibitionId` default.
 
 #### `GET /api/exhibitions/:slug` (public, cuid2 or slug)
 
-**Response `200 OK`:** `{ id, title, slug, description, phase, poster_url, location, start_date, end_date, posts_count }`.
-`posts_count: integer` — `APPROVED`+visible works only for public;
+**Response `200 OK`:** `{ id, title, slug, description, phase, posterUrl, location, startDate, endDate, postsCount }`.
+`postsCount: integer` — `APPROVED`+visible works only for public;
 all non-deleted works for `ADMIN`. Includes `poster` url.
 Errors: `404 NOT_FOUND` (unknown slug; `DRAFT` slug is `404` for non-ADMIN).
 
 #### `GET /api/exhibitions/:id/posts` (public)
 
-Alias for `GET /api/posts?exhibition_id=:id` — gallery scoped to that
+Alias for `GET /api/posts?exhibitionId=:id` — gallery scoped to that
 exhibition, same cursor contract (see [gallery-discovery](./gallery-discovery.md)).
 
 #### `POST /api/exhibitions` (ADMIN)
@@ -71,13 +71,13 @@ exhibition, same cursor contract (see [gallery-discovery](./gallery-discovery.md
 **Response `201 Created`:** the created exhibition (cuid2 `id`) with `posts_count: 0`.
 Errors: `400 VALIDATION_ERROR` (missing field, bad date range `end_date <= start_date`, slug collision).
 
-> Poster upload: **dedicated endpoint** `POST /api/admin/exhibitions/:id/poster-upload-url`
+> Poster upload: **dedicated endpoint** (NEW for 1.0) `POST /api/admin/exhibitions/:id/poster-upload-url`
 > (ADMIN-only, `phase != ARCHIVED` on `:id`; `DRAFT`/`PRE_EVENT`/`LIVE` allowed).
 > Body `{ filename, contentType, fileSizeBytes }` (single file, same
 > allowlist/size rules as photos, key prefix `posters/`, `expiresIn: 900` — never
 > `POST /api/posts/upload-url`, which is photographer-accessible and
 > scoped to `raw-uploads/`). Response `{ uploadUrl, s3Key, expiresIn }`,
-> then `PATCH /api/admin/exhibitions/:id { "poster_s3_key":
+> then `PATCH /api/admin/exhibitions/:id { "posterS3Key":
 > "posters/cuid-poster.jpg" }` → `200`. Flow: create exhibition first
 > (no poster) → presign with the new `:id` → PUT → PATCH (no
 > circular dependency: no presign before the exhibition exists).

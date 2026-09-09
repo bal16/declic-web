@@ -64,7 +64,7 @@ src/
 
 ## 2. Database Schema & Data Model (PostgreSQL)
 
-> Canonical Mermaid: [db-schema](./db-schema.md) §1. This section is the textual spec.
+> Canonical structure: [db-schema](./db-schema.md) §1 (columns, types, constraints — the Mermaid diagram lives there). This section specifies **behavior** only and never redefines columns; on any shape question, db-schema wins.
 
 **ID generation rule:**
 
@@ -186,9 +186,9 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | `created_at` | `timestamp` | DEFAULT `now()` | Creation time (cursor) |
 | `deleted_at` | `timestamp` | NULLABLE | Soft delete (future) |
 
-> For v1, `threaded_comments_enabled=false` → server rejects `parentId` or stores `NULL`; clients render flat. `posts.comments_count` counts only `is_hidden=false AND deleted_at IS NULL`.
+> For v1, `threaded_comments_enabled=false` → server rejects `parentId` with `400 {code:"FEATURE_DISABLED"}`; clients render flat. `posts.comments_count` counts only `is_hidden=false AND deleted_at IS NULL`.
 
-### 2.8 `admin_audit_logs` (schema-ready, optional for v1) — cuid2
+### 2.8 `admin_audit_logs` — cuid2
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
@@ -199,7 +199,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 | `payload` | `jsonb` | NULLABLE | Snapshot of change |
 | `created_at` | `timestamp` | DEFAULT `now()` | Time |
 
-> Not required for v1 launch; table exists so moderation can log without migration.
+> Required for v1 launch: replace/revert history, flag-toggle audit, and curator reads all depend on this table (see §4.6 audit-logs endpoint).
 
 ### 2.9 `feature_flags` — row-per-flag typed bool (scalable) + `site_settings` singleton for global limits
 
@@ -207,7 +207,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
-| `key` | `text` | PK | Flag key — `series_enabled`, `threaded_comments_enabled` |
+| `key` | `text` | PK | Flag key — `series_enabled`, `threaded_comments_enabled`, `comments_enabled` |
 | `enabled` | `boolean` | NOT NULL | On/off |
 | `description` | `text` | NULLABLE | Human-readable purpose |
 | `created_at` | `timestamp` | DEFAULT `now()` | Creation |
@@ -242,11 +242,11 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 
 **Seeds — see `docs/seed.ts` (source of truth, idempotent):**
 
-> Seeds are defined in `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT (key) DO NOTHING` / `ON CONFLICT (id) DO NOTHING`. PRD keeps only the **summary table** above; do not duplicate `INSERT` SQL here. Run `bun docs/seed.ts` or `bun run seed` (apps/api).
+> Seeds are defined in `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`, `exhibitionsSeed`) — `ON CONFLICT (key) DO NOTHING` / `ON CONFLICT (id) DO NOTHING`. PRD keeps only the **summary table** above; do not duplicate `INSERT` SQL here. Run `bun docs/seed.ts`.
 
 | Table | Seed keys / values |
 |---|---|
-| `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false` — see `featureFlagsSeed` in `docs/seed.ts` |
+| `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false`, `comments_enabled=true` — see `featureFlagsSeed` in `docs/seed.ts` |
 | `site_settings` | `id=1, site_title='Déclic — Pameran UKM CLIC UNNES', max_series_size=10` — see `siteSettingsSeed` in `docs/seed.ts` |
 
 > **Caching (so every page open does not hit DB):** Both tables are tiny (`feature_flags` 3 rows, `site_settings` 1 row) — **cached in-memory 10s TTL** per API instance (or Redis) and invalidated on `PATCH /api/admin/feature-flags/:key` / `PATCH /api/admin/site-settings`. Public `GET /api/feature-flags` + `GET /api/site-settings` are **CDN-cacheable** (`Cache-Control: public, max-age=10, stale-while-revalidate=60`) and frontend caches via `TanStack Query` 10s `staleTime`. No DB hit per page view.
@@ -269,7 +269,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 **CORS & Cookie Domain:**
 
 - API is mounted on verified origins via Better Auth `trustedOrigins`.
-- Web and API **must** be under the same registrable domain (e.g. `app.declic.com` + `api.declic.com`) so the cookie is treated as first-party (Safari/Firefox already block third-party cookies). Fallback: reverse-proxy rewrite (API proxied through the web domain).
+- Web and API **must** be under the same registrable domain (e.g. `app.declic.example` + `api.declic.example`) so the cookie is treated as first-party (Safari/Firefox already block third-party cookies). Fallback: reverse-proxy rewrite (API proxied through the web domain).
 
 Related env:
 
@@ -365,10 +365,10 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `VALIDATION_ERROR` | 400 | Body/query/cursor/DTO validation failed (`details` = field errors) |
 | `UNAUTHENTICATED` | 401 | No/invalid session or bearer token |
 | `FORBIDDEN` | 403 | RBAC deny (role insufficient) |
-| `FEATURE_DISABLED` | 403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`) |
+| `FEATURE_DISABLED` | 400/403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`) — `400` for flag-gated shapes (`parentId` with threading off), `403` for flag-gated actions (SERIES create, comments with flags off) |
 | `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder/replace/revert blocked) |
 | `NOT_FOUND` | 404 | Unknown `id`/`slug` |
-| `WITHDRAW_CLOSED` | 409 | `DELETE /api/posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`) |
+| `WITHDRAW_CLOSED` | 409 | `DELETE /api/posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`) |
 | `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
 | `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
 | `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in MinIO |

@@ -142,7 +142,7 @@ services:
   # ── NestJS API (Bun) ───────────────────────────────────────────
   api:
     profiles: ["apps"]
-    image: oven/bun:1.4
+    image: docker.io/oven/bun:1.4
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run start:dev"
@@ -180,7 +180,7 @@ services:
   # ── Image-processing worker (NestJS + @nestjs/bullmq + Bun.Image) ──
   worker:
     profiles: ["apps"]
-    image: oven/bun:1.4
+    image: docker.io/oven/bun:1.4
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run start:dev"
@@ -207,7 +207,7 @@ services:
   # ── TanStack Start frontend (Bun + Vite) ──────────────────────────
   web:
     profiles: ["apps"]
-    image: oven/bun:1.4
+    image: docker.io/oven/bun:1.4
     restart: unless-stopped
     working_dir: /app
     command: sh -c "bun install && bun run dev"

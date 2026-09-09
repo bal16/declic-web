@@ -17,7 +17,7 @@ Initial data for a fresh database. Run `bun docs/seed.ts` (idempotent,
 
 | Export | Table | Rows |
 |---|---|---|
-| `featureFlagsSeed` | `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false` |
+| `featureFlagsSeed` | `feature_flags` | `series_enabled=true`, `threaded_comments_enabled=false`, `comments_enabled=true` |
 | `siteSettingsSeed` | `site_settings` | `id=1`, `max_series_size=10` (+ title, maintenance off) |
 | `exhibitionsSeed` | `exhibitions` | `declic-2026` (`PRE_EVENT`, Sep 2026) |
 

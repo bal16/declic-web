@@ -67,6 +67,9 @@ jobs:
       - name: Compose sync check (spec materialized to root)
         run: bun run sync:compose --check
 
+      - name: Docs mirror check (sources embedded in docs/*.md)
+        run: bun run sync:docs --check
+
       - name: Leak guard (public web mirror)
         run: |
           violations=$(grep -R -l -E "BETTER_AUTH_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|S3_SECRET_KEY|apps/(api|worker)" apps/web --exclude-dir=node_modules || true)

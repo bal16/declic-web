@@ -33,7 +33,7 @@ updated: 2026-09-07
 ## 2. API — `POST /api/posts/upload-url`
 
 **Access:** Authenticated (`PHOTOGRAPHER`, `ADMIN`). Validates **target
-exhibition** `phase != ARCHIVED` (via `exhibition_id` body or latest
+exhibition** `phase != ARCHIVED` (via `exhibitionId` body or latest
 exhibition). No flag check (presign is cheap; flag is enforced at
 `POST /api/posts`).
 
@@ -124,7 +124,7 @@ incorporates `cuid2` for uniqueness.
 
 **API Actions (transactional, scoped to exhibition):**
 
-1. Resolve `exhibition_id` (provided or latest). If
+1. Resolve `exhibitionId` (provided or latest). If
    `exhibitions.phase === 'ARCHIVED'` → `403 {code:"ARCHIVED"}` (see Errors). If
    `type===SERIES` and `series_enabled===false` → `403 {code:"FEATURE_DISABLED"}`.
 2. Validate `1 <= items.length <= site_settings.max_series_size`.
@@ -180,7 +180,7 @@ admin action).
 
 **Response `200 OK`:** updated `post` with nested `items`.
 
-## 5. API — `PATCH /api/posts/:id/items/reorder` (photographer, cuid2 ids)
+## 5. API — `PATCH /api/posts/:id/items/reorder` (NEW for 1.0, photographer, cuid2 ids)
 
 Allows photographer to reorder frames inside a SERIES before moderation:
 `{ "orderedItemIds": ["cuid-2","cuid-1","cuid-3"] }` → updates

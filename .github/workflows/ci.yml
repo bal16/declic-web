@@ -44,6 +44,9 @@ jobs:
       - name: Compose sync check (spec materialized to root, dormant until triggers enabled)
         run: bun run sync:compose --check
 
+      - name: Docs mirror check (sources embedded in docs/*.md)
+        run: bun run sync:docs --check
+
       # Tolerant until every workspace defines these scripts (scaffold step).
       # The `||` fallbacks can be removed once typecheck/test/test:e2e/build
       # exist in @declic/web, @declic/api, @declic/worker and packages/*.

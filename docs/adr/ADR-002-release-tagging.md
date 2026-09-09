@@ -73,8 +73,11 @@ deploy step empty.
 
 ## 5. Deferred follow-ups (all blocked on deploy-target decisions, if any)
 
-1. **Tag protection** (`v*` maintainer-only ruleset) — enable when the
-   workflow goes live for real releases.
+1. **Tag protection** (`v*` maintainer-only ruleset) — unavailable:
+   verified 2026-09-08 that repository rulesets require Pro on private
+   repos (see [ADR-006](./ADR-006-branch-protection.md)). Substitute is
+   discipline (annotated, never moved) plus the strict `release.yml`
+   gates. Revisit only on a plan upgrade.
 2. **Snapshot automation** (`:main-<sha>` per push to `main`) — enable
    together with deploy targets, **with retention (last N versions) from
    day one** (see §6: registry storage is the binding constraint, not

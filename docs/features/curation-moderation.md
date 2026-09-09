@@ -50,7 +50,7 @@ display_order = :newRank WHERE id = :postId` atomically (O(1), no full
 table rebalance). Legacy field `photoId` accepted as alias for
 `postId`. Blocked when exhibition is `ARCHIVED` (`403 {code:"ARCHIVED"}`).
 
-**Response `200 OK`:** `{ "postId": "cuid-post", "display_order": "0|hzzzzz:" }`.
+**Response `200 OK`:** `{ "postId": "cuid-post", "displayOrder": "0|hzzzzz:" }`.
 Errors: `404 NOT_FOUND` (unknown `postId`); `400 VALIDATION_ERROR` (rank
 outside the exhibition scope, i.e. `postId` belongs to another exhibition).
 
@@ -80,8 +80,8 @@ outside the exhibition scope, i.e. `postId` belongs to another exhibition).
 - **Audit:** emits `AuditRequestedEvent` (`target_id=cuid-post`,
   `action='post.moderate'`) — never a direct insert ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
-**Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "display_order": "0|hzzzzz:" }`
-(`display_order` present only for `APPROVE`; `REJECT` returns `rejection_reason` instead).
+**Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "displayOrder": "0|hzzzzz:" }`
+(`displayOrder` present only for `APPROVE`; `REJECT` returns `rejectionReason` instead).
 Errors: `404 NOT_FOUND`; `400 VALIDATION_ERROR` (`REJECT` without reason).
 
 **Alias:** `PATCH /api/admin/photos/:id/moderate` (deprecated, removed post-1.0).
@@ -100,14 +100,14 @@ include hidden rows. Emits `AuditRequestedEvent` (`action='comment.hide'`).
 
 ## 5. API — `GET /api/admin/audit-logs` (ADMIN + CURATOR, read-only)
 
-Read-only trail over `admin_audit_logs`. Query params: `target_id`
+Read-only trail over `admin_audit_logs`. Query params: `targetId`
 (cuid2, e.g. frame for replace/revert chain), `action` (e.g.
 `photo_item.replace`, `photo_item.revert`, `post.withdraw`,
 `post.moderate`, `comment.hide`, `exhibition.phase_change`,
 `feature_flag.toggle`, `site_settings.update`, `user.role_change`),
 `limit` (default `20`, max `50`), `cursor` (§4.0 schema,
-`ORDER BY created_at, id`). Response: `{ data: [{id, admin_id, action,
-target_id, payload, created_at}], nextCursor }`. Powers the
+`ORDER BY created_at, id`). Response: `{ data: [{id, adminId, action,
+targetId, payload, createdAt}], nextCursor }`. Powers the
 revert-history UI (see [curator-replace-revert](./curator-replace-revert.md)) and phase-change
 trail; retention unbounded for 1.0.
 
@@ -152,4 +152,4 @@ tables. No new tables.
 - [ ] Drag work → `display_order` between neighbors, no rebalance
 - [ ] Reject without reason → `400`; with reason → `REJECTED` + audit
 - [ ] Hide comment → count decrements, public hides, admin sees
-- [ ] Audit-logs filtered by `target_id` shows replace→revert chain
+- [ ] Audit-logs filtered by `targetId` shows replace→revert chain

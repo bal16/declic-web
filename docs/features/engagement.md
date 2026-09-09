@@ -52,7 +52,7 @@ Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": tru
 
 **Body:** `{ "content": "Amazing composition!", "parentId": "cuid-parent-optional" }`
 
-**Response `201 Created`:** `{ "id": "cuid-comment", "post_id": "cuid-post", "content": "...", "parent_id": null, "created_at": "..." }`.
+**Response `201 Created`:** `{ "id": "cuid-comment", "postId": "cuid-post", "content": "...", "parentId": null, "createdAt": "..." }`.
 
 **Failure precedence:** `404 NOT_FOUND` (work invisible: `UNPUBLISHED`/withdrawn or wrong exhibition scope) → `403 {code:"ARCHIVED"}` (frozen exhibition) → `403 {code:"FEATURE_DISABLED"}` (`comments_enabled=false`) → `400 {code:"FEATURE_DISABLED"}` (`parentId` sent while `threaded_comments_enabled=false`).
 
@@ -67,11 +67,11 @@ Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": tru
 ## 4. API — `GET /api/posts/:id/comments`
 
 Paginated per [PRD-API](../PRD-API.md) §4.0 cursor (`created_at` + `id`, `limit` default `20` max `50`):
-`{ data: [{id, post_id, content, parent_id, created_at}], nextCursor }`.
+`{ data: [{id, postId, content, parentId, createdAt}], nextCursor }`.
 List with `is_hidden = false AND deleted_at IS NULL` for public; Admin
 sees all (including hidden). Flat sorted by `created_at` (not `id`);
-`parent_id` included but clients render flat unless threading flag is on
-(see [feature-flags-site-settings](./feature-flags-site-settings.md)).
+`parentId` returned for future nested assembly, but v1 clients render
+flat (nested UI is post-1.0 intent, see §9).
 
 ## 5. Frontend (lightbox + detail)
 
@@ -88,7 +88,7 @@ No involvement.
 ## 7. Schema touch
 
 `likes` (composite PK `(user_id, post_id)`), `comments` (`post_id`,
-`parent_id` reserved), denormalized `posts.likes_count` /
+`parent_id` nullable self-FK, fully stored and returned), denormalized `posts.likes_count` /
 `comments_count` maintained transactionally (see [db-schema](../db-schema.md)). No new
 tables.
 
@@ -100,8 +100,15 @@ tables.
 
 ## 9. Out of scope (post-1.0)
 
-- Threaded replies UI (`parent_id` reserved); reactions beyond like;
-  comment edit (delete + repost is the path); notifications.
+> **Post-1.0 intent (non-normative):** nested replies UI. The v1 API
+> already returns a flat list with `parentId`, so nesting is pure
+> client-side assembly when it lands: depth capped at 1 level (a reply
+> to a reply renders flat under the same root), no per-thread
+> pagination, no nested moderation actions, no reply notifications —
+> those are separate scope, not part of this note.
+
+- Reactions beyond like; comment edit (delete + repost is the path);
+  notifications.
 
 ## 10. Acceptance checklist
 

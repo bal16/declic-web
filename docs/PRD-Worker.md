@@ -18,7 +18,7 @@ updated: 2026-09-01
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> [!abstract] This document complements [PRD-API](./PRD-API.md). The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [db-schema](./db-schema.md); for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [PRD-API](./PRD-API.md) §2.2/§2.8/§3.3 and [exhibition-lifecycle](./features/exhibition-lifecycle.md). Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
+> [!abstract] This document complements [PRD-API](./PRD-API.md). The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [db-schema](./db-schema.md); for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [PRD-API](./PRD-API.md) §2.3/§2.9/§3.3 and [exhibition-lifecycle](./features/exhibition-lifecycle.md). Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
 
 ---
 
@@ -79,11 +79,12 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
   "postId": "cuid-post",
   "photoItemId": "cuid-photo-item",
   "s3Key": "raw-uploads/cuid-original.jpg",
-  "curated": false
+  "curated": false,
+  "revert": false
 }
 ```
 
-> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
+> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. **Curator revert** enqueues a single job with `curated:false, revert:true` — worker regenerates derivatives from `original_s3_key` (see [curator-replace-revert](./features/curator-replace-revert.md) §6). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
 
 **MinIO bucket layout (cuid2 s3Key):**
 
@@ -139,7 +140,7 @@ import { Job } from 'bullmq';
 
 @Processor('image-processing')
 export class ImageProcessorConsumer extends WorkerHost {
-  async process(job: Job<{ postId: string; photoItemId: string; s3Key: string }>): Promise<void> { // ids are cuid2 text
+  async process(job: Job<{ postId: string; photoItemId: string; s3Key: string; curated: boolean; revert?: boolean }>): Promise<void> { // ids are cuid2 text
 
     const { postId, photoItemId, s3Key } = job.data;
 
@@ -201,8 +202,9 @@ export class ImageProcessorConsumer extends WorkerHost {
   }
 }
 
-// Replacement follows the same pipeline — no separate code path
-// `curated:true` is only for audit/logging; derivatives are regenerated
+// Replacement and revert follow the same pipeline — no separate code path
+// `curated:true` is only for audit/logging (replacement); `revert:true`
+// regenerates from `original_s3_key`. Derivatives are regenerated
 // identically and `posts.status` aggregation remains PENDING → PENDING
 ```
 
@@ -230,7 +232,7 @@ COMMIT;
 
 ```sql
 -- executed after each frame commit, with row-level lock on posts
--- (skips withdrawn works: a concurrent DELETE sets deleted_at, see [[withdraw-work]])
+-- (skips withdrawn works: a concurrent DELETE sets deleted_at, see [withdraw-work](./features/withdraw-work.md) §4)
 SELECT COUNT(*) FROM photo_items WHERE post_id = :postId AND blurhash IS NULL;
 -- if 0 and no missing derivatives:
 UPDATE posts SET status = 'PENDING', updated_at = now()
@@ -302,23 +304,15 @@ S3_BUCKET=declic
 S3_FORCE_PATH_STYLE=true
 ```
 
-`worker` service in `docker-compose.yml`:
+`worker` service: see `docs/docker-compose.yml` (canonical spec;
+root `docker-compose.yml` is materialized from it) — `oven/bun`-based
+image, `depends_on` redis/postgres/minio healthy, no inbound ports.
 
-```yaml
-worker:
-  image: oven/bun:1.4
-  working_dir: /app
-  command: sh -c "bun install && bun run start:dev"
-  volumes:
-    - ./apps/worker:/app
-  depends_on:
-    redis: { condition: service_healthy }
-    minio: { condition: service_healthy }
-
-# BullMQ cron (runs in API, not worker, but shares Redis)
-# apps/api/src/modules/exhibitions/exhibition.scheduler.ts
-# @Cron('0 * * * *') exhibition-scheduler -> UPDATE exhibitions SET phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()
-```
+**BullMQ cron** (runs in API, not worker, but shares Redis):
+`apps/api/src/modules/exhibitions/exhibition.scheduler.ts` —
+`@Cron('0 ** **')` exhibition-scheduler → `UPDATE exhibitions SET
+phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()` (hourly
+intent — confirm the 5-field cron form at implementation).
 
 ---
 
