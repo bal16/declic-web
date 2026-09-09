@@ -4,13 +4,13 @@ aliases:
 tags:
   - declic
   - adr
-status: proposed
-updated: 2026-09-08
+status: accepted
+updated: 2026-09-09
 ---
 # ADR-006: Branch Protection Strategy (Phased Strict)
 
-**Status:** Proposed
-**Date:** 2026-09-08
+**Status:** Accepted
+**Date:** 2026-09-08 (accepted 2026-09-09; OQ-1–OQ-4 resolved below)
 **Org:** bal16
 **Deciders:** repo owner
 **Related:** [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-002](./ADR-002-release-tagging.md), `../../.github/workflows/ci.yml`, `../../.github/workflows/mirror.yml`
@@ -23,17 +23,17 @@ updated: 2026-09-08
   repository rulesets API returns `403 (requires Pro or public)`.
   Only **classic branch protection** (`Settings > Branches`) is available —
   no rulesets, no tag-protection rules, no granular bypass lists.
-* Team: solo now, **collaborators arriving later**. Stated preference:
-  **strict** at the end state.
-* Current phase: **docs/planning churn directly on `main`**
-  (uncommitted work in `scripts/*` at the time of writing).
-  Strict protection now would block that workflow.
+* Team: collaborators **onboarded and reading** (not coding yet).
+  Stated preference: **strict** at the end state.
+* Current phase: **docs/planning churn directly on `main`** — direct push
+  ends when the contracts slice (first feature branch) merges.
 * CI posture: `ci.yml` triggers still manual-only (`workflow_dispatch`);
-  jobs `verify` + `leak-guard`. `mirror.yml` fans out on every push to
-  `main` (paths-scoped, see [ADR-001](./ADR-001-monorepo-mirror.md) §6).
+  jobs `verify` (incl. `sync:compose` + `sync:docs` checks) + `leak-guard`.
+  Tracker ready: 5 labels + 2 issue templates. `mirror.yml` fans out on
+  every push to `main` (paths-scoped, see [ADR-001](./ADR-001-monorepo-mirror.md) §6).
   `release.yml` is tag-driven (`v*`).
 
-## 2. Decision (proposed)
+## 2. Decision (accepted)
 
 Two phases. **Phase A now, Phase B on an agreed trigger.**
 
@@ -47,9 +47,12 @@ Two phases. **Phase A now, Phase B on an agreed trigger.**
   3. Add `CODEOWNERS` per area (owners TBD — see §6 OQ-2).
   4. Optional: PR template so first-time collaborators start tidy.
 
-### Phase B — strict (on trigger, see §6 OQ-1)
+### Phase B — strict (trigger (d): contracts slice ready to merge)
 
-One classic branch protection rule for `main`:
+One classic branch protection rule for `main` (stale branches always
+via rebase — linear history rejects the web "Update branch" merge;
+see [DEVELOPMENT](../guides/DEVELOPMENT.md) §5.5, which also notes rebase
+drops approvals by design):
 
 * Require a pull request before merging; required approvals = **1**;
   require review from Code Owners; dismiss stale approvals;
@@ -116,21 +119,22 @@ E.g. only block force-push/deletion, allow direct pushes.
 * Mirrors unaffected: docs-only push skips fan-out (paths filter);
   slice change still force-pushes all three mirrors.
 
-## 6. Open questions
+## 6. Open questions — resolved 2026-09-09
 
-* **OQ-1 — Flip trigger:** what ends Phase A? Candidate answers:
-  (a) first scaffold lands, (b) first collaborator invited,
-  (c) CI triggers enabled + one green PR. Needs a dated decision;
-  until then this ADR stays `proposed`.
-* **OQ-2 — Code owners:** who owns `apps/web`, `apps/api`,
-  `apps/worker`, `packages/*`, `docs/adr/*`? Unassigned owners block
-  PRs under "require review from Code Owners".
-* **OQ-3 — Emergency lane:** strict says no bypass, but is there a
-  break-glass story (e.g. temporary rule relaxation by owner, logged
-  in the PR)? Classic protection has no per-actor bypass on Free.
-* **OQ-4 — Tag discipline without tag protection:** is social convention
-  plus annotated-tag hygiene enough until a plan upgrade, or should tag
-  creation move to a script/CI job (`release.yml` dispatch only)?
+* **OQ-1 — Flip trigger: (d) before the first code PR merges.** Phase A
+  prep now (triggers, CODEOWNERS, PR template, removable fallbacks);
+  flip protection when the contracts slice (first feature branch) is
+  ready to merge — collaborators' first experience is the gated flow.
+* **OQ-2 — Code owners: the owner, all areas (interim).** One `infra`
+  area (`.github/workflows/` + `docker-compose*` + `.env*`); split when
+  a dedicated infra owner exists. Code-owner review **on**.
+* **OQ-3 — Emergency lane: manual break-glass, logged.** No technical
+  bypass exists on Free — the owner temporarily relaxes the rule,
+  merges, and re-enables, with a `break-glass: <reason>` trail in the
+  PR body. Documented here so exceptions stay visible and rare.
+* **OQ-4 — Tag discipline: social convention.** Annotated tags, never
+  moved, owner-created only. Revisit script-gated creation when the
+  team passes ~5 people or a release goes wrong.
 
 ---
 
