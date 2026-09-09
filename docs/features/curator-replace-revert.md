@@ -62,9 +62,9 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
 5. Delete old `photo_derivatives` for that `photo_item_id` (avoid stale
    CDN; recommended over keep-until-overwrite).
 6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId,
-   s3Key, curated: true }` (same pipeline as [PRD-Worker](../PRD-Worker.md)).
+   s3Key, curated: true, revert: false }` (same pipeline as [PRD-Worker](../PRD-Worker.md)).
 7. Emit `AuditRequestedEvent` `{ action:'photo_item.replace',
-   admin_id, target_id:itemId, payload:{ postId,
+   adminId, targetId:itemId, payload:{ postId,
    old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }`
    (never a direct insert — [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
@@ -105,7 +105,7 @@ unreverted `photo_item.replace` audit row; no `from_audit_id` is accepted
    curated: false, revert: true }` (`revert:true` is audit/logging
    signal only).
 8. Emit `AuditRequestedEvent` `{ action:'photo_item.revert',
-   admin_id, target_id:itemId, payload:{ postId,
+   adminId, targetId:itemId, payload:{ postId,
    restored_s3_key: old_s3_key, restored_source: old_source,
    from_audit_id } }`.
 

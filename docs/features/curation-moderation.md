@@ -103,7 +103,7 @@ outside the exhibition scope, i.e. `postId` belongs to another exhibition).
 
 Validation notes: `action: "PUBLISHED"` is rejected with `400 VALIDATION_ERROR` (legacy alias, never a write); `rejectionReason` sent with `APPROVE`/`UNPUBLISH` is ignored (not stored, no error); `REJECT` without reason → `400`.
 
-- **Audit:** emits `AuditRequestedEvent` (`target_id=cuid-post`,
+- **Audit:** emits `AuditRequestedEvent` (`targetId=cuid-post`,
   `action='post.moderate'`) — never a direct insert ([ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2).
 
 **Response `200 OK`:** `{ "postId": "cuid-post", "status": "APPROVED", "displayOrder": "0|hzzzzz:" }`

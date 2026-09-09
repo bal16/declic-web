@@ -145,12 +145,12 @@ same gate).
 
 ```json
 [
-  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg", "curated": false },
-  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg", "curated": false }
+  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg", "curated": false, "revert": false },
+  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg", "curated": false, "revert": false }
 ]
 ```
 
-> Canonical payload `{postId, photoItemId, s3Key, curated}` (see [PRD-Worker](../PRD-Worker.md) §1). Fresh uploads always send `curated: false`.
+> Canonical payload `{postId, photoItemId, s3Key, curated, revert?}` (full shape in [contracts](../contracts.md) §3; see [PRD-Worker](../PRD-Worker.md) §1). Fresh uploads always send `curated: false, revert: false`.
 
 > Post status transitions to `PENDING` only after **all** its photo_items
 > finish processing (see [PRD-Worker](../PRD-Worker.md) §3.3).
@@ -243,7 +243,8 @@ re-validate size — only new `POST /api/posts` is validated).
 ## 9b. API — `POST /api/posts/:id/retry` (NEW for 1.0, owner or `ADMIN`, cuid2)
 
 Re-enqueues worker jobs for failed frames only (`photo_items` with
-`blurhash IS NULL` under this `postId`); sibling frames with valid
+`blurhash IS NULL` under this `postId`); replayed jobs carry the frame's
+`original_s3_key` as `s3Key`; sibling frames with valid
 derivatives are untouched. Allowed only from `FAILED_PROCESSING`
 (otherwise `409`, no-op); `ARCHIVED` exhibition → `403 {code:"ARCHIVED"}`
 (Retry does not bypass the freeze — withdraw the work instead, see

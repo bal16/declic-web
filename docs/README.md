@@ -20,6 +20,7 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 - [PRD-API](./PRD-API.md) — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
 - [db-schema](./db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
+- [contracts](./contracts.md) — normative cross-module/cross-app shapes (cursor, errors, queue, roles, audit actions). Planning scope: materializes into `packages/contracts/src/` when implementation starts.
 - [PRD-FE](./PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
 - [PRD-Worker](./PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
 
