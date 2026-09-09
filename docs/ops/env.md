@@ -12,7 +12,7 @@ status: living
 # Environment Variables
 
 Copy to root `.env` before first run: `cp .env.example .env`
-(see [DEVELOPMENT](./DEVELOPMENT.md) §4). Never commit real secrets
+(see [DEVELOPMENT](../guides/DEVELOPMENT.md) §4). Never commit real secrets
 (see `.gitignore`).
 
 | Group | Keys |

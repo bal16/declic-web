@@ -11,10 +11,10 @@ updated: 2026-09-09
 # Frontend Guide (`apps/web`, TanStack Start)
 
 **Status:** Draft (for owner review)
-**Related:** [DESIGN](./DESIGN.md) (design contract), [PRD-FE](./PRD-FE.md) (full UI spec), [contracts](./contracts.md) (shared shapes)
+**Related:** [DESIGN](./DESIGN.md) (design contract), [PRD-FE](../specs/PRD-FE.md) (full UI spec), [contracts](../specs/contracts.md) (shared shapes)
 
 How the web app is built: structure, data flow, guards, env, tests.
-*What* to build lives in [PRD-FE](./PRD-FE.md); *how it looks* in
+*What* to build lives in [PRD-FE](../specs/PRD-FE.md); *how it looks* in
 [DESIGN](./DESIGN.md). This file is *how it is organized*.
 
 ---
@@ -59,7 +59,7 @@ Rules (3, easy to remember):
    feature-to-feature only via barrels; `ui`/`lib` never import
    features or routes.
 
-`@/*` = `src` (see [ADR-007](./adr/ADR-007-path-aliases.md));
+`@/*` = `src` (see [ADR-007](../adr/ADR-007-path-aliases.md));
 generated files (`routeTree.gen.ts`, `.output/`) never hand-edited.
 
 ## 2. Data flow (TanStack Query)
@@ -72,7 +72,7 @@ generated files (`routeTree.gen.ts`, `.output/`) never hand-edited.
   (like button, reorder, moderation actions) — reconcile with the
   returned payload (`likesCount`, echoed order).
 - Type the wire with `@declic/contracts` (import type only — never
-  redefine shapes; camelCase per [contracts](./contracts.md) §1).
+  redefine shapes; camelCase per [contracts](../specs/contracts.md) §1).
 - Errors branch on `code` (never message text) → toasts per
   [DESIGN](./DESIGN.md) §6 copy table.
 
@@ -135,7 +135,7 @@ types. Mirror carries `apps/web` + `packages/*` slice + manifest only.
 
 ## Cross references
 
-- Full UI spec: [PRD-FE](./PRD-FE.md)
+- Full UI spec: [PRD-FE](../specs/PRD-FE.md)
 - Design contract: [DESIGN](./DESIGN.md)
-- Shared shapes: [contracts](./contracts.md)
-- Mirror + leak-guard: [ADR-001](./adr/ADR-001-monorepo-mirror.md), `ci.yml`
+- Shared shapes: [contracts](../specs/contracts.md)
+- Mirror + leak-guard: [ADR-001](../adr/ADR-001-monorepo-mirror.md), `ci.yml`

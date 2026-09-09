@@ -13,7 +13,7 @@ updated: 2026-09-04
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [PRD-Worker](../PRD-Worker.md) §4.3, `../../apps/api/src/logger.ts`, `../../apps/worker/src/logger.ts`
+**Related:** [PRD-Worker](../specs/PRD-Worker.md) §4.3, `../../apps/api/src/logger.ts`, `../../apps/worker/src/logger.ts`
 
 ---
 
@@ -98,5 +98,5 @@ coverage gate passing, lint/format clean.
 
 * API logger + middleware: `../../apps/api/src/logger.ts`
 * Worker logger: `../../apps/worker/src/logger.ts`
-* Observability targets: [PRD-Worker](../PRD-Worker.md) §4.3
+* Observability targets: [PRD-Worker](../specs/PRD-Worker.md) §4.3
 * Env: `../../.env.example` (`LOG_LEVEL`)

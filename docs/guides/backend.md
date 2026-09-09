@@ -11,11 +11,11 @@ updated: 2026-09-09
 # Backend Guide (`apps/api`, NestJS on Bun)
 
 **Status:** Draft (for owner review)
-**Related:** [PRD-API](./PRD-API.md) (full spec), [ADR-005](./adr/ADR-005-modular-monolith.md) (boundaries + contracts §7), [contracts](./contracts.md) (shared shapes)
+**Related:** [PRD-API](../specs/PRD-API.md) (full spec), [ADR-005](../adr/ADR-005-modular-monolith.md) (boundaries + contracts §7), [contracts](../specs/contracts.md) (shared shapes)
 
 How the api app is built: module anatomy, request lifecycle, data
-access, testing. *What* to build lives in [PRD-API](./PRD-API.md) and
-`features/`; *rules* live in [ADR-005](./adr/ADR-005-modular-monolith.md).
+access, testing. *What* to build lives in [PRD-API](../specs/PRD-API.md) and
+`features/`; *rules* live in [ADR-005](../adr/ADR-005-modular-monolith.md).
 This file is *how it is organized*.
 
 ---
@@ -39,7 +39,7 @@ hand-written `@ApiProperty`); cross-module imports only via
 `modules/examples/` (deleted when the first real module lands).
 
 > Current state (scaffold, delete this note when `posts` lands): only
-> `modules/examples/` exists — the 12 modules in [PRD-API](./PRD-API.md)
+> `modules/examples/` exists — the 12 modules in [PRD-API](../specs/PRD-API.md)
 > §1.1 are planned, none implemented. Landing order §6.
 
 ## 2. Request lifecycle (api)
@@ -48,7 +48,7 @@ hand-written `@ApiProperty`); cross-module imports only via
 ZodValidationPipe → controller → facade → Drizzle and/or queue →
 response DTO`. Guards read shared state (flags, phase, role) but never
 business tables; cross-field rules live in services, not schemas
-(see [ADR-003](./adr/ADR-003-zod-dto-strategy.md) §4).
+(see [ADR-003](../adr/ADR-003-zod-dto-strategy.md) §4).
 
 ```mermaid
 sequenceDiagram
@@ -73,7 +73,7 @@ Consume (`parse` payload with `imageProcessingJobSchema`) → process
 `posts.status` to `PENDING` when all siblings ready, skip
 `deleted_at IS NOT NULL`). No HTTP, no api imports — shared DB via
 `packages/db` plus the queue payload only (see
-[PRD-Worker](./PRD-Worker.md) §1–§3).
+[PRD-Worker](../specs/PRD-Worker.md) §1–§3).
 
 ```mermaid
 flowchart LR
@@ -87,18 +87,18 @@ flowchart LR
 ## 4. Data access + queue + scheduler
 
 - **Drizzle** (`packages/db`, landing): schema is shared-readable;
-  **writes** follow the ownership map ([ADR-005](./adr/ADR-005-modular-monolith.md)
+  **writes** follow the ownership map ([ADR-005](../adr/ADR-005-modular-monolith.md)
   Rule 2). Mutations on `posts` carry `WHERE deleted_at IS NULL`
   (withdraw wins races).
 - **Queue**: produce via the `queue` facade (`enqueueImageJob`,
-  canonical payload [contracts](./contracts.md) §3); cancel via
+  canonical payload [contracts](../specs/contracts.md) §3); cancel via
   `cancelJobsForPost` (best-effort).
 - **Scheduler** (`exhibition-scheduler`, hourly `0 * * * *`): lives in
   the `exhibitions` module, registers through `queue` infra, acts
   through the `archiveOverdue()` facade — never direct `db.update`.
 - **Events**: emit `AuditRequestedEvent` (fire-and-forget, best-effort);
   never fail the request for audit. Action names from
-  [contracts](./contracts.md) §6.
+  [contracts](../specs/contracts.md) §6.
 
 ## 5. Testing
 
@@ -121,8 +121,8 @@ per branch; slice size from the contracts it touches, not the module.
 
 ## Cross references
 
-- Full spec: [PRD-API](./PRD-API.md), [`features/`](./features/README.md)
-- Boundaries + layering + registry + DI: [ADR-005](./adr/ADR-005-modular-monolith.md) (§2, §7)
-- DTO strategy: [ADR-003](./adr/ADR-003-zod-dto-strategy.md)
-- Shared shapes: [contracts](./contracts.md)
-- Worker pipeline: [PRD-Worker](./PRD-Worker.md)
+- Full spec: [PRD-API](../specs/PRD-API.md), [`features/`](../features/README.md)
+- Boundaries + layering + registry + DI: [ADR-005](../adr/ADR-005-modular-monolith.md) (§2, §7)
+- DTO strategy: [ADR-003](../adr/ADR-003-zod-dto-strategy.md)
+- Shared shapes: [contracts](../specs/contracts.md)
+- Worker pipeline: [PRD-Worker](../specs/PRD-Worker.md)

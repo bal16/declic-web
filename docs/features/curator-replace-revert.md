@@ -12,11 +12,11 @@ updated: 2026-09-07
 
 # Feature: Curator Replace & Revert (Option C, non-destructive)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (frame update), `queue` (re-job), `audit`
-**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §3.2.1
-(`CuratedDiffViewer`), [PRD-Worker](../PRD-Worker.md) (`curated:true` payload),
-[db-schema](../db-schema.md) (`photo_items.source`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
+**Related:** [PRD-API](../specs/PRD-API.md) §4.0 (error contract), [PRD-FE](../specs/PRD-FE.md) §3.2.1
+(`CuratedDiffViewer`), [PRD-Worker](../specs/PRD-Worker.md) (`curated:true` payload),
+[db-schema](../data/db-schema.md) (`photo_items.source`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
 
 ---
 
@@ -62,7 +62,7 @@ mid-processing** (`photo_items.blurhash IS NULL` → `409
 5. Delete old `photo_derivatives` for that `photo_item_id` (avoid stale
    CDN; recommended over keep-until-overwrite).
 6. Enqueue **one** `image-processing` job `{ postId, photoItemId: itemId,
-   s3Key, curated: true, revert: false }` (same pipeline as [PRD-Worker](../PRD-Worker.md)).
+   s3Key, curated: true, revert: false }` (same pipeline as [PRD-Worker](../specs/PRD-Worker.md)).
 7. Emit `AuditRequestedEvent` `{ action:'photo_item.replace',
    adminId, targetId:itemId, payload:{ postId,
    old_s3_key, new_s3_key: s3Key, old_source, new_source:'CURATED' } }`
@@ -115,7 +115,7 @@ History: `GET /api/admin/audit-logs?targetId=:itemId` (see
 
 ## 4. Frontend (`/admin/moderation`)
 
-Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2.1):
+Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §3.2.1):
 
 - Per-frame **Replace** button → file picker → instant preview →
   **side-by-side diff slider** (`CuratedDiffViewer`: current `web.webp`
@@ -128,13 +128,13 @@ Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2.1):
 ## 5. Worker
 
 Same pipeline, `curated:true` / `revert:true` are logging signals only
-(see [PRD-Worker](../PRD-Worker.md)). Replacement regenerates `blurhash` + 3
+(see [PRD-Worker](../specs/PRD-Worker.md)). Replacement regenerates `blurhash` + 3
 derivatives; `posts.status` aggregation unaffected (`PENDING` stays).
 
 ## 6. Schema touch
 
 `photo_items.source` (`ORIGINAL`→`CURATED`), `updated_at` (see
-[db-schema](../db-schema.md)). Old keys live on in `admin_audit_logs` payloads; old
+[db-schema](../data/db-schema.md)). Old keys live on in `admin_audit_logs` payloads; old
 files stay in `raw-uploads/`. No new tables.
 
 ## 7. Edge cases

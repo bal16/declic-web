@@ -18,7 +18,7 @@ updated: 2026-09-01
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> [!abstract] This document complements [PRD-API](./PRD-API.md). The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [db-schema](./db-schema.md); for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [PRD-API](./PRD-API.md) §2.3/§2.9/§3.3 and [exhibition-lifecycle](./features/exhibition-lifecycle.md). Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
+> [!abstract] This document complements [PRD-API](./PRD-API.md). The API produces **one job per `photo_item`** (ids `cuid2` `text`); the Worker consumes them and aggregates to the parent `posts` status (which belongs to an `exhibitions.id`). For DB schema, see [db-schema](../data/db-schema.md); for API endpoints, **runtime feature flags**, **multi-exhibition** and **ARCHIVED freeze** + **BullMQ cron** `exhibition-scheduler`, see [PRD-API](./PRD-API.md) §2.3/§2.9/§3.3 and [exhibition-lifecycle](../features/exhibition-lifecycle.md). Existing queued jobs remain valid when `series_enabled` toggles or an exhibition becomes `ARCHIVED` — flags/phases only gate **new** writes.
 
 ---
 
@@ -84,7 +84,7 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 }
 ```
 
-> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. **Curator revert** enqueues a single job with `curated:false, revert:true` — worker regenerates derivatives from `original_s3_key` (see [curator-replace-revert](./features/curator-replace-revert.md) §6). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
+> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. **Curator revert** enqueues a single job with `curated:false, revert:true` — worker regenerates derivatives from `original_s3_key` (see [curator-replace-revert](../features/curator-replace-revert.md) §6). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
 
 **MinIO bucket layout (cuid2 s3Key):**
 
@@ -232,7 +232,7 @@ COMMIT;
 
 ```sql
 -- executed after each frame commit, with row-level lock on posts
--- (skips withdrawn works: a concurrent DELETE sets deleted_at, see [withdraw-work](./features/withdraw-work.md) §4)
+-- (skips withdrawn works: a concurrent DELETE sets deleted_at, see [withdraw-work](../features/withdraw-work.md) §4)
 SELECT COUNT(*) FROM photo_items WHERE post_id = :postId AND blurhash IS NULL;
 -- if 0 and no missing derivatives:
 UPDATE posts SET status = 'PENDING', updated_at = now()
@@ -262,7 +262,7 @@ If any frame fails, rollback for that frame only — sibling frames still succee
 
 1. Mark the **work** as terminal failure: `UPDATE posts SET status = 'FAILED_PROCESSING', updated_at = now() WHERE id = :postId`. Photographer sees an actionable error state (not an endless spinner).
 2. Error details are logged to an internal log column (`posts.rejection_reason` or a separate `job_logs`/`admin_audit_logs` table).
-3. Dashboard shows **Retry** (re-enqueue only frames with `blurhash IS NULL`) and **Withdraw/Edit title** remains available (see [withdraw-work](./features/withdraw-work.md) §2, [series-upload](./features/series-upload.md) §4). Sibling frames' derivatives remain valid — no need to reprocess the whole series.
+3. Dashboard shows **Retry** (re-enqueue only frames with `blurhash IS NULL`) and **Withdraw/Edit title** remains available (see [withdraw-work](../features/withdraw-work.md) §2, [series-upload](../features/series-upload.md) §4). Sibling frames' derivatives remain valid — no need to reprocess the whole series.
 4. Stuck detector (separate from failure): posts in `PROCESSING` > 10m emit log + metric `posts_stuck_processing` (queue backlog vs genuine failure signal) but do not auto-fail.
 
 > For SERIES, a single failed frame blocks promotion to `PENDING`; other frames' derivatives remain valid — no need to reprocess the whole series.
@@ -311,7 +311,7 @@ image, `depends_on` redis/postgres/minio healthy, no inbound ports.
 **BullMQ cron** (runs in API, not worker, but shares Redis):
 `apps/api/src/modules/exhibitions/exhibition.scheduler.ts` —
 `@Cron('0 * * * *')` exhibition-scheduler (hourly, canonical form in
-[exhibition-lifecycle](./features/exhibition-lifecycle.md) §4) →
+[exhibition-lifecycle](../features/exhibition-lifecycle.md) §4) →
 `UPDATE exhibitions SET
 phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()`.
 
@@ -321,5 +321,5 @@ phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()`.
 
 - **General PRD:** [PRD](./PRD.md) — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
 - **Backend API:** [PRD-API](./PRD-API.md) — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.
-- **DB Schema:** [db-schema](./db-schema.md) — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
+- **DB Schema:** [db-schema](../data/db-schema.md) — canonical ER diagram (cuid2 for domain tables, `users` stays `uuid`/`text`).
 - **Local Infra:** `docker-compose.yml` + `env.example`.

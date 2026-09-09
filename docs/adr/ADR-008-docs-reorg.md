@@ -48,7 +48,7 @@ docs/
 | R2 | Moved → other group H | `./Y.md` → `../H/Y.md` | per file |
 | R3 | Moved → `features/`/`adr/` | `./features/` → `../features/`, `./adr/` → `../adr/` | all ex-root files referencing them |
 | R4 | `features/`+`adr/` (stay) → moved target | `../X.md` → `../G/X.md` — per target: `PRD.md` 11 files, `PRD-API.md` 13, `PRD-FE.md` 9, `PRD-Worker.md` 6, `contracts.md` 3, `db-schema.md` 12, `DEVELOPMENT.md` 3, `README.md` 1 (`frontend`/`backend`/`DESIGN`/companions/`seeds` = 0) | ~60 file-touches |
-| R5 | Code-span path refs | `../apps` → `../../apps` (only `contracts.md`, `DESIGN.md`); in staying `adr/` files: `` `../seed.ts` `` → `` `../data/seed.ts` ``, `` `../docker-compose.yml` `` → `` `../ops/docker-compose.yml` ``; `../../apps\|scripts\|.github` in `adr/` unchanged | ~8 lines |
+| R5 | Code-span path refs | `../apps` → `../../apps` (only `contracts.md`, `DESIGN.md`); in staying `adr/` files: `` `../data/seed.ts` `` → `` `../data/seed.ts` ``, `` `../ops/docker-compose.yml` `` → `` `../ops/docker-compose.yml` ``; `../../apps\|scripts\|.github` in `adr/` unchanged | ~8 lines |
 | R6 | Non-docs (functional) | `sync-docs-mirrors.ts` 3 path pairs, `sync-compose.ts` `SPEC`, `sources embedded in docs/*.md` comments in `ci.yml`/`release.yml` — without these, CI goes red | mandatory |
 | R7 | Non-docs (cosmetic) | root `README.md` table (7 lines), `docker-compose.yml:5` header, `mirror.sh`/workflow/Dockerfile/`bunfig.toml`/`env.ts` comments, prose path mentions | ~15 lines |
 

@@ -13,7 +13,7 @@ status: living
 
 Local dev stack for Déclic: Postgres + Redis + MinIO plus the three
 Bun services (`api`, `worker`, `web`). Production parity comes from the
-same images (`apps/*/Dockerfile`, see [DEVELOPMENT](./DEVELOPMENT.md) §9).
+same images (`apps/*/Dockerfile`, see [DEVELOPMENT](../guides/DEVELOPMENT.md) §9).
 
 | Service      | Image                | Ports                     | Depends on                            |
 | ------------ | -------------------- | ------------------------- | ------------------------------------- |
@@ -37,7 +37,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.
 ```
 
 Root `docker-compose.yml` is materialized from this spec (see
-[DEVELOPMENT](./DEVELOPMENT.md) §5.2). Env values come from [env](./env.md).
+[DEVELOPMENT](../guides/DEVELOPMENT.md) §5.2). Env values come from [env](./env.md).
 
 > [!warning] Source of truth is `docs/docker-compose.yml`, not this note.
 > Edit that file, then run `bun scripts/sync-docs-mirrors.ts`.

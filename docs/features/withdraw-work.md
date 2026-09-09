@@ -11,10 +11,10 @@ updated: 2026-09-07
 
 # Feature: Withdraw Work (photographer pulls back own submission)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner module:** `posts` (API) + dashboard (web)
-**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §2.2,
-[db-schema](../db-schema.md) (`posts.deleted_at`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
+**Related:** [PRD-API](../specs/PRD-API.md) §4.0 (error contract), [PRD-FE](../specs/PRD-FE.md) §2.2,
+[db-schema](../data/db-schema.md) (`posts.deleted_at`), [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2
 
 ---
 
@@ -53,12 +53,12 @@ Concurrency rule: every mutating statement on `posts` carries
 `PATCH`/reorder/retry (the loser sees `404 NOT_FOUND`, never a
 half-applied edit). No optimistic-locking version column in v1.
 
-Error shape: see [PRD-API](../PRD-API.md) §4.0 (canonical `{code,message,details?}`).
+Error shape: see [PRD-API](../specs/PRD-API.md) §4.0 (canonical `{code,message,details?}`).
 
 ## 3. Frontend (`/dashboard`)
 
 - **Withdraw** button visible on `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` cards (see
-  [PRD-FE](../PRD-FE.md) §2.2) → confirm dialog ("Withdrawn works cannot be
+  [PRD-FE](../specs/PRD-FE.md) §2.2) → confirm dialog ("Withdrawn works cannot be
   restored") → optimistic removal → `204` ok / `409` toast rollback.
 - Withdrawn works never render (API already filters `deleted_at`).
 
@@ -70,7 +70,7 @@ cancellation is best-effort via BullMQ `job.remove()`.
 
 ## 5. Schema touch
 
-None — reuses `posts.deleted_at` (see [db-schema](../db-schema.md)). No new tables,
+None — reuses `posts.deleted_at` (see [db-schema](../data/db-schema.md)). No new tables,
 no new columns, no migration.
 
 ## 6. Edge cases

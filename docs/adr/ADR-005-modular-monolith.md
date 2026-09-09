@@ -13,14 +13,14 @@ updated: 2026-09-07
 **Date:** 2026-09-07
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [PRD-API](../PRD-API.md) §1–§2/§4, [PRD-Worker](../PRD-Worker.md) §1–§3, [db-schema](../db-schema.md), `../seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-003](./ADR-003-zod-dto-strategy.md)
+**Related:** [PRD-API](../specs/PRD-API.md) §1–§2/§4, [PRD-Worker](../specs/PRD-Worker.md) §1–§3, [db-schema](../data/db-schema.md), `../data/seed.ts`, `../../apps/api/src/app.module.ts`, `../../apps/api/src/modules/examples/`, [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-003](./ADR-003-zod-dto-strategy.md)
 
 ---
 
 ## 1. Context
 
 `apps/api` is a single NestJS deployable ([ADR-001](./ADR-001-monorepo-mirror.md)) with 12 planned
-feature modules ([PRD-API](../PRD-API.md) §1.1: auth, users, exhibitions,
+feature modules ([PRD-API](../specs/PRD-API.md) §1.1: auth, users, exhibitions,
 posts/photo-items, curation, moderation, engagement, storage, queue,
 feature-flags, site-settings, audit) plus `common/`. Today only
 `app.module.ts` (global config + health) and the `modules/examples/`
@@ -301,14 +301,14 @@ Interfaces erase at runtime, so a facade is always a concrete
 * **`parse` is mandatory at exactly 3 points**, where data is born
   outside the process:
   1. **Queue consume (worker)** — `imageProcessingJobSchema`
-     ([contracts](../contracts.md) §3), shared with the producer.
+     ([contracts](../specs/contracts.md) §3), shared with the producer.
   2. **Cron scheduler** — phase-enum guard on rows acted upon.
   3. **Audit listener** — `AuditRequestedEvent` envelope schema.
 
 ### 7.4 Facade method registry
 
 Existing names stand; `*` = proposed here (spec-first, code later).
-Signatures abbreviated — full shapes in feature files + [contracts](../contracts.md).
+Signatures abbreviated — full shapes in feature files + [contracts](../specs/contracts.md).
 
 | Caller → Callee | Method | Status |
 |---|---|---|
@@ -324,7 +324,7 @@ Signatures abbreviated — full shapes in feature files + [contracts](../contrac
 | `*` → `audit` (read) | `findLatestUnrevertedReplace(itemId)`, `search(filters)` * | proposed |
 | `auth` | `validateSession()` (used by `SessionGuard`) * | proposed |
 | `*` → `common` | `ROLE_MATRIX` const | specified |
-| worker → `posts` | direct DB via `packages/db` (promotion SQL in [PRD-Worker](../PRD-Worker.md) §3.3 — no facade, no HTTP, no import) | specified mechanism |
+| worker → `posts` | direct DB via `packages/db` (promotion SQL in [PRD-Worker](../specs/PRD-Worker.md) §3.3 — no facade, no HTTP, no import) | specified mechanism |
 | cron → `exhibitions` | `archiveOverdue()` (cron goes through the facade, never direct `db.update`) * | proposed |
 
 ### 7.5 Contract tests — `contract` block in co-located `*.test.ts`
@@ -333,7 +333,7 @@ No new file convention. Each `public-api` method gets a
 `describe('contract', …)` block in its module's co-located test file
 asserting inputs, outputs, and documented errors from the feature
 spec (e.g. `hideComment` idempotency + count rule; `enqueue` payload
-shape vs. [contracts](../contracts.md) §3; `getFlag` invalidation).
+shape vs. [contracts](../specs/contracts.md) §3; `getFlag` invalidation).
 The generic ADR-005 verification (facade contract per module +
 `POST → queue → worker → PENDING` trace + audit-never-fails test)
 stays; this makes it enumerable.
@@ -342,9 +342,9 @@ stays; this makes it enumerable.
 
 ## Cross references
 
-* Module list + responsibilities: [PRD-API](../PRD-API.md) §1.1
-* Schema + ownership targets: [db-schema](../db-schema.md), `../seed.ts`
-* Queue payload + worker contract: [PRD-Worker](../PRD-Worker.md) §1–§3
+* Module list + responsibilities: [PRD-API](../specs/PRD-API.md) §1.1
+* Schema + ownership targets: [db-schema](../data/db-schema.md), `../data/seed.ts`
+* Queue payload + worker contract: [PRD-Worker](../specs/PRD-Worker.md) §1–§3
 * DTO strategy for `dto.ts` files: [ADR-003](./ADR-003-zod-dto-strategy.md)
 * Repo/release context: [ADR-001](./ADR-001-monorepo-mirror.md), [ADR-002](./ADR-002-release-tagging.md)
 * Living module template: `../../apps/api/src/modules/examples/`

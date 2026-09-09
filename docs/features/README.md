@@ -12,9 +12,9 @@ status: living
 
 One file per feature, vertical slice (API + FE + worker + schema +
 acceptance). Rule: contracts (cursor, errors, guards, schema) are
-defined once in [PRD-API](../PRD-API.md) §4.0 / §2 and [db-schema](../db-schema.md) — feature files
+defined once in [PRD-API](../specs/PRD-API.md) §4.0 / §2 and [db-schema](../data/db-schema.md) — feature files
 **reference, never redefine**. Endpoint bodies moved here from
-[PRD-API](../PRD-API.md) §4.x (which keeps index pointers only, single source).
+[PRD-API](../specs/PRD-API.md) §4.x (which keeps index pointers only, single source).
 
 | Feature                                                                                   | Status                   | Owner modules                     |
 | ----------------------------------------------------------------------------------------- | ------------------------ | --------------------------------- |

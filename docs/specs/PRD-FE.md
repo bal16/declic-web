@@ -73,12 +73,12 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](./features/exhibition-lifecycle.md) §3). | `ADMIN` |
+| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to MinIO (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
 | `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
 | `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
-| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](./features/auth-rbac.md) §7. | `ADMIN` |
-| `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [feature-flags-site-settings](./features/feature-flags-site-settings.md) §6. | `ADMIN` |
+| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](../features/auth-rbac.md) §7. | `ADMIN` |
+| `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [feature-flags-site-settings](../features/feature-flags-site-settings.md) §6. | `ADMIN` |
 
 > All routes under `/dashboard/*` and `/admin/*` are protected by an **Auth Guard** (Middleware + HOC) that verifies the Better Auth session and `role` before rendering.
 
@@ -346,7 +346,7 @@ const { data: session, isPending } = useSession();
 - `maintenance_mode` banner: when `GET /api/site-settings`
   returns `maintenance_mode=true`, every route renders a top banner
   `"Scheduled maintenance — browsing only"` (copy in
-  [feature-flags-site-settings](./features/feature-flags-site-settings.md) §6).
+  [feature-flags-site-settings](../features/feature-flags-site-settings.md) §6).
   Banner-only in 1.0 — blocks no writes by itself.
 
 ---
@@ -356,5 +356,5 @@ const { data: session, isPending } = useSession();
 - **General PRD:** [PRD](./PRD.md) — vision, multi-exhibition (latest at `/`), SERIES works, per-exhibition lifecycle + `ARCHIVED` freeze + cron, system architecture.
 - **Backend API:** [PRD-API](./PRD-API.md) — `exhibitions` CRUD + `POST /api/posts` scoped to `exhibitionId`, `GET /api/posts?exhibitionId`, `GET /api/exhibitions` + scheduler `exhibition-scheduler`, `ARCHIVED` freeze, RBAC + phase + flag guards.
 - **Image Worker:** [PRD-Worker](./PRD-Worker.md) — `image-processing` per `photo_item` (`cuid2`), aggregation to `posts.status`, scheduler note (no worker change for exhibitions).
-- **DB Schema:** [db-schema](./db-schema.md) — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
+- **DB Schema:** [db-schema](../data/db-schema.md) — canonical ER (`exhibitions` → `posts` → `photo_items` + `photo_derivatives`, `cuid2` domain ids).
 - **Local Infra:** `docker-compose.yml` + `env.example` — services `web` (TanStack Start), `api` (NestJS), `worker`, `postgres`, `redis`, `minio`.

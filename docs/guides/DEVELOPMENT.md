@@ -11,9 +11,9 @@ status: living
 # Development & Deployment Guide (Monorepo + C1 Mirrors)
 
 **Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
-**Repo decision:** [ADR-001](./adr/ADR-001-monorepo-mirror.md) (source of truth `bal16/declic`, read-only mirrors per app)
-**Release decision:** [ADR-002](./adr/ADR-002-release-tagging.md) (single `vX.Y.Z` tag, rc-only, deploy deferred)
-**Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** [db-schema](./db-schema.md) · **Seeds:** `seed.ts`
+**Repo decision:** [ADR-001](../adr/ADR-001-monorepo-mirror.md) (source of truth `bal16/declic`, read-only mirrors per app)
+**Release decision:** [ADR-002](../adr/ADR-002-release-tagging.md) (single `vX.Y.Z` tag, rc-only, deploy deferred)
+**Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** [db-schema](../data/db-schema.md) · **Seeds:** `seed.ts`
 
 ---
 
@@ -204,7 +204,7 @@ Single Rust toolchain, exact-pinned (`oxlint@1.81.0`, `oxfmt@0.66.0`):
 * **Format** (`.oxfmtrc.jsonc`): width 80, single quotes, import sorting, Tailwind class sorting against `apps/web/src/styles.css`. Generated output (`.output/`, `dist/`, `routeTree.gen.ts`) and `docs/**` are ignored — Markdown prose stays under `markdownlint-cli2`. The pre-commit hook formats staged `yml`/`yaml`/`md` outside `docs/**` too (root `README.md`, compose files), so `format:check` stays green.
 * **Lint** (`.oxlintrc.json`): `correctness` = error everywhere, `react/hooks` baseline, plus an `apps/web/**` override block with stricter hooks rules (`react/rules-of-hooks`, `react/exhaustive-deps`) and test leniency (`no-explicit-any` off in tests).
 * **Known oxlint fact:** nested per-directory configs (e.g. `apps/web/.oxlintrc.json`) are silently ignored in 1.81 — per-app strictness lives in root `overrides`, verified empirically. Do not reintroduce nested configs without re-verifying.
-* **Gates:** Lefthook pre-commit (staged-only, `stage_fixed` so fixes land in the same commit; install per clone) and the `lint` job in `ci.yml`. Boundary gate (`bun run boundaries`, full-tree scan ~0.05s, no re-stage) runs in pre-commit alongside oxlint/oxfmt, in `ci.yml` verify, and in `release.yml` verify (see [ADR-005](./adr/ADR-005-modular-monolith.md) §6). VS Code uses `oxc.oxc-vscode` for format+fix on save; ESLint/Prettier extensions are disabled via settings + `unwantedRecommendations`.
+* **Gates:** Lefthook pre-commit (staged-only, `stage_fixed` so fixes land in the same commit; install per clone) and the `lint` job in `ci.yml`. Boundary gate (`bun run boundaries`, full-tree scan ~0.05s, no re-stage) runs in pre-commit alongside oxlint/oxfmt, in `ci.yml` verify, and in `release.yml` verify (see [ADR-005](../adr/ADR-005-modular-monolith.md) §6). VS Code uses `oxc.oxc-vscode` for format+fix on save; ESLint/Prettier extensions are disabled via settings + `unwantedRecommendations`.
 * **Imports:** intra-app `@/*` (= that app's `src`, per [ADR-007](adr/ADR-007-path-aliases.md); `~/` and `src/` prefixes are not used), inter-package `@declic/*` via `workspace:*`. DB columns stay `snake_case`; wire JSON is `camelCase`.
 * **JSON/YAML:** covered by oxfmt (it already normalizes `package.json` key order and workflow YAML). JSON *lint* (schemas) comes from `$schema` keys + editor support, not oxlint.
 
@@ -219,7 +219,7 @@ every push to bal16/declic:main touching the C1 slice (`mirror.yml`, `push` + `p
     bal16/declic-web:main, bal16/declic-api:main, bal16/declic-worker:main
 ```
 
-Docs-only pushes skip the fan-out (see [ADR-001](./adr/ADR-001-monorepo-mirror.md) §6).
+Docs-only pushes skip the fan-out (see [ADR-001](../adr/ADR-001-monorepo-mirror.md) §6).
 
 * `mirror.yml` also supports manual `workflow_dispatch` (all or one app).
   `ci.yml` stays manual-only.
@@ -288,7 +288,7 @@ Web (Vercel explicitly out), api, and worker destinations are undecided — the 
 
 ### 9.3 Domain and cookie constraint (Better Auth)
 
-From [PRD](./PRD.md) §8.5: web and API must share one registrable domain (for example `app.<domain>` + `api.<domain>`) configured via Better Auth `trustedOrigins` plus API CORS, so the session cookie stays first-party. Fallback if that is impossible: reverse-proxy `/api/*` through the web domain. Native/mobile clients use the `bearer()` token plugin instead of cookies. Settle the production domains before configuring OAuth redirect URIs and CORS.
+From [PRD](../specs/PRD.md) §8.5: web and API must share one registrable domain (for example `app.<domain>` + `api.<domain>`) configured via Better Auth `trustedOrigins` plus API CORS, so the session cookie stays first-party. Fallback if that is impossible: reverse-proxy `/api/*` through the web domain. Native/mobile clients use the `bearer()` token plugin instead of cookies. Settle the production domains before configuring OAuth redirect URIs and CORS.
 
 ## 10. Troubleshooting
 
@@ -314,6 +314,6 @@ From [PRD](./PRD.md) §8.5: web and API must share one registrable domain (for e
 * Repo decision and trade-offs: `adr/ADR-001-monorepo-mirror.md`
 * Release/tag decision, limits analysis: `adr/ADR-002-release-tagging.md`
 * Release workflow + coverage gate: `../../.github/workflows/release.yml`, `../../scripts/check-coverage.ts`
-* Product vision and lifecycle: [PRD](./PRD.md)
-* API and worker specs: [PRD-API](./PRD-API.md), [PRD-Worker](./PRD-Worker.md), [PRD-FE](./PRD-FE.md)
-* Schema and seeds: [db-schema](./db-schema.md), `seed.ts`
+* Product vision and lifecycle: [PRD](../specs/PRD.md)
+* API and worker specs: [PRD-API](../specs/PRD-API.md), [PRD-Worker](../specs/PRD-Worker.md), [PRD-FE](../specs/PRD-FE.md)
+* Schema and seeds: [db-schema](../data/db-schema.md), `seed.ts`

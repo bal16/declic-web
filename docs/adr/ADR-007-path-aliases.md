@@ -136,7 +136,7 @@ ROT faster than the saved config lines. All-at-once was chosen.
 
 1. **Bun version pin in Docker — resolved 2026-09-08.** All runtimes
    pin `1.4.2` (`packageManager`, `setup-bun` ×2, Dockerfile `FROM`s,
-   compose spec); the rule lives in [DEVELOPMENT](../DEVELOPMENT.md) §3.
+   compose spec); the rule lives in [DEVELOPMENT](../guides/DEVELOPMENT.md) §3.
 2. **Gate spelling cleanup — resolved 2026-09-09.** `check-boundaries.ts`
    resolves exactly one alias spelling (`@/`); `~/` / `src/` support removed.
 3. **`nestia`/`typia` evaluation — cancelled 2026-09-09** (owner
@@ -148,5 +148,5 @@ ROT faster than the saved config lines. All-at-once was chosen.
 
 * Mirror slices and why per-app anchors are mirror-safe: [ADR-001](./ADR-001-monorepo-mirror.md)
 * Boundary gate alias handling: [ADR-005](./ADR-005-modular-monolith.md) §6, `../../scripts/check-boundaries.ts`
-* Toolchain (oxlint+oxfmt) and dev commands: [DEVELOPMENT](../DEVELOPMENT.md)
+* Toolchain (oxlint+oxfmt) and dev commands: [DEVELOPMENT](../guides/DEVELOPMENT.md)
 * Alias aspirational example: `../PRD-FE.md` §6.1

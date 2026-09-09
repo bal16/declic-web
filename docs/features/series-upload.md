@@ -12,10 +12,10 @@ updated: 2026-09-07
 
 # Feature: Submission Lifecycle — Upload, Edit, Frame Reorder (SINGLE & SERIES)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (+ `photo-items`), `storage`, `queue` (API); upload/edit pages (web)
-**Related:** [PRD-API](../PRD-API.md) §4.0 (contracts), [PRD-FE](../PRD-FE.md) §3.2 (`/dashboard/upload`),
-[PRD-Worker](../PRD-Worker.md) §1–§3, [db-schema](../db-schema.md) (`posts`, `photo_items`),
+**Related:** [PRD-API](../specs/PRD-API.md) §4.0 (contracts), [PRD-FE](../specs/PRD-FE.md) §3.2 (`/dashboard/upload`),
+[PRD-Worker](../specs/PRD-Worker.md) §1–§3, [db-schema](../data/db-schema.md) (`posts`, `photo_items`),
 [withdraw-work](./withdraw-work.md) (retraction), [exhibition-lifecycle](./exhibition-lifecycle.md) (phase gates)
 
 ---
@@ -150,10 +150,10 @@ same gate).
 ]
 ```
 
-> Canonical payload `{postId, photoItemId, s3Key, curated, revert?}` (full shape in [contracts](../contracts.md) §3; see [PRD-Worker](../PRD-Worker.md) §1). Fresh uploads always send `curated: false, revert: false`.
+> Canonical payload `{postId, photoItemId, s3Key, curated, revert?}` (full shape in [contracts](../specs/contracts.md) §3; see [PRD-Worker](../specs/PRD-Worker.md) §1). Fresh uploads always send `curated: false, revert: false`.
 
 > Post status transitions to `PENDING` only after **all** its photo_items
-> finish processing (see [PRD-Worker](../PRD-Worker.md) §3.3).
+> finish processing (see [PRD-Worker](../specs/PRD-Worker.md) §3.3).
 
 **Response `201 Created`:** newly created `post` (cuid2 ids) with nested
 `items`.
@@ -202,7 +202,7 @@ Errors: `400 VALIDATION_ERROR` (id set mismatch — drops/adds/foreign ids); `40
 
 ## 6. Frontend (`/dashboard`, `/dashboard/upload`, `/dashboard/edit/$postId`)
 
-Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2):
+Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §3.2):
 
 - **Upload:** SINGLE/SERIES toggle (auto-switch on drop count),
   `feature_flags.series_enabled` + exhibition `phase` gating, per-file
@@ -216,13 +216,13 @@ Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.2):
 
 ## 7. Worker
 
-Standard per-frame pipeline (see [PRD-Worker](../PRD-Worker.md) §1–§3): N jobs for N
+Standard per-frame pipeline (see [PRD-Worker](../specs/PRD-Worker.md) §1–§3): N jobs for N
 frames, `blurhash` + 3 derivatives each, post promotes to `PENDING`
 when all succeed. Edit (§4) and reorder (§5) enqueue **no** jobs.
 
 ## 8. Schema touch
 
-Writes `posts` + `photo_items` (see [db-schema](../db-schema.md)). No new tables. Limit
+Writes `posts` + `photo_items` (see [db-schema](../data/db-schema.md)). No new tables. Limit
 source: `site_settings.max_series_size` (grandfathering — old SERIES
 stay valid when lowered; later title/caption edits and reorders do **not**
 re-validate size — only new `POST /api/posts` is validated).

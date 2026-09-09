@@ -11,10 +11,10 @@ updated: 2026-09-07
 
 # Feature: Auth & RBAC (OAuth, guards, role elevation)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `auth`, `users`
-**Related:** [PRD-API](../PRD-API.md) §3 (+ §4.0 error contract), [PRD-FE](../PRD-FE.md) §6
-(session/cookie/guards), [db-schema](../db-schema.md) (`users`),
+**Related:** [PRD-API](../specs/PRD-API.md) §3 (+ §4.0 error contract), [PRD-FE](../specs/PRD-FE.md) §6
+(session/cookie/guards), [db-schema](../data/db-schema.md) (`users`),
 [ADR-005](../adr/ADR-005-modular-monolith.md) Rule 2 (`users` owns `users.role`)
 
 ---
@@ -40,8 +40,8 @@ updated: 2026-09-07
   Google + GitHub OAuth 2.0.
 - Web: `HTTP-Only`, `Secure`, `SameSite=Lax` first-party cookie — web +
   API must share one registrable domain (`app.*` + `api.*`,
-  `trustedOrigins` + CORS) or `/api/*` reverse proxy (see [PRD-FE](../PRD-FE.md)
-  §6, [PRD](../PRD.md) §8.5).
+  `trustedOrigins` + CORS) or `/api/*` reverse proxy (see [PRD-FE](../specs/PRD-FE.md)
+  §6, [PRD](../specs/PRD.md) §8.5).
 - Future mobile: `Authorization: Bearer <token>` via `bearer()` plugin.
 - `users` ids stay Better Auth-managed (`uuid`/`text`, **not** cuid2);
   `role` defaults `VIEWER`.
@@ -52,7 +52,7 @@ updated: 2026-09-07
 ## 3. Guard chain, central matrix & role cache
 
 `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` →
-`FeatureFlagGuard` (see [PRD-API](../PRD-API.md) §3.2 for the full endpoint matrix).
+`FeatureFlagGuard` (see [PRD-API](../specs/PRD-API.md) §3.2 for the full endpoint matrix).
 UI guards (middleware/HOC) redirect fast; API guards are the final
 authority.
 
@@ -87,7 +87,7 @@ export const ROLE_MATRIX = {
   'posts:own':       ['ADMIN', 'PHOTOGRAPHER'],
 } as const;
 // usage: @Require('moderate:write')  (likes/comments need session only;
-// public gallery is @Public() — see matrix in [PRD-API](../PRD-API.md) §3.2)
+// public gallery is @Public() — see matrix in [PRD-API](../specs/PRD-API.md) §3.2)
 ```
 
 Key → endpoint binding (owner checks live in the service, not the guard):
@@ -177,7 +177,7 @@ OAuth (creating `VIEWER` rows) → admin bulk-promotes to
 
 ## 7. Frontend (`/admin/users`, NEW for 1.0)
 
-Summary (route to be added in [PRD-FE](../PRD-FE.md) §2.3): searchable table
+Summary (route to be added in [PRD-FE](../specs/PRD-FE.md) §2.3): searchable table
 (`GET /api/admin/users`) + per-row role dropdown + bulk-select promote
 (checkbox → one promote action for launch onboarding) → `PATCH` → toast +
 refetch; own row's dropdown disabled (tooltip "You cannot change your
@@ -187,7 +187,7 @@ Requires `ADMIN` (route guard + API guard).
 Route guards: `/dashboard/*` → session + `PHOTOGRAPHER|ADMIN`;
 `/admin/*` → session + `ADMIN`, except artwork routes
 (`/admin/moderation`, `/admin/curate`, `/admin/comments`) which allow
-`ADMIN|CURATOR` (see [PRD-FE](../PRD-FE.md) §2.3).
+`ADMIN|CURATOR` (see [PRD-FE](../specs/PRD-FE.md) §2.3).
 
 ## 8. Worker
 
@@ -195,7 +195,7 @@ No involvement.
 
 ## 9. Schema touch
 
-Reads/writes `users.role` (see [db-schema](../db-schema.md)); audit
+Reads/writes `users.role` (see [db-schema](../data/db-schema.md)); audit
 `user.role_change`. No new tables, no new columns. `RoleCache` is
 runtime-only (never persisted).
 

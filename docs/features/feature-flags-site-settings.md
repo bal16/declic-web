@@ -12,9 +12,9 @@ updated: 2026-09-07
 
 # Feature: Feature Flags & Site Settings (runtime kill-switches, global limits)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `feature-flags`, `site-settings`, `audit`
-**Related:** [PRD-API](../PRD-API.md) §2.9 + §4.6, [db-schema](../db-schema.md) (tables + seeds),
+**Related:** [PRD-API](../specs/PRD-API.md) §2.9 + §4.6, [db-schema](../data/db-schema.md) (tables + seeds),
 `docs/seed.ts` (`featureFlagsSeed`, `siteSettingsSeed`),
 [series-upload](./series-upload.md) (consumes `series_enabled`, `max_series_size`),
 [engagement](./engagement.md) (consumes `threaded_comments_enabled`)
@@ -42,7 +42,7 @@ updated: 2026-09-07
   `maintenance_mode`, `contact_email`, `instagram_url`, `updated_at`,
   `updated_by`. Seed `id=1` (see `docs/seed.ts`).
 - `system_settings` KV table is **deleted** (phase lives in
-  `exhibitions.phase`; flags/limits live here). See [db-schema](../db-schema.md).
+  `exhibitions.phase`; flags/limits live here). See [db-schema](../data/db-schema.md).
 
 ## 3. API — flags
 
@@ -130,7 +130,7 @@ drain with the values at enqueue).
 ## 8. Schema touch
 
 `feature_flags` + `site_settings` tables as specified (see
-[db-schema](../db-schema.md)). Seeds in `docs/seed.ts`. No other tables.
+[db-schema](../data/db-schema.md)). Seeds in `docs/seed.ts`. No other tables.
 
 ## 9. Edge cases
 

@@ -11,12 +11,12 @@ updated: 2026-09-07
 
 # Feature: Curation & Moderation (order, approve/reject, comments, audit trail)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `curation`, `moderation` (no tables — via `posts`
 facade per [ADR-005](../adr/ADR-005-modular-monolith.md)), `engagement`
 (comment hide), `audit` (trail)
-**Related:** [PRD-API](../PRD-API.md) §4.0 (error contract), [PRD-FE](../PRD-FE.md) §3.3 +
-`/admin/*`, [db-schema](../db-schema.md), [exhibition-lifecycle](./exhibition-lifecycle.md) (per-exhibition
+**Related:** [PRD-API](../specs/PRD-API.md) §4.0 (error contract), [PRD-FE](../specs/PRD-FE.md) §3.3 +
+`/admin/*`, [db-schema](../data/db-schema.md), [exhibition-lifecycle](./exhibition-lifecycle.md) (per-exhibition
 scope), [curator-replace-revert](./curator-replace-revert.md) (frame-level curation)
 
 ---
@@ -142,7 +142,7 @@ trail; retention unbounded for 1.0.
 
 ## 6. Frontend (`/admin/moderation`, `/admin/curate`, `/admin/comments`)
 
-Summary (full UI spec: [PRD-FE](../PRD-FE.md) §2.3/§3.3):
+Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §2.3/§3.3):
 
 - **Moderation queue:** per-exhibition filter, cover + frame strip for
   SERIES, Approve/Reject with reason, per-frame Replace entry point.
@@ -161,7 +161,7 @@ No involvement.
 
 Writes go through `posts` facade (`display_order`, `status`,
 `rejection_reason`) and `comments.is_hidden`; reads
-`admin_audit_logs` (see [db-schema](../db-schema.md)). `curation`/`moderation` own no
+`admin_audit_logs` (see [db-schema](../data/db-schema.md)). `curation`/`moderation` own no
 tables. No new tables.
 
 ## 9. Edge cases

@@ -12,13 +12,13 @@ updated: 2026-09-09
 # Shared Contracts (Cross-Module & Cross-App)
 
 **Status:** Draft (planning scope — no code in `packages/` yet)
-**Related:** [ADR-003](./adr/ADR-003-zod-dto-strategy.md), [ADR-005](./adr/ADR-005-modular-monolith.md), [PRD-API](./PRD-API.md) §4.0, [db-schema](./db-schema.md)
+**Related:** [ADR-003](../adr/ADR-003-zod-dto-strategy.md), [ADR-005](../adr/ADR-005-modular-monolith.md), [PRD-API](./PRD-API.md) §4.0, [db-schema](../data/db-schema.md)
 
 Normative definitions for every surface crossed by more than one
 module or app. Other documents **reference, never redefine** — on any
 shape question, this file wins (behavioral rules stay in their feature
 files). Module call rules (layering, DI, method registry) live in
-[ADR-005](./adr/ADR-005-modular-monolith.md) §7, not here — this file
+[ADR-005](../adr/ADR-005-modular-monolith.md) §7, not here — this file
 is data shapes only, so it can materialize cleanly. When implementation starts (first real module, `posts`), each
 § below materializes line-by-line into `packages/contracts/src/`
 (`cursor.ts`, `errors.ts`, `queue.ts`, `roles.ts`, `audit.ts`); the
@@ -92,7 +92,7 @@ const roleSchema = z.enum(['VIEWER', 'PHOTOGRAPHER', 'CURATOR', 'ADMIN']);
 Single-role enum. Api source of truth is `ROLE_MATRIX`
 (`common/auth/role-matrix.ts` when implemented); web imports the union
 from contracts for guards (never redefines). Matrix:
-[auth-rbac](./features/auth-rbac.md) §3.
+[auth-rbac](../features/auth-rbac.md) §3.
 
 ## 6. Audit actions (`audit.ts` later — names only; event class stays api-internal)
 
@@ -115,7 +115,7 @@ Envelope: `{ action, adminId, targetId, payload }`
 (`adminId: null` for cron). The class + listener live in the api
 `audit` module; web only renders the names returned by
 `GET /api/admin/audit-logs`. Emitter list:
-[curation-moderation](./features/curation-moderation.md) §5.
+[curation-moderation](../features/curation-moderation.md) §5.
 
 ## 7. Derived worker-done signal (rule, not a field)
 
@@ -123,7 +123,7 @@ No `frameStatus` / `photo_items.status` column. Per-frame state derives:
 `blurhash IS NULL` + parent `PROCESSING` = in-flight;
 `blurhash IS NULL` + parent `FAILED_PROCESSING` = terminally failed.
 Ready siblings stay viewable (null derivatives for failed frames,
-owner only). Rule source: [series-upload](./features/series-upload.md)
+owner only). Rule source: [series-upload](../features/series-upload.md)
 §9; dashboard binding: [PRD-FE](./PRD-FE.md) §2.2.
 
 ## 8. Contract → consumer → status
@@ -141,8 +141,8 @@ owner only). Rule source: [series-upload](./features/series-upload.md)
 
 ## Cross references
 
-- DTO strategy (contracts → nestjs-zod → Swagger): [ADR-003](./adr/ADR-003-zod-dto-strategy.md)
-- Module boundaries + facades + events: [ADR-005](./adr/ADR-005-modular-monolith.md)
+- DTO strategy (contracts → nestjs-zod → Swagger): [ADR-003](../adr/ADR-003-zod-dto-strategy.md)
+- Module boundaries + facades + events: [ADR-005](../adr/ADR-005-modular-monolith.md)
 - Cursor/error/flag canonical tables: [PRD-API](./PRD-API.md) §4.0
 - Queue flow: [PRD-Worker](./PRD-Worker.md) §1
-- Living example (deleted on first real module): `../apps/api/src/modules/examples/`
+- Living example (deleted on first real module): `../../apps/api/src/modules/examples/`

@@ -13,7 +13,7 @@ updated: 2026-09-04
 **Date:** 2026-09-04
 **Org:** bal16
 **Deciders:** repo owner
-**Related:** [PRD-API](../PRD-API.md) §4, `../../apps/api/src/docs.ts`, `../../apps/api/src/main.ts`, `../../packages/contracts/src/posts.ts`
+**Related:** [PRD-API](../specs/PRD-API.md) §4, `../../apps/api/src/docs.ts`, `../../apps/api/src/main.ts`, `../../packages/contracts/src/posts.ts`
 
 ---
 
@@ -99,4 +99,4 @@ curl -s -X POST localhost:3001/api/examples/works \
 * Living example: `../../apps/api/src/modules/examples/`
 * Docs wiring: `../../apps/api/src/docs.ts`
 * Contracts: `../../packages/contracts/src/`
-* API spec: [PRD-API](../PRD-API.md)
+* API spec: [PRD-API](../specs/PRD-API.md)

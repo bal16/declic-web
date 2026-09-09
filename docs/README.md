@@ -14,18 +14,18 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 ## Product
 
-- [PRD](./PRD.md) — vision, roles, exhibition lifecycle (`PRE_EVENT` → `LIVE` → `ARCHIVED`), frozen-archive rules. Status: draft `0.4-draft`, app `0.x` pre-release.
+- [PRD](./specs/PRD.md) — vision, roles, exhibition lifecycle (`PRE_EVENT` → `LIVE` → `ARCHIVED`), frozen-archive rules. Status: draft `0.4-draft`, app `0.x` pre-release.
 
 ## Specs (vertical slices share these contracts — defined once, referenced everywhere)
 
-- [PRD-API](./PRD-API.md) — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
-- [db-schema](./db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
-- [contracts](./contracts.md) — normative cross-module/cross-app shapes (cursor, errors, queue, roles, audit actions). Planning scope: materializes into `packages/contracts/src/` when implementation starts.
-- [PRD-FE](./PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
-- [PRD-Worker](./PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
-- [frontend](./frontend.md) — web app organization (structure, data flow, guards, tests). Draft.
-- [backend](./backend.md) — api app organization (module anatomy, lifecycle, testing). Draft.
-- [DESIGN](./DESIGN.md) — design system contract (tokens, components, a11y, i18n, states). Draft.
+- [PRD-API](./specs/PRD-API.md) — modules, schema text, cursor/error/flag contracts, endpoint index (bodies live in `features/`). Status: draft `0.4-draft`.
+- [db-schema](./data/db-schema.md) — canonical Mermaid ER + seeds summary (seeds live in `docs/seed.ts`).
+- [contracts](./specs/contracts.md) — normative cross-module/cross-app shapes (cursor, errors, queue, roles, audit actions). Planning scope: materializes into `packages/contracts/src/` when implementation starts.
+- [PRD-FE](./specs/PRD-FE.md) — routes, upload/lightbox/curation UI, web vitals, auth guards. Status: draft `0.4-draft`.
+- [PRD-Worker](./specs/PRD-Worker.md) — per-frame pipeline, retry/DLQ, memory budget. Status: draft `0.4-draft`.
+- [frontend](./guides/frontend.md) — web app organization (structure, data flow, guards, tests). Draft.
+- [backend](./guides/backend.md) — api app organization (module anatomy, lifecycle, testing). Draft.
+- [DESIGN](./guides/DESIGN.md) — design system contract (tokens, components, a11y, i18n, states). Draft.
 
 ## Features (1 file per feature — acceptance index)
 
@@ -45,19 +45,19 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 ## Ops
 
-- [DEVELOPMENT](./DEVELOPMENT.md) — repo map, env, dev loop, mirrors, releases, troubleshooting.
+- [DEVELOPMENT](./guides/DEVELOPMENT.md) — repo map, env, dev loop, mirrors, releases, troubleshooting.
 
 ## Infra companions (Obsidian-readable mirrors, auto-synced)
 
 | Note | Source of truth | Sync |
 |---|---|---|
-| [docker-compose](./docker-compose.md) | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
-| [seeds](./seeds.md) | `docs/seed.ts` | same |
-| [env](./env.md) | root `.env.example` | same |
+| [docker-compose](./ops/docker-compose.md) | `docs/docker-compose.yml` | `bun scripts/sync-docs-mirrors.ts` |
+| [seeds](./data/seeds.md) | `docs/seed.ts` | same |
+| [env](./ops/env.md) | root `.env.example` | same |
 
 ## Conventions used in these notes
 
-- Cross-note links use relative paths — `[PRD](./PRD.md)` from this folder, `../PRD-API.md` from a subfolder (adjust `../` to your file's depth).
+- Cross-note links use relative paths — `[PRD](./specs/PRD.md)` from this folder, `../PRD-API.md` from a subfolder (adjust `../` to your file's depth).
 - `[ADR-001](./adr/ADR-001-monorepo-mirror.md)` = short label for a long filename.
 - `> [!abstract]` = document summary; `> [!note]-` = collapsed side note; `> [!warning]` = do-not-break rule.
 - YAML frontmatter (`title`, `aliases`, `tags`, `status`, `updated`) powers Obsidian search/graph/Dataview.

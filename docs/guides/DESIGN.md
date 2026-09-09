@@ -12,7 +12,7 @@ updated: 2026-09-09
 # DESIGN — Déclic Design System Contract
 
 **Status:** Draft (for owner review — tokens not yet implemented in `styles.css`)
-**Related:** [PRD-FE](./PRD-FE.md) §4 (decision history), [frontend](./frontend.md) (implementation guide), `../apps/web/src/styles.css`
+**Related:** [PRD-FE](../specs/PRD-FE.md) §4 (decision history), [frontend](./frontend.md) (implementation guide), `../../apps/web/src/styles.css`
 
 PRD-FE §4 decided the *look* (dark gallery, gold accent, shadcn-compatible).
 This file is the *implementation contract*: exact tokens, component set,
@@ -61,7 +61,7 @@ needed, never upfront.
 | `DropdownMenu`, `Select` | shadcn/Base UI | sort options, admin filters |
 | `Toast`/`Sonner` | shadcn | feedback toasts (upload ok, layout saved, per-frame errors) |
 | `Badge` | shadcn | statuses (`Pending` yellow, `Approved` green, `Rejected` red), `SERIES • N`, `CURATED` gold, `Auto-filled from EXIF` |
-| `GalleryGrid`, `WorkCard`, `CurationCanvas`, `SeriesCarousel`, `FrameReorderList`, `CuratedDiffViewer` | custom (+ dnd-kit where noted) | see [PRD-FE](./PRD-FE.md) §4.2 |
+| `GalleryGrid`, `WorkCard`, `CurationCanvas`, `SeriesCarousel`, `FrameReorderList`, `CuratedDiffViewer` | custom (+ dnd-kit where noted) | see [PRD-FE](../specs/PRD-FE.md) §4.2 |
 
 Rules: never style raw HTML for these — always the component (variants
 via `cva`-style props); custom components compose primitives, never
@@ -98,7 +98,7 @@ reimplement focus/keyboard handling the primitive already provides.
 
 - **Breakpoints:** mobile-first; gallery `1 col → 2 → justified`;
   lightbox full-screen on mobile; `/admin/curate` canvas desktop/tablet
-  with move up/down fallback on mobile (per [PRD-FE](./PRD-FE.md) §2.3).
+  with move up/down fallback on mobile (per [PRD-FE](../specs/PRD-FE.md) §2.3).
 - **Images:** plain `<img>` + `loading="lazy"` (`fetchpriority="high"`
   first 4) + responsive `sizes`; blurhash placeholder against CLS (no
   framework optimizer).
@@ -126,7 +126,7 @@ developer-facing); user-facing copy above is the only Indonesian surface.
 
 ## Cross references
 
-- Decision history (palette, component table): [PRD-FE](./PRD-FE.md) §4
+- Decision history (palette, component table): [PRD-FE](../specs/PRD-FE.md) §4
 - Implementation guide (structure, data flow, guards, tests): [frontend](./frontend.md)
-- API error codes consumed by toasts: [PRD-API](./PRD-API.md) §4.0
-- States spec source: [PRD-FE](./PRD-FE.md) §2–§3, [engagement](./features/engagement.md) §5
+- API error codes consumed by toasts: [PRD-API](../specs/PRD-API.md) §4.0
+- States spec source: [PRD-FE](../specs/PRD-FE.md) §2–§3, [engagement](../features/engagement.md) §5

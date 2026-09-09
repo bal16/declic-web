@@ -18,7 +18,7 @@ updated: 2026-09-01
 **Status:** Draft
 **Last updated:** 2026-09-01
 
-> [!abstract] This document is the technical specification for the **Backend API** of the Déclic platform. For the asynchronous image processing pipeline, see [PRD-Worker](./PRD-Worker.md). For the canonical DB diagram, see [db-schema](./db-schema.md). This version (0.4-draft) introduces **SERIES** (`posts` + `photo_items`), **runtime feature flags** (kill-switch), **cuid2** for domain tables, **multi-exhibition** (`exhibitions` + `posts.exhibition_id`, root = latest) and **ARCHIVED freeze** (likes/comments read-only) plus **BullMQ cron** `exhibition-scheduler`.
+> [!abstract] This document is the technical specification for the **Backend API** of the Déclic platform. For the asynchronous image processing pipeline, see [PRD-Worker](./PRD-Worker.md). For the canonical DB diagram, see [db-schema](../data/db-schema.md). This version (0.4-draft) introduces **SERIES** (`posts` + `photo_items`), **runtime feature flags** (kill-switch), **cuid2** for domain tables, **multi-exhibition** (`exhibitions` + `posts.exhibition_id`, root = latest) and **ARCHIVED freeze** (likes/comments read-only) plus **BullMQ cron** `exhibition-scheduler`.
 
 ---
 
@@ -64,7 +64,7 @@ src/
 
 ## 2. Database Schema & Data Model (PostgreSQL)
 
-> Canonical structure: [db-schema](./db-schema.md) §1 (columns, types, constraints — the Mermaid diagram lives there). This section specifies **behavior** only and never redefines columns; on any shape question, db-schema wins.
+> Canonical structure: [db-schema](../data/db-schema.md) §1 (columns, types, constraints — the Mermaid diagram lives there). This section specifies **behavior** only and never redefines columns; on any shape question, db-schema wins.
 
 **ID generation rule:**
 
@@ -83,7 +83,7 @@ src/
 | `created_at` | `timestamp` | DEFAULT `now()` | Registration time |
 | `updated_at` | `timestamp` | NULLABLE | Last profile update (Better Auth adapter) |
 
-> `role` defaults to `VIEWER` — elevation to `PHOTOGRAPHER`/`CURATOR`/`ADMIN` is done by an Admin via `PATCH /api/admin/users/:id/role` (see [auth-rbac](./features/auth-rbac.md)). No seed admin — the first admin is a one-off direct DB edit. `users` ids are **not** switched to cuid2 — keep Better Auth compatibility.
+> `role` defaults to `VIEWER` — elevation to `PHOTOGRAPHER`/`CURATOR`/`ADMIN` is done by an Admin via `PATCH /api/admin/users/:id/role` (see [auth-rbac](../features/auth-rbac.md)). No seed admin — the first admin is a one-off direct DB edit. `users` ids are **not** switched to cuid2 — keep Better Auth compatibility.
 
 ### 2.2 `exhibitions` — cuid2
 
@@ -220,7 +220,7 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 |---|---|---|
 | `series_enabled` | `true` | `POST /api/posts` with `type=SERIES` or `items.length>1` → `403 {code:"FEATURE_DISABLED"}`. Existing SERIES remain readable. Toggle via `PATCH /api/admin/feature-flags/:key` |
 | `threaded_comments_enabled` | `false` | `POST /api/posts/:id/comments` with `parentId` → `400 {code:"FEATURE_DISABLED"}`. No threading UI. |
-| `comments_enabled` | `true` | `POST /api/posts/:id/comments` → `403 {code:"FEATURE_DISABLED"}` (spam-emergency kill-switch; reads stay open). See [feature-flags-site-settings](./features/feature-flags-site-settings.md) §3. |
+| `comments_enabled` | `true` | `POST /api/posts/:id/comments` → `403 {code:"FEATURE_DISABLED"}` (spam-emergency kill-switch; reads stay open). See [feature-flags-site-settings](../features/feature-flags-site-settings.md) §3. |
 
 > Flags are cached in-memory (10s TTL) and invalidated on `PATCH /api/admin/feature-flags/:key`. **No** `GET /api/system/settings` — use `GET /api/feature-flags` (public, filtered list) + `GET /api/exhibitions/:id` for phase. Legacy `GET /api/system/settings` is **deleted**.
 
@@ -297,7 +297,7 @@ GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 | Site Settings (`PATCH /api/admin/site-settings`) | Blocked | Blocked | Blocked | Blocked | Allowed |
 | Audit Trail (`GET /api/admin/audit-logs`) | Blocked | Blocked | Blocked | Allowed (read) | Allowed |
 
-Union is manual — `ADMIN` is listed explicitly everywhere (no implicit superset in `RolesGuard`). Role literals live in one map (`common/auth/role-matrix.ts`, see [auth-rbac](./features/auth-rbac.md) §3.1); endpoints reference permission keys.
+Union is manual — `ADMIN` is listed explicitly everywhere (no implicit superset in `RolesGuard`). Role literals live in one map (`common/auth/role-matrix.ts`, see [auth-rbac](../features/auth-rbac.md) §3.1); endpoints reference permission keys.
 
 Implementation: `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` (checks `exhibitions.phase != ARCHIVED` for the target exhibition, or latest if not specified) → `FeatureFlagGuard` (checks `feature_flags.series_enabled` etc.).
 
@@ -379,51 +379,51 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 
 ### 4.1 Ingestion & Work Upload (SINGLE & SERIES)
 
-> **Moved to [series-upload](./features/series-upload.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [series-upload](../features/series-upload.md)** — single source of truth lives there; this section is an index pointer only.
 >
 > Endpoints: `POST /api/posts/upload-url`, `POST /api/posts`, `PATCH /api/posts/:id` (new), `PATCH /api/posts/:id/items/reorder`, `POST /api/posts/:id/retry` (new).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.2 Gallery & Discovery (Public Read API)
 
-> **Moved to [gallery-discovery](./features/gallery-discovery.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [gallery-discovery](../features/gallery-discovery.md)** — single source of truth lives there; this section is an index pointer only.
 >
 > Endpoints: `GET /api/posts`, `GET /api/posts/mine`, `GET /api/posts/:id` (+ `/photos` alias).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.3 Engagement (Likes & Comments on works)
 
-> **Moved to [engagement](./features/engagement.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [engagement](../features/engagement.md)** — single source of truth lives there; this section is an index pointer only.
 >
 > Endpoints: `POST/DELETE /api/posts/:id/like`, `POST/GET /api/posts/:id/comments`.
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.4 Curation & Moderation (Admin API)
 
-> **Moved to [curation-moderation](./features/curation-moderation.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [curation-moderation](../features/curation-moderation.md)** — single source of truth lives there; this section is an index pointer only.
 >
-> Endpoints: `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`. Frame-level curation lives in [curator-replace-revert](./features/curator-replace-revert.md); author retraction in [withdraw-work](./features/withdraw-work.md).
+> Endpoints: `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`. Frame-level curation lives in [curator-replace-revert](../features/curator-replace-revert.md); author retraction in [withdraw-work](../features/withdraw-work.md).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.5 Exhibitions (Multi-pameran, root = latest)
 
-> **Moved to [exhibition-lifecycle](./features/exhibition-lifecycle.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [exhibition-lifecycle](../features/exhibition-lifecycle.md)** — single source of truth lives there; this section is an index pointer only.
 >
 > Endpoints: `GET /api/exhibitions`, `GET /api/exhibitions/:slug`, `GET /api/exhibitions/:id/posts`, `POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`, plus `exhibition-scheduler` cron.
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.6 Feature Flags & Site Settings
 
-> **Moved to [feature-flags-site-settings](./features/feature-flags-site-settings.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [feature-flags-site-settings](../features/feature-flags-site-settings.md)** — single source of truth lives there; this section is an index pointer only.
 >
 > Endpoints: `GET /api/feature-flags`, `PATCH /api/admin/feature-flags/:key`, `GET /api/site-settings`, `PATCH /api/admin/site-settings`.
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.7 Audit Logs (ADMIN + CURATOR, read-only)
 
-> **Moved to [curation-moderation](./features/curation-moderation.md)** — single source of truth lives there; this section is an index pointer only.
+> **Moved to [curation-moderation](../features/curation-moderation.md)** — single source of truth lives there; this section is an index pointer only.
 >
-> Endpoints: `GET /api/admin/audit-logs` — defined once in [curation-moderation](./features/curation-moderation.md) §5 (Audit trail).
+> Endpoints: `GET /api/admin/audit-logs` — defined once in [curation-moderation](../features/curation-moderation.md) §5 (Audit trail).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ## 5. Non-Functional Requirements
@@ -447,5 +447,5 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 
 - **General PRD:** [PRD](./PRD.md) — vision, users & roles, lifecycle, system architecture (now with SERIES + feature flags).
 - **Worker Pipeline:** [PRD-Worker](./PRD-Worker.md) — BullMQ consumer per `photo_item` (`cuid2`), `Bun.Image` derivatives, retry/DLQ, post-level aggregation.
-- **DB Schema:** [db-schema](./db-schema.md) — canonical Mermaid ER diagram (`posts` + `photo_items`, cuid2 for domain tables).
+- **DB Schema:** [db-schema](../data/db-schema.md) — canonical Mermaid ER diagram (`posts` + `photo_items`, cuid2 for domain tables).
 - **Local Infra:** `docker-compose.yml` + `env.example` — Postgres, Redis, MinIO, API, Worker, Web.

@@ -11,9 +11,9 @@ updated: 2026-09-07
 
 # Feature: Gallery & Discovery (public reads, lightbox, OG)
 
-**Status:** Specced ([PRD](../PRD.md) 0.4-draft) — not implemented
+**Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `posts` (reads), `exhibitions` (scoping)
-**Related:** [PRD-API](../PRD-API.md) §4.0 (cursor schema), [PRD-FE](../PRD-FE.md) §3.1,
+**Related:** [PRD-API](../specs/PRD-API.md) §4.0 (cursor schema), [PRD-FE](../specs/PRD-FE.md) §3.1,
 [exhibition-lifecycle](./exhibition-lifecycle.md) (latest/archive scoping)
 
 ---
@@ -42,7 +42,7 @@ updated: 2026-09-07
 | `exhibition_slug` | `string` | — | Alternative (e.g. `declic-2026`) |
 | `sort` | `enum` | `curated` | `curated` (by `posts.display_order`), `most_liked` (by `likes_count`), `recent` (by `posts.created_at` — **not** `id`) |
 | `search` | `string` | — | Substring match on `posts.title` or `users.name` |
-| `cursor` | `string` | — | Opaque `base64url(JSON)` per [PRD-API](../PRD-API.md) §4.0 — **never raw cuid2 sort** |
+| `cursor` | `string` | — | Opaque `base64url(JSON)` per [PRD-API](../specs/PRD-API.md) §4.0 — **never raw cuid2 sort** |
 | `limit` | `integer` | `20` | `1..50` |
 | `type` | `enum` | — | Filter `SINGLE` or `SERIES` (optional) |
 
@@ -107,7 +107,7 @@ updated: 2026-09-07
 
 ## 4. Frontend (`/`, `/archive`, `/post/$postId`, `/og/$postId`)
 
-Summary (full UI spec: [PRD-FE](../PRD-FE.md) §3.1):
+Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §3.1):
 
 - **Grid:** justified layout by cover aspect (no crop), `SERIES • N`
   badge, `useInfiniteQuery` cursor pagination, blurhash placeholders
@@ -131,7 +131,7 @@ No involvement (reads serve stored derivatives + `blurhash`).
 
 Reads `posts` (+ `photo_items`, `photo_derivatives`, `users` join).
 Relies on composite `(exhibition_id, status)` index (see
-[db-schema](../db-schema.md)). No new tables.
+[db-schema](../data/db-schema.md)). No new tables.
 
 ## 7. Edge cases
 
