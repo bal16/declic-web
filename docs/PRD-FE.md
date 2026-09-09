@@ -61,7 +61,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 | Route | Description | Guard |
 |---|---|---|
-| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress. Each `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner alongside the button (withdraw cancels worker jobs best-effort). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
+| `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress (derived: `blurhash NULL` + parent `PROCESSING` = in-flight, + parent `FAILED_PROCESSING` = failed). `REJECTED` cards render `rejectionReason` (available to owner via detail endpoint). Each `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner alongside the button (withdraw cancels worker jobs best-effort). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
 | `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch MinIO Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from `site_settings`. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
 | `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (`FAILED_PROCESSING` allows title/caption edit + Retry, reorder stays `PENDING`-only; exhibition not `ARCHIVED`). | Owner only |
 
@@ -334,6 +334,20 @@ const { data: session, isPending } = useSession();
   - if `exhibitions.phase === 'ARCHIVED'`, like/comment buttons everywhere (gallery, lightbox, `/post/$postId`) are **disabled** with tooltip `"This exhibition is archived — likes and comments are frozen"` (API returns `403 {code:"ARCHIVED"}` on POST; unlike stays `204`). Reads remain.
   - if `feature_flags.comments_enabled === false`, comment inputs are disabled with the same frozen tooltip (API returns `403 {code:"FEATURE_DISABLED"}` on POST).
   - Frontend reads `GET /api/exhibitions` (latest) + `GET /api/feature-flags` on mount; polling/cache 10s TTL. All `id` params are `cuid2` text — never sorted lexicographically; pagination uses `created_at` cursor. Root `/` auto-resolves to latest exhibition (`start_date DESC`).
+
+### 6.4 Login page (`/login`) + global banners
+
+- `/login`: Google + GitHub buttons (Better Auth OAuth). When a provider's
+  client id is empty (login disabled), its button renders disabled with
+  tooltip `"Login with <provider> is not configured"` + a banner
+  `"Login is currently disabled — browsing only"`. Like/comment/upload
+  buttons assume login possible; with login disabled they open the Auth
+  Wall modal, which shows the same banner instead of provider buttons.
+- `maintenance_mode` banner: when `GET /api/site-settings`
+  returns `maintenance_mode=true`, every route renders a top banner
+  `"Scheduled maintenance — browsing only"` (copy in
+  [feature-flags-site-settings](./features/feature-flags-site-settings.md) §6).
+  Banner-only in 1.0 — blocks no writes by itself.
 
 ---
 

@@ -126,7 +126,10 @@ reads still include hidden rows (see [engagement](./engagement.md) §4). Emits `
 
 ## 5. API — `GET /api/admin/audit-logs` (ADMIN + CURATOR, read-only)
 
-Read-only trail over `admin_audit_logs`. Query params: `targetId`
+Read-only trail over `admin_audit_logs`. No scoping in v1 — `ADMIN` and
+`CURATOR` see the full trail (including other curators' actions and
+`adminId: null` cron rows); an audit log that hides entries is not an
+audit log. Query params: `targetId`
 (cuid2, e.g. frame for replace/revert chain), `action` (e.g.
 `photo_item.replace`, `photo_item.revert`, `post.withdraw`,
 `post.retry`, `post.moderate`, `comment.hide`, `exhibition.phase_change`,

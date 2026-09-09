@@ -100,6 +100,8 @@ only (freeze enforced by `ExhibitionPhaseGuard` + `FeatureFlagGuard`).
 > Ownership is a row fact (`photographer_id`), not a role: a user whose
 > role changed (e.g. `PHOTOGRAPHER` → `CURATOR`) keeps owner rights on
 > works they shot — the guard passes on owner-match **or** role-allowlist.
+> Roles are global in v1 (no per-exhibition curator — out of scope):
+> a `CURATOR` may moderate any exhibition's works.
 
 Changing one rule = editing one row here. If the mapping ever moves to
 DB (hybrid pattern), only this map's source changes (const → cached

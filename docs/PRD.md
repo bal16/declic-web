@@ -347,7 +347,7 @@ auth (`bearer()` plugin) instead of cookies.
 - [x] What happens to likes/comments if a published photo is later un-published (Section 8.2) — **decided v1.2:** `ARCHIVED` freeze + soft `UNPUBLISHED` keeps engagement rows but hidden from public (`status` filter).
 - [ ] Final choice of production domain structure (needed to lock in the cookie/CORS configuration from Section 8.5).
 - [ ] Whether a mobile client (Expo/React Native, or native Kotlin/Swift) is in scope for a future version — the current architecture supports it without redesign, but it is not part of v1 scope.
-- [ ] Exhibition poster storage limits and slug collision UX for `/exhibition/[slug]`.
+- [ ] Exhibition poster storage limits and slug collision UX for `/exhibition/[slug]` (backend: `400 VALIDATION_ERROR` on collision — inline field error naming the taken slug; spec detail deferred).
 
 ---
 

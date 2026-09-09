@@ -74,7 +74,9 @@ incorporates `cuid2` for uniqueness.
 ## 3. API — `POST /api/posts`
 
 **Access:** Authenticated (`PHOTOGRAPHER`, `ADMIN`). Checks
-`FeatureFlagGuard('series_enabled')` if `type===SERIES`.
+`FeatureFlagGuard('series_enabled')` if `type===SERIES` **or**
+`items.length > 1` (a multi-item `SINGLE` is a series in disguise —
+same gate).
 
 **Request Body (SINGLE, defaults to latest exhibition):**
 
@@ -126,9 +128,15 @@ incorporates `cuid2` for uniqueness.
 
 1. Resolve `exhibitionId` (provided or latest). If
    `exhibitions.phase === 'ARCHIVED'` → `403 {code:"ARCHIVED"}` (see Errors). If
-   `type===SERIES` and `series_enabled===false` → `403 {code:"FEATURE_DISABLED"}`.
-2. Validate `1 <= items.length <= site_settings.max_series_size`.
+   (`type===SERIES` **or** `items.length > 1`) and `series_enabled===false` → `403 {code:"FEATURE_DISABLED"}`.
+   If no writable exhibition exists (only `DRAFT`, or none at all) →
+   `400 VALIDATION_ERROR` ("no writable exhibition" — `DRAFT` writes require `ADMIN`).
+2. Validate cardinality + size: `SINGLE` ⇒ exactly 1 item, `SERIES` ⇒
+   `2..max_series_size` (mismatched `type`/count → `400 VALIDATION_ERROR`).
 3. Verify each `s3Key` exists in MinIO (HEAD) — optional but recommended.
+   Keys are single-use (bound to one presign): re-uploads must presign
+   anew — reusing a withdrawn work's key aliases two works to one object
+   and is rejected with `400 VALIDATION_ERROR` (duplicate `s3Key`).
 4. Insert `posts` (`id=cuid2`, `exhibition_id`, `status='PROCESSING'`,
    `type`, `title`, `caption`, `photographer_id`).
 5. Insert `photo_items` rows (`id=cuid2` per row, `post_id`,
@@ -154,7 +162,7 @@ incorporates `cuid2` for uniqueness.
 
 - `403 {code:"ARCHIVED"}` if target `exhibitions.phase === 'ARCHIVED'` →
   `"Exhibition has been archived, new uploads are closed"`.
-- `403 {code:"FEATURE_DISABLED"}` if `type===SERIES` and `series_enabled===false`
+- `403 {code:"FEATURE_DISABLED"}` if (`type===SERIES` **or** `items.length>1`) and `series_enabled===false`
   → `"SERIES creation is temporarily disabled"`.
 
 ## 4. API — `PATCH /api/posts/:id` (NEW for 1.0, photographer edit)
@@ -216,7 +224,8 @@ when all succeed. Edit (§4) and reorder (§5) enqueue **no** jobs.
 
 Writes `posts` + `photo_items` (see [db-schema](../db-schema.md)). No new tables. Limit
 source: `site_settings.max_series_size` (grandfathering — old SERIES
-stay valid when lowered).
+stay valid when lowered; later title/caption edits and reorders do **not**
+re-validate size — only new `POST /api/posts` is validated).
 
 ## 9. Edge cases
 
@@ -228,6 +237,8 @@ stay valid when lowered).
 - Duplicate `s3Key` across items → `400 VALIDATION_ERROR`.
 - Edit/reorder on `PROCESSING` work → `409` (wait for `PENDING` or `FAILED_PROCESSING`; title edit opens at `FAILED_PROCESSING`, reorder stays `PENDING`-only).
 - `FAILED_PROCESSING` (after 3 worker attempts) → dashboard shows Retry (re-enqueue frames with `blurhash IS NULL`) + title edit + withdraw; reorder stays blocked until `PENDING`.
+- Per-frame state is derived (no `photo_items.status` column): `blurhash IS NULL` + parent `PROCESSING` = in-flight (attempts remain); `blurhash IS NULL` + parent `FAILED_PROCESSING` = terminally failed. Dashboard renders per-frame from this rule; ready siblings stay viewable (failed frames return null derivatives) for the owner while parent is `FAILED_PROCESSING`.
+- Presigned-then-rejected objects (PUT to MinIO before a `403` at create time) have no `posts` row and no cleanup in v1 — accepted orphan gap alongside withdraw orphans (see [withdraw-work](./withdraw-work.md) §7); a lifecycle GC policy is post-1.0.
 
 ## 9b. API — `POST /api/posts/:id/retry` (NEW for 1.0, owner or `ADMIN`, cuid2)
 

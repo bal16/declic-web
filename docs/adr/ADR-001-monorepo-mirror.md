@@ -50,7 +50,7 @@ Rules:
 * One lockfile: root `bun.lock`. Subdirectories do not commit their own lockfiles.
 * Cross-package deps use `workspace:*` inside the monorepo.
 * Model C1 means each mirror carries the `packages/*` slice it needs, so a standalone clone of a mirror still runs `bun install && bun run build` with no access to the monorepo.
-* Mirroring runs via `scripts/mirror.sh` per app slice (see `scripts/mirror.sh`), force-updating the mirror's `main`. Automation starts as manual `workflow_dispatch` only; the push-to-`main` trigger is enabled once the mirror repos + deploy key exist.
+* Mirroring runs via `scripts/mirror.sh` per app slice (see `scripts/mirror.sh`), force-updating the mirror's `main`. Automation started as manual `workflow_dispatch` only; the push-to-`main` trigger (paths-filtered) is enabled since 2026-09-08 — see §6.
 
 ## 3. Alternatives considered
 

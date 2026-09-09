@@ -48,6 +48,11 @@ Effects (one tx): set `deleted_at`; cancel pending BullMQ jobs for its
 deferred post-1.0, see §7). Emits `AuditRequestedEvent`
 (`action='post.withdraw'`).
 
+Concurrency rule: every mutating statement on `posts` carries
+`WHERE deleted_at IS NULL` — withdraw wins races against concurrent
+`PATCH`/reorder/retry (the loser sees `404 NOT_FOUND`, never a
+half-applied edit). No optimistic-locking version column in v1.
+
 Error shape: see [PRD-API](../PRD-API.md) §4.0 (canonical `{code,message,details?}`).
 
 ## 3. Frontend (`/dashboard`)

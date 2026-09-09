@@ -35,8 +35,15 @@ Request body: empty. Responses: `POST → 200 { "likesCount": 43, "isLiked": tru
 
 - **Idempotent** — repeated `POST` does not duplicate (composite PK on
   `likes(user_id, post_id)`), `DELETE` on a not-yet-liked work still
-  returns `204`.
+  returns `204`. Implementation contract: `INSERT ... ON CONFLICT DO
+  NOTHING` + increment `likes_count` **only when a row was actually
+  inserted** — a naive increment-on-every-POST drifts under retry storms.
 - Atomically maintains `posts.likes_count` within same transaction.
+- **Visibility precedence (mirrors comments §3):** `POST`/`DELETE` on
+  `UNPUBLISHED`/withdrawn work → `404 NOT_FOUND` (uniform, owner
+  included — no tombstone in v1); `POST` in `ARCHIVED` → `403 ARCHIVED`;
+  `DELETE` (unlike) stays `204` in `ARCHIVED` only (withdrawn/unpublished
+  likes keep their rows but have no unlike path — rows are inert).
 - Supports Optimistic UI — frontend may update count before response,
   then reconciles with the returned `likesCount`.
 - **Frozen when parent exhibition is `ARCHIVED`:** `POST /like`
@@ -96,9 +103,9 @@ tables.
 
 ## 8. Edge cases
 
-- Double-click like storm → single row (PK), count converges.
-- Comment on `UNPUBLISHED`/withdrawn work → `404` (work invisible).
-- `parentId` pointing to hidden/deleted comment → `400 VALIDATION_ERROR`.
+- Double-click like storm → single row (PK), count converges (see §2 increment-on-insert contract).
+- Comment on `UNPUBLISHED`/withdrawn work → `404` (work invisible) — applies to everyone including the owner (no owner carve-out on engagement writes).
+- `parentId` pointing to hidden/deleted comment → `400 VALIDATION_ERROR`; `parentId` belonging to a different `postId` → `400 VALIDATION_ERROR` (no cross-post threading, no silent flatten).
 
 ## 9. Out of scope (post-1.0)
 

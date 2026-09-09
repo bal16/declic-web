@@ -57,6 +57,12 @@ latest `ARCHIVED`) as `exhibitionId` default.
 `postsCount: integer` — `APPROVED`+visible works only for public;
 all non-deleted works for `ADMIN`. Includes `poster` url.
 Errors: `404 NOT_FOUND` (unknown slug; `DRAFT` slug is `404` for non-ADMIN).
+`PRE_EVENT` slug → `200` with exhibition metadata but an empty works
+grid for non-ADMIN (container visible as "coming soon", works hidden).
+The `?phase=DRAFT` ADMIN bypass also applies on `:slug` detail (not
+just the list). Non-latest `LIVE` exhibitions (two `LIVE` at once is
+allowed) are reachable only via `/exhibition/$slug` — `/archive` lists
+`ARCHIVED` only.
 
 #### `GET /api/exhibitions/:id/posts` (public)
 
