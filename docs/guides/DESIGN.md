@@ -14,7 +14,7 @@ updated: 2026-09-09
 **Status:** Draft (for owner review — tokens not yet implemented in `styles.css`)
 **Related:** [PRD-FE](../specs/PRD-FE.md) §4 (decision history), [frontend](./frontend.md) (implementation guide), `../../apps/web/src/styles.css`
 
-PRD-FE §4 decided the *look* (dark gallery, gold accent, shadcn-compatible).
+PRD-FE §4 decided the *look* (dark gallery, orange accent, shadcn-compatible).
 This file is the *implementation contract*: exact tokens, component set,
 and standards. On conflict between an example here and PRD-FE §4, this
 file wins for implementation (flag the drift when you see it).
@@ -50,7 +50,7 @@ in v1. Light mode UI remains out of scope.
   --foreground: 0 0% 96%;
   --card: 240 6% 8%;
   --popover: 240 6% 8%;
-  --primary: 46 68% 47%;      /* #C9A227 gold, accents only */
+  --primary: 25 95% 53%;      /* #F97316 orange, accents only */
   --secondary: 240 4% 16%;
   --muted: 240 4% 16%;
   --muted-foreground: 240 5% 65%;
@@ -58,7 +58,7 @@ in v1. Light mode UI remains out of scope.
   --destructive: 0 62% 30%;
   --border: 240 4% 16%;
   --input: 240 4% 16%;
-  --ring: 46 68% 47%;
+  --ring: 25 95% 53%;
 }
 ```
 
@@ -69,17 +69,17 @@ Palette (`.dark` values, from PRD-FE §4.1, unchanged):
 | `--background`                         | `240 10% 4%` (`#0A0A0C`)      | gallery canvas only                                                         |
 | `--foreground`                         | `0 0% 96%`                    | main text                                                                   |
 | `--card` / `--popover`                 | `240 6% 8%`                   | containers, overlays                                                        |
-| `--primary`                            | `46 68% 47%` (`#C9A227` gold) | curatorial accents ONLY (CTA, active, focus ring) — never large backgrounds |
+| `--primary`                            | `25 95% 53%` (`#F97316` orange) | curatorial accents ONLY (CTA, active, focus ring) — never large backgrounds |
 | `--secondary` / `--muted` / `--accent` | `240 4% 16–20%`               | buttons, borders, inputs                                                    |
 | `--muted-foreground`                   | `240 5% 65%`                  | EXIF data, secondary text                                                   |
 | `--destructive`                        | `0 62% 30%`                   | destructive actions                                                         |
 | `--border` / `--input`                 | `240 4% 16%`                  |                                                                             |
-| `--ring`                               | `46 68% 47%`                  | focus ring (see §4)                                                         |
+| `--ring`                               | `25 95% 53%`                  | focus ring (see §4)                                                         |
 | `--radius`                             | `0.5rem`                      |                                                                             |
 
 Rules: `--primary` never backgrounds; works/covers always sit on
 `.dark --background`; `SERIES` badge = `--secondary` bg + `--secondary-foreground`
-text; `CURATED` badge = gold. Never use the `:root` light values in v1
+text; `CURATED` badge = orange. Never use the `:root` light values in v1
 (app is always `.dark`); a future light mode = design new `:root`
 gallery-light values, no structural change.
 
@@ -95,7 +95,7 @@ needed, never upfront.
 | `Dialog`, `Sheet` | shadcn/Base UI | `LightboxModal` (carousel-aware), per-frame EXIF drawer |
 | `DropdownMenu`, `Select` | shadcn/Base UI | sort options, admin filters |
 | `Toast`/`Sonner` | shadcn | feedback toasts (upload ok, layout saved, per-frame errors) |
-| `Badge` | shadcn | statuses (`Pending` yellow, `Approved` green, `Rejected` red), `SERIES • N`, `CURATED` gold, `Auto-filled from EXIF` |
+| `Badge` | shadcn | statuses (`Pending` yellow, `Approved` green, `Rejected` red), `SERIES • N`, `CURATED` orange, `Auto-filled from EXIF` |
 | `GalleryGrid`, `WorkCard`, `CurationCanvas`, `SeriesCarousel`, `FrameReorderList`, `CuratedDiffViewer` | custom (+ dnd-kit where noted) | see [PRD-FE](../specs/PRD-FE.md) §4.2 |
 
 Rules: never style raw HTML for these — always the component (variants
@@ -104,10 +104,10 @@ reimplement focus/keyboard handling the primitive already provides.
 
 ## 3. a11y baseline (WCAG AA, 4 items)
 
-1. **Contrast ≥ 4.5:1 for text.** Gold `#C9A227` on near-black MUST pass
+1. **Contrast ≥ 4.5:1 for text.** Orange `#F97316` on near-black MUST pass
    by measurement, not by eye — verify the ratio when implementing §1
    and record it here. `muted-foreground` on `muted` likewise.
-2. **Visible focus everywhere.** `--ring` gold ring on all interactive
+2. **Visible focus everywhere.** `--ring` orange ring on all interactive
    elements; never `outline: none` without a replacement.
 3. **Don't reimplement what Base UI gives free.** Dialog focus-trap,
    Escape-to-close, arrow-key navigation, toast live-regions come from

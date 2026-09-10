@@ -76,7 +76,7 @@ kept unused) + `.dark` (gallery theme below, active). App always renders
   --card-foreground: 0 0% 96%;
   --popover: 240 6% 8%;
   --popover-foreground: 0 0% 96%;
-  --primary: 46 68% 47%;           /* #C9A227 warm gold, accents only */
+  --primary: 25 95% 53%;           /* #F97316 vivid orange, accents only */
   --primary-foreground: 240 10% 4%;
   --secondary: 240 4% 16%;
   --secondary-foreground: 0 0% 98%;
@@ -88,17 +88,17 @@ kept unused) + `.dark` (gallery theme below, active). App always renders
   --destructive-foreground: 0 0% 98%;
   --border: 240 4% 16%;
   --input: 240 4% 16%;
-  --ring: 46 68% 47%;              /* gold focus ring */
+  --ring: 25 95% 53%;              /* orange focus ring */
   --radius: 0.5rem;
 }
 ```
 
 Rules:
 
-- `--primary` gold: CTA, active state, focus ring only. Never large backgrounds.
+- `--primary` orange: CTA, active state, focus ring only. Never large backgrounds.
 - Works/covers always sit on `.dark --background`. Never use `:root` light values in v1.
 - `SERIES` badge: `--secondary` bg + `--secondary-foreground` text.
-- `CURATED` badge: gold.
+- `CURATED` badge: orange.
 - Status badges: `Pending` yellow, `Approved` green, `Rejected` red.
 - `--muted-foreground`: EXIF metadata, secondary text.
 
@@ -109,7 +109,7 @@ Rules:
 | `Dialog`, `Sheet` | shadcn / Base UI | Lightbox modal (carousel-aware), per-frame EXIF drawer, Auth Wall modal, confirm dialogs (withdraw, revert, unpublish) |
 | `DropdownMenu`, `Select` | shadcn / Base UI | Sort (`Curated`, `Most Liked`, `Recent`), admin status/type filters, user role dropdown |
 | `Toast` / `Sonner` | shadcn | Feedback: upload ok, layout saved, per-frame errors, error-code toasts |
-| `Badge` | shadcn | Status, `SERIES • N`, `CURATED` gold, `Auto-filled from EXIF` |
+| `Badge` | shadcn | Status, `SERIES • N`, `CURATED` orange, `Auto-filled from EXIF` |
 | `GalleryGrid` | custom | Main grid container, cover-based justified layout |
 | `WorkCard` (`PhotoCard` alias ok) | custom | One work card: cover, hover overlay (title, photographer, Like, type badge, `CURATED` hint if any frame curated) |
 | `SeriesCarousel` | custom | Frame carousel in lightbox/detail: dots, `1/N` indicator, per-frame metadata, `CURATED` badge per frame |
@@ -178,7 +178,7 @@ Curation canvas:
 Non-destructive. Blocked when `ARCHIVED`. Blocked while frame mid-processing (one regeneration at a time).
 
 - Replace button per frame -> file picker -> instant `URL.createObjectURL` preview -> side-by-side diff slider (`CuratedDiffViewer`: left current `web.webp`, right new preview) -> confirm -> returns processing state, frame shows spinner until worker done.
-- Replaced frame: gold `CURATED` badge + tooltip shows audit time. Original file stays in storage (audit keeps old key). No delete.
+- Replaced frame: orange `CURATED` badge + tooltip shows audit time. Original file stays in storage (audit keeps old key). No delete.
 - Revert button -> confirm dialog naming which replace is undone (latest one; repeatable to walk back) -> returns processing state. History via mini timeline under frame (from audit-logs by frame ID).
 - Disabled state banner: `"Archived — replacements frozen"`.
 - If cover frame (`item_order=0`) replaced, gallery cover swaps after worker completes.
@@ -280,8 +280,8 @@ Minimal API index (UI needs only these names):
 
 A11y (WCAG AA):
 
-- [ ] Text contrast >= 4.5:1. Gold `#C9A227` on near-black must pass by measurement, not by eye. Muted text on muted bg likewise.
-- [ ] Visible focus everywhere. Gold `--ring` on all interactive elements. Never `outline: none` without replacement.
+- [ ] Text contrast >= 4.5:1. Orange `#F97316` on near-black must pass by measurement, not by eye. Muted text on muted bg likewise.
+- [ ] Visible focus everywhere. Orange `--ring` on all interactive elements. Never `outline: none` without replacement.
 - [ ] Do not reimplement what Base UI gives free. Dialog focus-trap, Escape-to-close, arrow-key nav, toast live-regions come from primitive. Custom `SeriesCarousel`, `CurationCanvas`, `CuratedDiffViewer` must wire equivalent keyboard explicitly.
 - [ ] Alt text two tiers. Informative (work cover, curated diff): curatorial one-liner (title + photographer + frame note). Decorative (skeletons, placeholders): empty `alt=""`. EXIF text is data, not alt.
 - [ ] Lightbox: `Esc` close, `Left`/`Right` frames/works, `Tab` trapped, `aria-modal`, carousel `aria-roledescription="carousel"`, pagination announced.
@@ -345,7 +345,7 @@ Curator/Admin:
 
 - [ ] Moderation queue per exhibition; Approve puts work at bottom; Reject requires reason; SERIES as one unit; `APPROVED` in `PRE_EVENT` hidden until `LIVE`
 - [ ] Curation canvas drag-drop (desktop) / move up-down (mobile); reorder saves single rank, no rebalance; disabled in `ARCHIVED`
-- [ ] Replace shows diff slider, `202` processing, `CURATED` gold badge + audit tooltip, derivatives regenerate; revert undoes one level with confirm + timeline; no history / mid-processing / `ARCHIVED` show correct 409/403
+- [ ] Replace shows diff slider, `202` processing, `CURATED` orange badge + audit tooltip, derivatives regenerate; revert undoes one level with confirm + timeline; no history / mid-processing / `ARCHIVED` show correct 409/403
 - [ ] Comment hide decrements count once, public hides, admin sees; idempotent
 - [ ] Audit trail readable, filterable by frame/action
 - [ ] Exhibitions CRUD (no delete); slug collision inline error; poster picker round-trips with preview; manual phase override writes audit
@@ -368,6 +368,6 @@ Global:
 - Cover: frame `item_order=0`. Sizes the gallery card.
 - Curated order: public default sort by curated rank (`display_order`).
 - Blurhash: placeholder string per frame, prevents layout shift.
-- `CURATED`: frame replaced by curator (gold badge). Original kept in audit.
+- `CURATED`: frame replaced by curator (orange badge). Original kept in audit.
 - Exhibition: time-boxed event with `phase`. Root `/` = latest.
 - Auth Wall: login modal preserving state (file-drop, draft, pending like).

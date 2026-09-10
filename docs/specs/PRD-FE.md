@@ -183,7 +183,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 [Admin] --(4) Poll GET /api/posts/:id (items blurhash) --> worker done
 ```
 
-- UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (gold) on replaced frames; tooltip shows `audit` time.
+- UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (orange) on replaced frames; tooltip shows `audit` time.
 - Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (latest one; repeatable) → `POST /api/admin/posts/:postId/frames/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?targetId=:itemId` rendered as a mini timeline under the frame.
 - Disabled when exhibition `ARCHIVED` with banner `"Archived — replacements frozen"`.
 
@@ -227,7 +227,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
   --popover: 240 6% 8%;
   --popover-foreground: 0 0% 96%;
 
-  --primary: 46 68% 47%;           /* #C9A227 Warm Gold Accent */
+  --primary: 25 95% 53%;           /* #F97316 Vivid Orange Accent */
   --primary-foreground: 240 10% 4%;
 
   --secondary: 240 4% 16%;         /* Muted Slate Button/Borders */
@@ -244,14 +244,14 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 
   --border: 240 4% 16%;
   --input: 240 4% 16%;
-  --ring: 46 68% 47%;
+  --ring: 25 95% 53%;
   --radius: 0.5rem;
 }
 ```
 
 **Usage rules:**
 
-- `--primary` (Warm Gold `#C9A227`) only for curatorial accents (CTA, active state, focus ring) — not for large backgrounds.
+- `--primary` (Vivid Orange `#F97316`) only for curatorial accents (CTA, active state, focus ring) — not for large backgrounds.
 - `--muted-foreground` for EXIF metadata / secondary text.
 - All works/covers are displayed on top of `--background` dark for maximum contrast.
 - `SERIES` badge uses `--secondary` background with `--secondary-foreground` text.
@@ -263,7 +263,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 | `<Dialog />` & `<Sheet />` | shadcn/ui | `LightboxModal` (now carousel-aware) and per-frame EXIF drawer |
 | `<DropdownMenu />` & `<Select />` | shadcn/ui | Sorting options (`Curated`, `Most Liked`, `Recent`) and admin status/type filters (`SINGLE`/`SERIES`) |
 | `<Toast />` / `<Sonner />` | shadcn/ui | Feedback: `"Work uploaded successfully"`, `"Layout order saved"`, per-frame upload errors |
-| `<Badge />` | shadcn/ui | Moderation status (`Pending` yellow, `Approved` green, `Rejected` red) + `SERIES • N` + `"Auto-filled from EXIF"` + `CURATED` (gold, admin-replaced frame) |
+| `<Badge />` | shadcn/ui | Moderation status (`Pending` yellow, `Approved` green, `Rejected` red) + `SERIES • N` + `"Auto-filled from EXIF"` + `CURATED` (orange, admin-replaced frame) |
 | `<GalleryGrid />` | Custom | Main grid container rendering **works** (cover-based justified layout) |
 | `<WorkCard />` (`<PhotoCard />` alias) | Custom | Work card with cover hover overlay (title, photographer, Like, type badge, `CURATED` indicator if any frame curated) |
 | `<CurationCanvas />` | Custom (dnd-kit) | Drag-and-drop grid canvas of **works** for curator panel (desktop) |
