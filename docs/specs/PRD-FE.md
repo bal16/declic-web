@@ -227,7 +227,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
   --popover: 240 6% 8%;
   --popover-foreground: 0 0% 96%;
 
-  --primary: 43 74% 49%;           /* #D4AF37 Warm Gold Accent */
+  --primary: 46 68% 47%;           /* #C9A227 Warm Gold Accent */
   --primary-foreground: 240 10% 4%;
 
   --secondary: 240 4% 16%;         /* Muted Slate Button/Borders */
@@ -244,14 +244,14 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 
   --border: 240 4% 16%;
   --input: 240 4% 16%;
-  --ring: 43 74% 49%;
+  --ring: 46 68% 47%;
   --radius: 0.5rem;
 }
 ```
 
 **Usage rules:**
 
-- `--primary` (Warm Gold `#D4AF37`) only for curatorial accents (CTA, active state, focus ring) — not for large backgrounds.
+- `--primary` (Warm Gold `#C9A227`) only for curatorial accents (CTA, active state, focus ring) — not for large backgrounds.
 - `--muted-foreground` for EXIF metadata / secondary text.
 - All works/covers are displayed on top of `--background` dark for maximum contrast.
 - `SERIES` badge uses `--secondary` background with `--secondary-foreground` text.
