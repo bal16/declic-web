@@ -49,6 +49,18 @@ updated: 2026-09-07
   `VIEWER`) — no `roles`/`permissions` tables in 1.0. Anonymous
   (no session) is not a role; it only reaches `@Public()` reads.
 
+### 2.1 Display-name contract (Closes #9)
+
+- **Initial mapping, first login only:** `users.name =
+  trim(provider.name) || email-prefix`; never overwrite an existing
+  non-empty name on later logins. Email is immutable (OAuth identity).
+- **Self rename:** via built-in Better Auth `authClient.updateUser({name,
+  image})` — no custom endpoint. Validation: `name` 2..50 chars. No
+  audit row (not an admin action). Triggered from the account menu
+  (`EditProfileModal`, Dialog/Sheet primitives).
+- **Read-path fallback (normative, everywhere):** `trim(name) ||
+  email-prefix || "Fotografer"`. Search keeps using the stored name.
+
 ## 3. Guard chain, central matrix & role cache
 
 `SessionGuard` → `RolesGuard` → `ExhibitionPhaseGuard` →

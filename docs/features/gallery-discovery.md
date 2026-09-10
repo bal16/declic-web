@@ -62,6 +62,8 @@ updated: 2026-09-07
         "name": "Budi Santoso",
         "image": "https://lh3.googleusercontent.com/..."
       },
+      // `name` follows the display-name contract (fallback applies;
+      // see [auth-rbac](./auth-rbac.md) §2.1).
       "items": [
         {
           "id": "cuid-item-1",

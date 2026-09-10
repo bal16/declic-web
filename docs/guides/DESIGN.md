@@ -153,6 +153,7 @@ reimplement focus/keyboard handling the primitive already provides.
 | Login disabled (no OAuth) | disabled provider buttons + banner | `"Login saat ini dinonaktifkan — hanya lihat"` |
 | `maintenance_mode` | top banner all routes | `"Pemeliharaan terjadwal — hanya lihat"` |
 | 404 work (incl. withdrawn) | not-found page | `"Karya tidak ditemukan."` |
+| Blank/ugly display name | fallback render (no new copy) | `trim(name) \|\| email-prefix \|\| "Fotografer"` per [auth-rbac](../features/auth-rbac.md) §2.1 |
 
 API stays English codes (`{code,message?,details?}` wire messages are
 developer-facing); user-facing copy above is the only Indonesian surface.
