@@ -15,7 +15,7 @@ updated: 2026-09-01
 **Owner:** TBD
 **Last updated:** 2026-09-01
 
-> [!note]- **Changelog 0.4-draft:** Added **Option C — curator non-destructive replacement** (`photo_items.source` `ORIGINAL`→`CURATED`, `POST /api/admin/posts/:postId/frames/:itemId/replace`, revert `POST /api/admin/posts/:postId/frames/:itemId/revert` (stack of single-levels), audit `photo_item.replace`, diff viewer `CuratedDiffViewer`, blocked when `ARCHIVED` or frame mid-processing `FRAME_PROCESSING`). See [PRD-API](./PRD-API.md) §4.4, [curator-replace-revert](../features/curator-replace-revert.md), [db-schema](../data/db-schema.md) `PHOTO_ITEMS.source`, [PRD-FE](./PRD-FE.md) §3.2.1, [PRD-Worker](./PRD-Worker.md) `curated:true` payload.
+> [!note]- **Changelog 0.4-draft:** Removed **Option C — curator replacement** (kurator tidak mengedit visual; revisi via `REJECT` + withdraw + re-upload). See [curation-moderation](../features/curation-moderation.md), [db-schema](../data/db-schema.md), [PRD-FE](./PRD-FE.md) §3, [PRD-Worker](./PRD-Worker.md) §1.
 
 ---
 
@@ -99,7 +99,7 @@ and indefinitely afterward (as a lower-traffic archive).
 |---|---|---|
 | **Viewer** | Logged-in public (default role) | Browse photos, like/react, comment |
 | **Photographer** | Contributor with an account | Upload photos, view own submission status, edit/withdraw pending submissions |
-| **Curator** | Artwork manager | Approve/reject submissions, arrange display order/layout, replace/revert frames, moderate comments, read audit trail |
+| **Curator** | Artwork manager | Approve/reject submissions, arrange display order/layout, moderate comments, read audit trail |
 | **Admin** | Platform owner (all powers) | Everything a curator can do, plus exhibitions CRUD, user role management, feature flags, site settings |
 
 Anonymous visitors (no session) can browse public exhibitions only.
@@ -142,7 +142,7 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
   `FAILED_PROCESSING`, `UNPUBLISHED`, and the `PUBLISHED` legacy alias)
   — individual frames have no independent status.
 - Edit or withdraw a **work** while it is `PENDING`, `REJECTED`,
-  `PROCESSING`, `FAILED_PROCESSING`, or `UNPUBLISHED` (reorder frames within a series, replace a frame, edit title/caption; withdraw is photographer + admin, see [withdraw-work](../features/withdraw-work.md)).
+  `PROCESSING`, `FAILED_PROCESSING`, or `UNPUBLISHED` (reorder frames within a series, edit title/caption; withdraw is photographer + admin, see [withdraw-work](../features/withdraw-work.md)).
 
 ### 4.3 Admin
 
@@ -151,16 +151,16 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 - Manage **exhibitions** at `/admin/exhibitions` — create/edit `title`/`slug`/`start_date`/`end_date`/`location`/`poster`, manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`), slug unique. Creation auto-generates `cuid2` id.
 - Manage **users** at `/admin/users` — role elevation (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), self/last-admin guards.
 - Toggle **feature flags** and **site settings** at `/admin/settings`.
-- Manage the pre-event → archive transition — scheduled via `end_date` cron; manual override allowed. Replacements are **blocked when `ARCHIVED`**.
+- Manage the pre-event → archive transition — scheduled via `end_date` cron; manual override allowed.
 
 ### 4.4 Curator
 
 - Log in via Google or GitHub OAuth (same auth system, elevated role).
 - Review pending **works** per exhibition; approve or reject each **work** (status on `posts`; rejection reason shared for the whole work).
 - Arrange the display order/layout of approved **works** per exhibition (ordering is on `posts.display_order`; frames inside a SERIES keep `photo_items.item_order`).
-- **Curator replacement (non-destructive, Option C)** — curator may upload a **curated replacement** for any frame (`photo_items`) while `exhibitions.phase != ARCHIVED` (e.g. color consistency). Original `original_s3_key` is kept via audit log (`admin_audit_logs` payload `old_s3_key`), `photo_items.source` flips `ORIGINAL` → `CURATED`, `blurhash` + derivatives are regenerated via the same worker pipeline. Original file stays in `raw-uploads/` (not deleted) for archive honesty. Revert possible via audit.
+- Kurator tidak mengedit visual — revisi diminta via `REJECT` + reason, fotografer perbaiki via withdraw + re-upload.
 - Moderate (remove) inappropriate comments (per work thread; `is_hidden` + optional `parent_id`).
-- Read the audit trail (`admin_audit_logs`) including `feature_flag.toggle`, `exhibition.phase_change`, and `photo_item.replace`.
+- Read the audit trail (`admin_audit_logs`) including `feature_flag.toggle` and `exhibition.phase_change`.
 
 ---
 
@@ -299,7 +299,7 @@ remains the single source of truth for every image size shown publicly.
 ### 8.2 Moderation workflow state machine
 
 Every **work (post)** moves through: `PROCESSING` → `PENDING` → `APPROVED` / `REJECTED` (→ `UNPUBLISHED` as admin hide during `LIVE`). `FAILED_PROCESSING` is the terminal worker-failure state (retryable). `PUBLISHED` is a legacy alias of visible `APPROVED` (see [gallery-discovery](../features/gallery-discovery.md)). `APPROVED` is staging — publicly visible only when parent `exhibitions.phase IN ('LIVE','ARCHIVED')` (an `APPROVED` work in `PRE_EVENT` stays hidden until `LIVE`; no bulk status update on phase change). Series is moderated as one unit — frames cannot be approved individually. Admin can also reorder published **works** independently of the
-approval step (`posts.display_order`; intra-series order is `photo_items.item_order`). **Curator replacement** (Option C) is allowed on any `photo_items` of a work while its exhibition is not `ARCHIVED` — non-destructive, audited, derivatives regenerated (`photo_items.source` `ORIGINAL` → `CURATED`). Open question: what happens to likes/comments if an already
+approval step (`posts.display_order`; intra-series order is `photo_items.item_order`). Open question: what happens to likes/comments if an already
 published **work** is later un-published (soft delete vs hard removal of
 engagement data) — **decided v1.2:** `ARCHIVED` freeze + soft `UNPUBLISHED` keeps engagement rows but hidden from public (`status` filter). Denormalized `likes_count`/`comments_count` on `posts` are kept as optional cache (updated via transaction/trigger) to keep `GET /api/posts` <50ms; source of truth remains `likes`/`comments` tables.
 

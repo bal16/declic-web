@@ -86,11 +86,10 @@ erDiagram
         string post_id FK "cuid2 refs POSTS"
         int item_order "zero based order"
         string original_s3_key "raw uploads path"
-        string source "ORIGINAL or CURATED default ORIGINAL"
-        string blurhash "per frame regenerated on replace"
+        string blurhash "per frame placeholder"
         string exif_metadata "jsonb per frame"
         datetime created_at
-        datetime updated_at "replace time"
+        datetime updated_at
     }
 
     PHOTO_DERIVATIVES {
@@ -186,7 +185,7 @@ erDiagram
 
 - `exhibitions`: `slug` UNIQUE, `phase`, `start_date DESC` (latest query), `end_date` (cron).
 - `posts`: `exhibition_id`, composite `(exhibition_id, status)` for gallery, `display_order` per exhibition, `photographer_id`, `created_at`, `type`; filter `deleted_at IS NULL`; **do not** order by `id`.
-- `photo_items`: `UNIQUE(post_id, item_order)`, index `post_id` and `source`; `SINGLE` has 1 row (`item_order=0`), `SERIES` 2 to `max_series_size` (read from `site_settings.max_series_size`, **grandfathering** old rows); `source` tracks `ORIGINAL` vs `CURATED` replacement (original file kept in `raw-uploads/`, old key in audit).
+- `photo_items`: `UNIQUE(post_id, item_order)`, index `post_id`; `SINGLE` has 1 row (`item_order=0`), `SERIES` 2 to `max_series_size` (read from `site_settings.max_series_size`, **grandfathering** old rows).
 - `feature_flags`: `key` PK; no extra index.
 - `site_settings`: `id=1` CHECK; single row.
 - `likes`: composite PK `(user_id, post_id)`; transaction keeps `posts.likes_count` in sync; **frozen** when parent `exhibitions.phase='ARCHIVED'`.
@@ -206,14 +205,14 @@ erDiagram
 
 - **Multi-exhibition:** `exhibitions` is the top-level container (`slug`, `phase`, `start_date`, `end_date`, `location`, `poster`). Root `/` = latest `LIVE` `exhibitions` by `start_date DESC` (fallback latest `ARCHIVED` when no `LIVE`; `DRAFT`/`PRE_EVENT` never public); older at `/archive` and `/exhibition/[slug]`. `posts.exhibition_id` FK, `NOT NULL`.
 - **Phase lifecycle per exhibition:** `PRE_EVENT` to `LIVE` to `ARCHIVED` via BullMQ `exhibition-scheduler` (hourly) when `end_date <= now()`. `system_settings` deleted — phase lives only in `exhibitions.phase`.
-- **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /api/posts` + `POST /api/posts/:id/like` + `POST /api/posts/:id/comments` → `403 {code:"ARCHIVED"}` (read-only; `DELETE /api/posts/:id/like` stays `204`). Curation reorder + `photo_item.replace` blocked for that exhibition.
+- **ARCHIVED freeze:** Gallery stays visible (permanent archive), but `POST /api/posts/upload-url` + `POST /api/posts` + `POST /api/posts/:id/like` + `POST /api/posts/:id/comments` → `403 {code:"ARCHIVED"}` (read-only; `DELETE /api/posts/:id/like` stays `204`). Curation reorder blocked for that exhibition.
 - **SERIES:** 2 to N frames as one curatorial unit; work-level likes/comments/curation; worker enqueues one job per `photo_item` and promotes `posts.status` to `PENDING` when all frames succeed.
-- **Curator replace (Option C, non-destructive):** admin may `POST /api/admin/posts/:postId/frames/:itemId/replace` with new `s3Key` → `photo_items.source` `ORIGINAL` to `CURATED`, old `s3_key` kept in `admin_audit_logs` payload, derivatives regenerated via same worker pipeline; blocked when exhibition `ARCHIVED` or frame mid-processing (`FRAME_PROCESSING`); stack-of-single-levels revert via `POST /api/admin/posts/:postId/frames/:itemId/revert` (IN for 1.0, `postId` ↔ `itemId` validated).
-- **Per-frame processing state is derived, not stored:** there is no status column on `photo_items`; `FRAME_PROCESSING` (replace/revert guard) means `photo_items.blurhash IS NULL` (worker mid-flight). The `status:"PROCESSING"` in replace/revert responses is transient, not a persisted value.
+- **Curator does not edit visuals:** revisi visual diminta via `REJECT` + `rejection_reason`, fotografer perbaiki via withdraw + re-upload. Tidak ada endpoint replace/revert.
+- **Per-frame processing state is derived, not stored:** there is no status column on `photo_items`; `photo_items.blurhash IS NULL` + parent `PROCESSING` = in-flight, + parent `FAILED_PROCESSING` = terminally failed.
 - **Denormalized counters** on `posts` retained as cache for `GET /api/posts` under 50ms.
 - **FKs:** `likes.post_id` and `comments.post_id` on works; `photo_derivatives.photo_item_id` per frame.
 - **Threading implemented (backend):** `comments.parent_id` is fully stored and returned; v1 clients render flat (nested UI is post-1.0 intent, see [engagement](../features/engagement.md) §9).
-- **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `photo_item.replace` (with `old_s3_key`), `photo_item.revert`, `post.withdraw`, `post.retry`, `post.moderate`, `comment.hide`, `feature_flag.toggle`, `site_settings.update`, `user.role_change`. Read via `GET /api/admin/audit-logs` (defined in [curation-moderation](../features/curation-moderation.md) §5; pointer at [PRD-API](../specs/PRD-API.md) §4.7).
+- **Audit log:** `admin_audit_logs` logs `exhibition.phase_change`, `post.withdraw`, `post.retry`, `post.moderate`, `comment.hide`, `feature_flag.toggle`, `site_settings.update`, `user.role_change`. Read via `GET /api/admin/audit-logs` (defined in [curation-moderation](../features/curation-moderation.md) §5; pointer at [PRD-API](../specs/PRD-API.md) §4.7).
 - **Soft delete (withdraw):** `posts.deleted_at` is the withdraw mechanism (`DELETE /api/posts/:id`, allowed in `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`); `comments.deleted_at` reserved. Public gallery filters `deleted_at IS NULL`. No new tables for withdraw.
 - **DRAFT phase:** `exhibitions.phase='DRAFT'` is invisible-to-public (excluded by default from `GET /api/exhibitions` and all public gallery queries; ADMIN bypass via `?phase=DRAFT`).
 - **IDs:** `users` untouched (Better Auth); domain tables `text` cuid2 app-generated, cursor pagination via `created_at` plus `id` opaque, never raw cuid2 sort.

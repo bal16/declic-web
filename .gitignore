@@ -23,5 +23,7 @@ lcov.info
 .DS_Store
 
 # Obsidian vault config (local-only: workspace layout, appearance, plugins)
-.obsidian/
-docs/.obsidian/
+/.obsidian/
+docs/.obsidian/*
+# Shared vault essentials (status board needs the plugin list to render)
+!docs/.obsidian/community-plugins.json

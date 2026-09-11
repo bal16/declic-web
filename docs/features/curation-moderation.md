@@ -17,7 +17,7 @@ facade per [ADR-005](../adr/ADR-005-modular-monolith.md)), `engagement`
 (comment hide), `audit` (trail)
 **Related:** [PRD-API](../specs/PRD-API.md) §4.0 (error contract), [PRD-FE](../specs/PRD-FE.md) §3.3 +
 `/admin/*`, [db-schema](../data/db-schema.md), [exhibition-lifecycle](./exhibition-lifecycle.md) (per-exhibition
-scope), [curator-replace-revert](./curator-replace-revert.md) (frame-level curation)
+scope)
 
 ---
 
@@ -28,7 +28,8 @@ scope), [curator-replace-revert](./curator-replace-revert.md) (frame-level curat
 - As a curator, I approve or reject whole works (SERIES moderated as
   one unit) with a required reason on reject.
 - As a curator, I hide inappropriate comments and can review the full
-  admin action trail (replaces, reverts, phase changes, flag toggles).
+  admin action trail (phase changes, flag toggles, moderation).
+- Revisi visual tidak dilakukan kurator — diminta via `REJECT` + reason, fotografer perbaiki via withdraw + re-upload.
 
 ## 2. API — `PATCH /api/admin/curate/reorder`
 
@@ -130,14 +131,13 @@ Read-only trail over `admin_audit_logs`. No scoping in v1 — `ADMIN` and
 `CURATOR` see the full trail (including other curators' actions and
 `adminId: null` cron rows); an audit log that hides entries is not an
 audit log. Query params: `targetId`
-(cuid2, e.g. frame for replace/revert chain), `action` (e.g.
-`photo_item.replace`, `photo_item.revert`, `post.withdraw`,
+(cuid2), `action` (e.g.
+`post.withdraw`,
 `post.retry`, `post.moderate`, `comment.hide`, `exhibition.phase_change`,
 `feature_flag.toggle`, `site_settings.update`, `user.role_change`),
 `limit` (default `20`, max `50`), `cursor` (§4.0 schema,
 `ORDER BY created_at, id`). Response: `{ data: [{id, adminId, action,
-targetId, payload, createdAt}], nextCursor }`. Powers the
-revert-history UI (see [curator-replace-revert](./curator-replace-revert.md)) and phase-change
+targetId, payload, createdAt}], nextCursor }`. Powers the phase-change
 trail; retention unbounded for 1.0.
 
 ## 6. Frontend (`/admin/moderation`, `/admin/curate`, `/admin/comments`)
@@ -145,9 +145,8 @@ trail; retention unbounded for 1.0.
 Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §2.3/§3.3):
 
 - **Moderation queue:** per-exhibition filter, cover + frame strip for
-  SERIES, Approve/Reject with reason, per-frame Replace entry point.
-- **Curation canvas:** `dnd-kit` sortable works (cover cards, `CURATED`
-  hint), mobile move up/down fallback, optimistic reorder +
+  SERIES, Approve/Reject with reason.
+- **Curation canvas:** `dnd-kit` sortable works (cover cards), mobile move up/down fallback, optimistic reorder +
   `PATCH reorder {postId, prevDisplayOrder, nextDisplayOrder}`.
   Disabled when `ARCHIVED`. Intra-series order is authorial (see
   [series-upload](./series-upload.md) §5), not editable here.
@@ -181,4 +180,4 @@ tables. No new tables.
 - [ ] Drag work → `display_order` between neighbors, no rebalance
 - [ ] Reject without reason → `400`; with reason → `REJECTED` + audit
 - [ ] Hide comment → count decrements, public hides, admin sees
-- [ ] Audit-logs filtered by `targetId` shows replace→revert chain
+- [ ] Audit-logs filtered by `action` shows phase-change trail

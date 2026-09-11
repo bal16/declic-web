@@ -125,7 +125,7 @@ async handle() {
 
 When `phase === 'ARCHIVED'`: gallery stays visible (`/archive`,
 `/exhibition/$slug`), but `POST /api/posts/upload-url`, `POST /api/posts`,
-`POST /api/posts/:id/like`, `POST /api/posts/:id/comments`, reorder, replace, revert →
+`POST /api/posts/:id/like`, `POST /api/posts/:id/comments`, reorder →
 `403 {code:"ARCHIVED"}`. Curation reorder blocked for that exhibition.
 Likes/comments already stored stay readable (`likesCount` etc.);
 `DELETE /api/posts/:id/like` (unlike) stays `204`. Exception: owner
@@ -178,7 +178,7 @@ No image work. Scheduler lives in API (shares Redis). Note in
 - [ ] `/` shows latest `LIVE`; after cron, shows next/archived + banner
 - [ ] No `LIVE`/`ARCHIVED` → `/` empty-state "Pameran berikutnya sedang disiapkan."
 - [ ] Cron flips `LIVE`→`ARCHIVED` at `end_date` + audit row
-- [ ] `ARCHIVED`: upload/like/comment/reorder/replace → `403 ARCHIVED`
+- [ ] `ARCHIVED`: upload/like/comment/reorder → `403 ARCHIVED`
 - [ ] `DRAFT` invisible publicly, visible to ADMIN with `?phase=DRAFT`
 - [ ] Poster picker round-trips through dedicated presign (`POST /api/admin/exhibitions/:id/poster-upload-url` → PUT `posters/` → `PATCH {poster_s3_key}`)
 - [ ] Manual `PATCH .../exhibitions/:id {phase}` flips phase + writes `exhibition.phase_change` audit (`via:"manual"`)

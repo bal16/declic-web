@@ -37,7 +37,7 @@ src/
 │   ├── users/         # User profile and role management (Better Auth ids, not cuid2)
 │   ├── exhibitions/   # Exhibitions CRUD, slug, phase, scheduler (exhibition-scheduler cron), poster presign (`POST /api/admin/exhibitions/:id/poster-upload-url` via storage facade, `posters/` prefix)
 │   ├── posts/         # Posts + photo_items ingestion, public queries, pagination (scoped by exhibition_id)
-│   │   └── photo-items/ # Frames within a post (item_order, original_s3_key, source, blurhash, exif)
+│   │   └── photo-items/ # Frames within a post (item_order, original_s3_key, blurhash, exif)
 │   ├── curation/      # Layout ordering at post level per exhibition (LexoRank)
 │   ├── moderation/    # Work approval workflow per exhibition (Approve/Reject per post)
 │   ├── engagement/    # Likes & Comments on posts (freeze when exhibition ARCHIVED)
@@ -45,7 +45,7 @@ src/
 │   ├── queue/         # BullMQ producer (per photo_item) + scheduler (exhibition-scheduler)
 │   ├── feature-flags/ # Row-per-flag feature_flags (key, enabled) — scalable, no migration
 │   ├── site-settings/ # Singleton site_settings (id=1, max_series_size, site_title, maintenance_mode)
-│   └── audit/         # Admin audit logs (exhibition.phase_change, photo_item.replace, flag toggle)
+│   └── audit/         # Admin audit logs (exhibition.phase_change, flag toggle)
 └── common/            # Interceptors, Filters, Guards, Decorators (FeatureFlagGuard, ExhibitionPhaseGuard)
 ```
 
@@ -136,16 +136,15 @@ Indexes: `exhibition_id`, `display_order`, `status`, `photographer_id`, `created
 | `id` | `text` | PK, `cuid2` (app-generated) | Frame ID |
 | `post_id` | `text` | FK → `posts.id`, ON DELETE CASCADE | Parent work |
 | `item_order` | `integer` | NOT NULL | Order inside SERIES (0-based) |
-| `original_s3_key` | `text` | NOT NULL | Original file path in Object Storage (`raw-uploads/...`, curated replacement overwrites but old kept in audit `payload.old_s3_key`) |
-| `source` | `enum` | NOT NULL, DEFAULT `'ORIGINAL'` | `'ORIGINAL'` (photographer) or `'CURATED'` (admin replacement) — non-destructive, original file remains in `raw-uploads/` |
-| `blurhash` | `varchar(100)` | NULLABLE | Visual placeholder (per frame, regenerated on replace) |
-| `exif_metadata` | `jsonb` | NULLABLE | Camera, Lens, FNumber, Exposure, ISO, etc. (per frame, updated on replace if provided) |
+| `original_s3_key` | `text` | NOT NULL | Original file path in Object Storage (`raw-uploads/...`) |
+| `blurhash` | `varchar(100)` | NULLABLE | Visual placeholder (per frame) |
+| `exif_metadata` | `jsonb` | NULLABLE | Camera, Lens, FNumber, Exposure, ISO, etc. (per frame) |
 | `created_at` | `timestamp` | DEFAULT `now()` | Upload time |
-| `updated_at` | `timestamp` | DEFAULT `now()` | Last curator replacement time |
+| `updated_at` | `timestamp` | DEFAULT `now()` | Last update |
 
-Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
+Unique: `(post_id, item_order)`. Index: `post_id`.
 
-> A SINGLE work has exactly 1 row here (`item_order=0`). A SERIES has 2–N (limit `site_settings.max_series_size`, default 10). **Option C:** admin replacement does **not** create a new `photo_items` row — it updates `original_s3_key`/`source`/`blurhash`/`exif_metadata` in place and re-enqueues a worker job to regenerate derivatives; the old `s3_key` is preserved in `admin_audit_logs` payload for revert.
+> A SINGLE work has exactly 1 row here (`item_order=0`). A SERIES has 2–N (limit `site_settings.max_series_size`, default 10).
 
 ### 2.5 `photo_derivatives` — cuid2
 
@@ -194,12 +193,12 @@ Unique: `(post_id, item_order)`. Index: `post_id`, `source`.
 |---|---|---|---|
 | `id` | `text` | PK, `cuid2` (app-generated) | Log ID |
 | `admin_id` | `uuid` / `text` | FK → `users.id`, ON DELETE SET NULL, NULLABLE | Acting admin (`NULL` for cron, e.g. `exhibition.phase_change` via scheduler) |
-| `action` | `varchar(100)` | NOT NULL | e.g. `post.moderate`, `post.withdraw`, `curation.reorder`, `comment.hide`, `feature_flag.toggle`, `photo_item.replace` |
+| `action` | `varchar(100)` | NOT NULL | e.g. `post.moderate`, `post.withdraw`, `curation.reorder`, `comment.hide`, `feature_flag.toggle` |
 | `target_id` | `text` | NULLABLE | Target work/comment ID (`cuid2`) |
 | `payload` | `jsonb` | NULLABLE | Snapshot of change |
 | `created_at` | `timestamp` | DEFAULT `now()` | Time |
 
-> Required for v1 launch: replace/revert history, flag-toggle audit, and curator reads all depend on this table (see §4.6 audit-logs endpoint).
+> Required for v1 launch: flag-toggle audit, phase-change trail, and curator reads all depend on this table (see §4.6 audit-logs endpoint).
 
 ### 2.9 `feature_flags` — row-per-flag typed bool (scalable) + `site_settings` singleton for global limits
 
@@ -290,7 +289,6 @@ GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 | Contributor Dashboard (`GET /api/posts/mine`) | Blocked | Blocked | Own Data Only | Blocked | All Data |
 | Moderation (`PATCH /api/admin/posts/:id/moderate`) | Blocked | Blocked | Blocked | Allowed | Allowed |
 | Curation Layout (`PATCH /api/admin/curate/reorder`) | Blocked | Blocked | Blocked | Allowed (orders works) | Allowed |
-| Curator Replace/Revert (`POST .../replace`, `POST .../revert`) | Blocked | Blocked | Blocked | Allowed | Allowed |
 | Comment Moderation (`DELETE /api/admin/comments/:id`) | Blocked | Blocked | Blocked | Allowed | Allowed |
 | User Management (`GET /api/admin/users`, `PATCH /api/admin/users/:id/role`) | Blocked | Blocked | Blocked | Blocked | Allowed |
 | Feature Flags (`PATCH /api/admin/feature-flags/:key`) | Blocked | Blocked | Blocked | Blocked | Allowed |
@@ -366,12 +364,9 @@ Canonical codes (FE branches on `code`, never on `message` text):
 | `UNAUTHENTICATED` | 401 | No/invalid session or bearer token |
 | `FORBIDDEN` | 403 | RBAC deny (role insufficient) |
 | `FEATURE_DISABLED` | 400/403 | `feature_flags` kill-switch off (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`) — `400` for flag-gated shapes (`parentId` with threading off), `403` for flag-gated actions (SERIES create, comments with flags off) |
-| `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder/replace/revert blocked) |
+| `ARCHIVED` | 403 | Target exhibition `phase='ARCHIVED'` (upload/like/comment/reorder blocked) |
 | `NOT_FOUND` | 404 | Unknown `id`/`slug` |
 | `WITHDRAW_CLOSED` | 409 | `DELETE /api/posts/:id` on `APPROVED`/`PUBLISHED` (withdraw open for `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED`) |
-| `NOTHING_TO_REVERT` | 409 | Revert with no prior `photo_item.replace` audit |
-| `FRAME_PROCESSING` | 409 | Replace/revert while frame `blurhash IS NULL` (worker mid-flight) |
-| `ORIGINAL_MISSING` | 409 | Audited `old_s3_key` no longer in Object Storage |
 | `EDIT_CLOSED` | 409 | `PATCH /api/posts/:id` outside `PENDING`/`FAILED_PROCESSING`, or frame-reorder outside `PENDING` |
 | `ROLE_CHANGE_DENIED` | 409 | `PATCH /api/admin/users/:id/role` refused (`details.reason`: `self` = own role, `last_admin` = last ADMIN) |
 
@@ -402,7 +397,7 @@ All `{code:"..."}` references elsewhere in this document point to this table.
 
 > **Moved to [curation-moderation](../features/curation-moderation.md)** — single source of truth lives there; this section is an index pointer only.
 >
-> Endpoints: `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`. Frame-level curation lives in [curator-replace-revert](../features/curator-replace-revert.md); author retraction in [withdraw-work](../features/withdraw-work.md).
+> Endpoints: `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`. Author retraction in [withdraw-work](../features/withdraw-work.md).
 > Contracts (cursor, errors, guards): §4.0 above.
 
 ### 4.5 Exhibitions (Multi-pameran, root = latest)

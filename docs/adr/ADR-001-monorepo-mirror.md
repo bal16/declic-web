@@ -25,7 +25,7 @@ Déclic has three runtimes that look like three apps but share one contract surf
 * `apps/api` — NestJS on Bun, owns Better Auth sessions, RBAC, presigned S3 Compatible Object Storage uploads, and enqueues one BullMQ job per `photo_items` row ([PRD-API](../specs/PRD-API.md) §1/§4).
 * `apps/worker` — NestJS BullMQ consumer, regenerates `blurhash` + derivatives per frame with `Bun.Image` and promotes `posts.status` to `PENDING` ([PRD-Worker](../specs/PRD-Worker.md) §1–§3).
 
-Shared surface (all must change together): `posts`/`photo_items` cuid2 ids, `exhibition_id` scoping, `feature_flags` row-per-flag kill-switches, `site_settings.max_series_size`, and the queue payload `{ postId, photoItemId, s3Key, curated, revert? }` (full shape in [contracts](../specs/contracts.md) §3).
+Shared surface (all must change together): `posts`/`photo_items` cuid2 ids, `exhibition_id` scoping, `feature_flags` row-per-flag kill-switches, `site_settings.max_series_size`, and the queue payload `{ postId, photoItemId, s3Key }` (full shape in [contracts](../specs/contracts.md) §3).
 
 Requirements for repo layout:
 

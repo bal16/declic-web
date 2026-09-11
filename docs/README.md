@@ -47,6 +47,11 @@ Start here. Every note below is linked with standard markdown links (relative pa
 
 - [DEVELOPMENT](./guides/DEVELOPMENT.md) — repo map, env, dev loop, mirrors, releases, troubleshooting.
 
+## Vault views (Obsidian only, needs community plugins)
+
+- [status-board](./status-board.base) — kanban tracker status dokumen per folder (`draft`/`living`/`accepted`, dari frontmatter `status`). Requires `kanban-bases-view` (see `docs/.obsidian/community-plugins.json` — install both listed plugins after cloning).
+- Pinned: `kanban-bases-view` wajib **0.10.3** — 0.10.4 gagal render kanban yang group-by-property (blank + `HierarchyRequestError` di `createColumn`, lihat [issue #110](https://github.com/xiwcx/obsidian-bases-kanban/issues/110)). Matikan auto-update untuk plugin ini. Downgrade bila telanjur 0.10.4: download release 0.10.3 → timpa `main.js`/`manifest.json`/`styles.css` di `plugins/kanban-bases-view/` → reload Obsidian. Unpin saat issue closed dan versi fix lolos uji render. Fallback bila plugin terbengkalai: tulis ulang board sebagai core table view grouped by `status`.
+
 ## Infra companions (Obsidian-readable mirrors, auto-synced)
 
 | Note | Source of truth | Sync |

@@ -57,16 +57,13 @@ const imageProcessingJobSchema = z.object({
   postId: z.string(), // cuid2
   photoItemId: z.string(), // cuid2
   s3Key: z.string(), // Object Storage key to process
-  curated: z.boolean(), // true = curator replacement pipeline
-  revert: z.boolean().optional(), // true = regenerate from original_s3_key
 });
 ```
 
 Consumed by **both sides**: api producer (`queue` facade) and worker
 consumer (`image-processing`, concurrency 2, attempts 3 + exp backoff).
-Fresh uploads send `curated: false, revert: false`; replace sends
-`curated: true`; revert sends `curated: false, revert: true`; retry
-replays the frame's `original_s3_key`. Canonical flow:
+Every job carries the frame's `original_s3_key` as `s3Key`; retry
+replays the same key. Canonical flow:
 [PRD-Worker](./PRD-Worker.md) §1.
 
 ## 4. Error envelope (`errors.ts`)
@@ -102,8 +99,6 @@ const auditActionSchema = z.enum([
   'post.withdraw',
   'post.retry',
   'comment.hide',
-  'photo_item.replace',
-  'photo_item.revert',
   'exhibition.phase_change',
   'feature_flag.toggle',
   'site_settings.update',
@@ -134,7 +129,7 @@ owner only). Rule source: [series-upload](../features/series-upload.md)
 | Error envelope (4) | api | web (branches on `code`) | spec-only |
 | Queue payload (3) | api `queue` facade | worker consumer | spec-only |
 | Roles (5) | `users` module | guards, web | spec-only (+ `examples/` demo) |
-| Audit actions (6) | 9 emitters | `audit` module, web timeline | spec-only |
+| Audit actions (6) | 7 emitters | `audit` module, web timeline | spec-only |
 | Casing (1), derived signal (7) | — | all | rule, no code |
 
 ---

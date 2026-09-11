@@ -35,10 +35,11 @@ with no scaling benefit pre-launch. What is needed is a structure
 that keeps one deployable but preserves extractability later.
 
 Q1 scope for 1.0 is confirmed IN: photographer withdraw
-(`DELETE /api/posts/:id`, soft-delete), exhibition poster upload
+(`DELETE /api/posts/:id`, soft-delete) and exhibition poster upload
 (`POST /api/admin/exhibitions/:id/poster-upload-url` + `poster_s3_key`
-via existing PATCH), and curator revert
-(`POST /api/admin/posts/:postId/frames/:itemId/revert`). All three fit inside
+via existing PATCH). Curator replace/revert (Option C) dibatalkan —
+kurator tidak mengedit visual; revisi via `REJECT` + withdraw + re-upload.
+Both fit inside
 the module boundaries defined here with no new tables.
 
 ## 2. Decision
@@ -125,7 +126,7 @@ module lands (its header already says so).
 
 Landing order: `packages/db` schema first (unblocks all), then
 `storage` + `queue` facades, then `posts`, then
-`engagement`/`curation`/`moderation` (incl. Q1 withdraw/revert),
+`engagement`/`curation`/`moderation` (incl. Q1 withdraw),
 then `exhibitions` + poster upload + scheduler, then
 `feature-flags`/`site-settings`/`audit`. The worker consumes the
 queue payload only — it never imports api modules.
@@ -162,7 +163,7 @@ preserving a later split path.
 ## 4. Consequences
 
 * Positive: cross-module changes are explicit (facade or event);
-  Q1 features (withdraw soft-delete, poster upload, revert) land
+  Q1 features (withdraw soft-delete, poster upload) land
   without new tables; worker stays decoupled via queue payload.
 * Negative: new dependency (`@nestjs/event-emitter`); facade
   discipline slows the first module slightly; boundary-check
@@ -263,11 +264,11 @@ Rules:
 * **`common/` imports no feature module, ever.** Guard needs are met
   by dependency inversion: `common/` defines the token, the feature
   module provides it.
-* **Cycle resolutions** (all five audit risks, closed):
+* **Cycle resolutions** (closed):
   1. `posts ↔ exhibitions` — the `:id/posts` alias is a
      controller-level delegate, never a module import.
   2. `posts ↔ audit` — reads go through the `audit` facade
-     (§7.4: `findLatestUnrevertedReplace`, `search`), never raw table
+     (`search`), never raw table
      reads from other modules.
   3. `users ↔ common` — `RoleCache` lives in `common/`; `users`
      imports it for invalidation. One direction only.
@@ -321,7 +322,7 @@ Signatures abbreviated — full shapes in feature files + [contracts](../specs/c
 | `*` → `settings` | `getMaxSeriesSize()` * | proposed |
 | `*` → `exhibitions` | `getPhase(id)`, `resolveLatest(kind)` * | proposed |
 | `*` → `users` | `RoleCache.get/invalidate` via `common/` | specified |
-| `*` → `audit` (read) | `findLatestUnrevertedReplace(itemId)`, `search(filters)` * | proposed |
+| `*` → `audit` (read) | `search(filters)` * | proposed |
 | `auth` | `validateSession()` (used by `SessionGuard`) * | proposed |
 | `*` → `common` | `ROLE_MATRIX` const | specified |
 | worker → `posts` | direct DB via `packages/db` (promotion SQL in [PRD-Worker](../specs/PRD-Worker.md) §3.3 — no facade, no HTTP, no import) | specified mechanism |

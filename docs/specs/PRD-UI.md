@@ -49,7 +49,7 @@ Work statuses: `PROCESSING`, `PENDING`, `APPROVED`, `REJECTED`, `FAILED_PROCESSI
 | `/dashboard/upload` | `PHOTOGRAPHER`, `ADMIN` | Session + role. Blocked if exhibition `ARCHIVED` or `series_enabled=false` for SERIES. | Target exhibition picker (defaults to latest active). Mode toggle `SINGLE`/`SERIES` (auto-switch if >1 file dropped). Max files = `max_series_size` (default 10). | Flow: drag-drop -> validate -> local preview -> EXIF auto-fill -> parallel upload with progress -> create work. See §5.2. |
 | `/dashboard/edit/$postId` | Owner or `ADMIN` | Session + owner check. Blocked if `ARCHIVED`. | Work title/caption + frame order list. | Title/caption editable in `PENDING` and `FAILED_PROCESSING`. Frame reorder only in `PENDING`. See §5.2. |
 | `/admin/exhibitions` | `ADMIN` | Session + `ADMIN`. Else 403. | Exhibitions CRUD (no delete in v1). Fields: title, slug (unique), description, location, poster, start/end date, phase. Manual phase override. | Poster picker: file picker -> upload -> save key -> instant preview. See §5.5. |
-| `/admin/moderation` | `ADMIN`, `CURATOR` | Session + role. | Queue of works per exhibition filter. SERIES shows cover + frame strip. Buttons: Approve, Reject (reason required), per-frame Replace/Revert. | Whole work moderated as one unit. No per-frame approve. See §5.3-5.4. |
+| `/admin/moderation` | `ADMIN`, `CURATOR` | Session + role. | Queue of works per exhibition filter. SERIES shows cover + frame strip. Buttons: Approve, Reject (reason required). | Whole work moderated as one unit. No per-frame approve. Revisi visual via Reject + reason. See §5.3. |
 | `/admin/curate` | `ADMIN`, `CURATOR` | Session + role. Disabled if exhibition `ARCHIVED`. | Canvas of works in curated order. Desktop/tablet: drag-drop grid. Mobile: ordered list with Move Up / Move Down + position number input. | Orders works only, not frames inside a series. Optimistic reorder + toast. See §5.3. |
 | `/admin/comments` | `ADMIN`, `CURATOR` | Session + role. | Flat comment list per exhibition. Toggle hide per comment. | v1 is flat list. No nested UI. |
 | `/admin/users` | `ADMIN` | Session + `ADMIN`. Own row dropdown disabled. | Searchable table: search name/email, role filter, per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), bulk-select promote. | Self change blocked with tooltip `"You cannot change your own role"`. Last-admin demote shows 409 error. |
@@ -98,7 +98,6 @@ Rules:
 - `--primary` orange: CTA, active state, focus ring only. Never large backgrounds.
 - Works/covers always sit on `.dark --background`. Never use `:root` light values in v1.
 - `SERIES` badge: `--secondary` bg + `--secondary-foreground` text.
-- `CURATED` badge: orange.
 - Status badges: `Pending` yellow, `Approved` green, `Rejected` red.
 - `--muted-foreground`: EXIF metadata, secondary text.
 
@@ -106,16 +105,15 @@ Rules:
 
 | Component | Source | Usage |
 |---|---|---|
-| `Dialog`, `Sheet` | shadcn / Base UI | Lightbox modal (carousel-aware), per-frame EXIF drawer, Auth Wall modal, confirm dialogs (withdraw, revert, unpublish) |
+| `Dialog`, `Sheet` | shadcn / Base UI | Lightbox modal (carousel-aware), per-frame EXIF drawer, Auth Wall modal, confirm dialogs (withdraw, unpublish) |
 | `DropdownMenu`, `Select` | shadcn / Base UI | Sort (`Curated`, `Most Liked`, `Recent`), admin status/type filters, user role dropdown |
 | `Toast` / `Sonner` | shadcn | Feedback: upload ok, layout saved, per-frame errors, error-code toasts |
-| `Badge` | shadcn | Status, `SERIES • N`, `CURATED` orange, `Auto-filled from EXIF` |
+| `Badge` | shadcn | Status, `SERIES • N`, `Auto-filled from EXIF` |
 | `GalleryGrid` | custom | Main grid container, cover-based justified layout |
-| `WorkCard` (`PhotoCard` alias ok) | custom | One work card: cover, hover overlay (title, photographer, Like, type badge, `CURATED` hint if any frame curated) |
-| `SeriesCarousel` | custom | Frame carousel in lightbox/detail: dots, `1/N` indicator, per-frame metadata, `CURATED` badge per frame |
+| `WorkCard` (`PhotoCard` alias ok) | custom | One work card: cover, hover overlay (title, photographer, Like, type badge) |
+| `SeriesCarousel` | custom | Frame carousel in lightbox/detail: dots, `1/N` indicator, per-frame metadata |
 | `FrameReorderList` | custom + dnd-kit | Sortable frame list in upload/edit for SERIES `item_order` |
 | `CurationCanvas` | custom + dnd-kit | Drag-drop grid of works for `/admin/curate` (desktop/tablet) |
-| `CuratedDiffViewer` | custom | Side-by-side slider: current `web.webp` (left) vs new preview (right), in `/admin/moderation` |
 
 Rules: never style raw HTML for the shadcn rows — always the component. Custom components compose primitives, never reimplement focus/keyboard the primitive already provides. Install Base UI per component as needed, never upfront.
 
@@ -149,7 +147,7 @@ Edit (`/dashboard/edit/$postId`):
 
 - Title/caption form. Allowed in `PENDING` and `FAILED_PROCESSING`. Blocked otherwise with `EDIT_CLOSED` error.
 - Frame reorder list (`FrameReorderList`). Allowed only in `PENDING`. Validates full set (no drops/adds; drops/adds = withdraw + re-upload).
-- Photographer frame replacement: not supported. Path is withdraw + re-upload (or curator replace).
+- Photographer frame replacement: not supported. Path is withdraw + re-upload. Curator never edits visuals; revisi visual diminta via `REJECT` + reason.
 
 Dashboard (`/dashboard`):
 
@@ -167,30 +165,20 @@ Moderation queue:
 
 Curation canvas:
 
-- Desktop/tablet: drag-drop grid with dnd-kit (pointer + keyboard sensors). Each sortable item is a work (post), not a frame. SERIES card shows cover + stacked hint + `CURATED` hint if any frame replaced.
+- Desktop/tablet: drag-drop grid with dnd-kit (pointer + keyboard sensors). Each sortable item is a work (post), not a frame. SERIES card shows cover + stacked hint.
 - Mobile: ordered card list with Move Up / Move Down buttons + direct position number input.
 - Intra-series frame order is authorial, not editable here. Only photographer edit changes it.
 - Move calculates new order between neighbor works. Sends single reorder call `{postId, prevDisplayOrder, nextDisplayOrder}`. Optimistic reorder + toast `"Layout order saved"`, rollback on failure.
 - Disabled when exhibition `ARCHIVED`.
 
-### 5.4 Curator replace / revert (in `/admin/moderation`, per frame)
-
-Non-destructive. Blocked when `ARCHIVED`. Blocked while frame mid-processing (one regeneration at a time).
-
-- Replace button per frame -> file picker -> instant `URL.createObjectURL` preview -> side-by-side diff slider (`CuratedDiffViewer`: left current `web.webp`, right new preview) -> confirm -> returns processing state, frame shows spinner until worker done.
-- Replaced frame: orange `CURATED` badge + tooltip shows audit time. Original file stays in storage (audit keeps old key). No delete.
-- Revert button -> confirm dialog naming which replace is undone (latest one; repeatable to walk back) -> returns processing state. History via mini timeline under frame (from audit-logs by frame ID).
-- Disabled state banner: `"Archived — replacements frozen"`.
-- If cover frame (`item_order=0`) replaced, gallery cover swaps after worker completes.
-
-### 5.5 Exhibition management (`/admin/exhibitions`)
+### 5.4 Exhibition management (`/admin/exhibitions`)
 
 - Create/edit: `title`, `slug` (unique kebab-case), `description`, `location`, `poster`, `start_date`, `end_date`, `phase`. No delete in v1 (`ARCHIVED` is terminal; `DRAFT` for mistakes). Create generates ID. Slug collision = inline field error naming taken slug.
 - Manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`). Manual `ARCHIVED` triggers same freeze as cron.
 - Poster picker (dedicated flow): file picker -> get poster upload URL -> PUT to object storage (`posters/` prefix) -> save key via PATCH -> instant `URL.createObjectURL` preview before save. Same type/size rules as photos.
-- Blocked when exhibition `ARCHIVED` for poster/replace/reorder.
+- Blocked when exhibition `ARCHIVED` for poster/reorder.
 
-### 5.6 Likes + comments (lightbox + detail)
+### 5.5 Likes + comments (lightbox + detail)
 
 - Like: one like per work (SERIES liked as one unit). Optimistic UI. Double-click storm = single row, count converges. Unlike (DELETE) on not-yet-liked still returns success (204-equivalent, no error).
 - Unlike stays enabled in `ARCHIVED` (sole write exception; removing own like adds no data). Like-create blocked in `ARCHIVED`.
@@ -198,7 +186,7 @@ Non-destructive. Blocked when `ARCHIVED`. Blocked while frame mid-processing (on
 - Failure precedence for comment create: invisible work (404) -> `ARCHIVED` freeze (403) -> comments flag off (403) -> threading flag off with `parentId` (400). Show frozen tooltip in latter cases.
 - No comment edit in v1 (delete + repost is the path). No reactions beyond like. No notifications. Nested replies UI is post-1.0 (API already returns `parentId` for future).
 
-### 5.7 Withdraw (in `/dashboard`)
+### 5.6 Withdraw (in `/dashboard`)
 
 - Withdraw button on `PENDING`, `REJECTED`, `PROCESSING`, `FAILED_PROCESSING`, `UNPUBLISHED` cards.
 - Confirm dialog: `"Withdrawn works cannot be restored"` (no undo) -> optimistic removal -> success removes from list, failure toasts + rollback.
@@ -206,7 +194,7 @@ Non-destructive. Blocked when `ARCHIVED`. Blocked while frame mid-processing (on
 - In `ARCHIVED`: never-published works can still be withdrawn (cleanup path, no dead-end). `APPROVED`/`PUBLISHED` in `ARCHIVED` = frozen error.
 - During `PROCESSING` withdraw: allowed, worker jobs cancelled best-effort, spinner shown alongside button.
 
-### 5.8 Users + settings (`/admin/users`, `/admin/settings`)
+### 5.7 Users + settings (`/admin/users`, `/admin/settings`)
 
 Users table:
 
@@ -225,7 +213,7 @@ Settings (minimal):
 | No `LIVE` (only `DRAFT`/`PRE_EVENT`) | empty-state grid | `"Pameran berikutnya sedang disiapkan."` |
 | Gallery search no hit | empty-state grid | `"Tidak ada karya yang cocok."` |
 | Flag off (`series_enabled`, `comments_enabled`) | hidden control / disabled + frozen tooltip | `"Sementara dinonaktifkan"` |
-| `ARCHIVED` actions (upload/like-create/comment/reorder/replace) | disabled + tooltip/banner | `"Pameran telah diarsip — hanya lihat"` |
+| `ARCHIVED` actions (upload/like-create/comment/reorder) | disabled + tooltip/banner | `"Pameran telah diarsip — hanya lihat"` |
 | Upload failure (per frame) | inline error per file + toast | from `details` field errors |
 | Login disabled (no OAuth configured) | disabled provider buttons + banner; Auth Wall shows same banner | `"Login saat ini dinonaktifkan — hanya lihat"` |
 | `maintenance_mode=true` | top banner on all routes (blocks nothing in v1) | `"Pemeliharaan terjadwal — hanya lihat"` |
@@ -234,7 +222,6 @@ Settings (minimal):
 | `ARCHIVED` gallery banner (long form) | top banner over grid | `"This exhibition is archived — browsing only"` + disable like/comment creation (unlike stays enabled) |
 | Upload into `ARCHIVED` | disabled form + toast | `"Exhibition has been archived, new uploads are closed"` |
 | SERIES attempt with flag off | hidden toggle + toast | `"SERIES creation is temporarily disabled"` |
-| Curator replace in `ARCHIVED` | disabled button + banner | `"Archived — replacements frozen"` |
 | Dashboard `ARCHIVED` filter | disabled actions + tooltip | `"Archived — read only"` |
 | Self role change | disabled dropdown + tooltip | `"You cannot change your own role"` |
 | Provider button disabled | disabled button + tooltip | `"Login with <provider> is not configured"` |
@@ -247,15 +234,12 @@ API wire messages stay English codes. Only the table above is user-facing Indone
 |---|---|---|
 | Not logged in, clicks like/comment/upload | Uniform Auth Wall modal on every surface (gallery, lightbox, detail, dashboard, upload). Preserves state (file-drop, draft comment, pending like). Redirect to `/login` only for direct navigation to `/login`. | `UNAUTHENTICATED` (401) |
 | Logged in, insufficient role | 403 page. Routes: `/dashboard/*` requires `PHOTOGRAPHER` or `ADMIN`; `/admin/moderation`, `/admin/curate`, `/admin/comments` require `ADMIN` or `CURATOR`; `/admin/exhibitions`, `/admin/users`, `/admin/settings` require `ADMIN`. | `FORBIDDEN` (403) |
-| Exhibition `ARCHIVED`, attempt upload/like-create/comment/reorder/replace/revert | Disable control + tooltip/banner from §6. Unlike stays enabled. Owner withdraw of never-published stays enabled. | `ARCHIVED` (403) |
+| Exhibition `ARCHIVED`, attempt upload/like-create/comment/reorder | Disable control + tooltip/banner from §6. Unlike stays enabled. Owner withdraw of never-published stays enabled. | `ARCHIVED` (403) |
 | `series_enabled=false`, attempt SERIES create | Hide SERIES toggle/batch UI. Toast on attempt. Existing SERIES readable. | `FEATURE_DISABLED` (403 for actions) |
 | `comments_enabled=false`, attempt comment | Disable comment inputs everywhere with frozen tooltip. Reads stay open. | `FEATURE_DISABLED` (403) |
 | Threading off, send `parentId` | Reject with validation toast. V1 renders flat always. | `FEATURE_DISABLED` (400 for shapes) |
 | Withdraw `APPROVED`/`PUBLISHED` | 409 toast (contact admin). | `WITHDRAW_CLOSED` (409) |
 | Edit/reorder outside allowed status | 409 toast. Title edit allowed `PENDING`/`FAILED_PROCESSING`; reorder only `PENDING`. | `EDIT_CLOSED` (409) |
-| Replace/revert while frame processing | 409 toast, one regeneration at a time. | `FRAME_PROCESSING` (409) |
-| Revert with no replace history | 409 toast. | `NOTHING_TO_REVERT` (409) |
-| Revert when original file gone | 409 toast. | `ORIGINAL_MISSING` (409) |
 | Self role change / last-admin demote | 409 toast + inline handling. | `ROLE_CHANGE_DENIED` (409, `details.reason`: `self` or `last_admin`) |
 | Validation (slug collision, bad dates, bad cursor, bad type/count, duplicate key) | Inline field error + toast. Slug collision names the taken slug. | `VALIDATION_ERROR` (400, `details` = field errors) |
 | Unknown id/slug, withdrawn work | 404 page `"Karya tidak ditemukan."` | `NOT_FOUND` (404) |
@@ -270,7 +254,6 @@ Minimal API index (UI needs only these names):
 - `POST /api/posts/upload-url`, `POST /api/posts`, `PATCH /api/posts/:id`, `PATCH /api/posts/:id/items/reorder`, `POST /api/posts/:id/retry`, `DELETE /api/posts/:id`
 - `POST /api/posts/:id/like`, `DELETE /api/posts/:id/like`, `POST /api/posts/:id/comments`, `GET /api/posts/:id/comments`
 - `PATCH /api/admin/curate/reorder`, `PATCH /api/admin/posts/:id/moderate`, `DELETE /api/admin/comments/:id`, `GET /api/admin/audit-logs`
-- `POST /api/admin/posts/:postId/frames/:itemId/replace`, `POST /api/admin/posts/:postId/frames/:itemId/revert`
 - `POST /api/exhibitions`, `PATCH /api/admin/exhibitions/:id`, `POST /api/admin/exhibitions/:id/poster-upload-url`
 - `GET /api/admin/users`, `PATCH /api/admin/users/:id/role`
 - `GET /api/feature-flags`, `PATCH /api/admin/feature-flags/:key`, `GET /api/site-settings`, `PATCH /api/admin/site-settings`
@@ -282,8 +265,8 @@ A11y (WCAG AA):
 
 - [ ] Text contrast >= 4.5:1. Orange `#F97316` on near-black must pass by measurement, not by eye. Muted text on muted bg likewise.
 - [ ] Visible focus everywhere. Orange `--ring` on all interactive elements. Never `outline: none` without replacement.
-- [ ] Do not reimplement what Base UI gives free. Dialog focus-trap, Escape-to-close, arrow-key nav, toast live-regions come from primitive. Custom `SeriesCarousel`, `CurationCanvas`, `CuratedDiffViewer` must wire equivalent keyboard explicitly.
-- [ ] Alt text two tiers. Informative (work cover, curated diff): curatorial one-liner (title + photographer + frame note). Decorative (skeletons, placeholders): empty `alt=""`. EXIF text is data, not alt.
+- [ ] Do not reimplement what Base UI gives free. Dialog focus-trap, Escape-to-close, arrow-key nav, toast live-regions come from primitive. Custom `SeriesCarousel`, `CurationCanvas` must wire equivalent keyboard explicitly.
+- [ ] Alt text two tiers. Informative (work cover): curatorial one-liner (title + photographer + frame note). Decorative (skeletons, placeholders): empty `alt=""`. EXIF text is data, not alt.
 - [ ] Lightbox: `Esc` close, `Left`/`Right` frames/works, `Tab` trapped, `aria-modal`, carousel `aria-roledescription="carousel"`, pagination announced.
 
 I18n:
@@ -345,9 +328,8 @@ Curator/Admin:
 
 - [ ] Moderation queue per exhibition; Approve puts work at bottom; Reject requires reason; SERIES as one unit; `APPROVED` in `PRE_EVENT` hidden until `LIVE`
 - [ ] Curation canvas drag-drop (desktop) / move up-down (mobile); reorder saves single rank, no rebalance; disabled in `ARCHIVED`
-- [ ] Replace shows diff slider, `202` processing, `CURATED` orange badge + audit tooltip, derivatives regenerate; revert undoes one level with confirm + timeline; no history / mid-processing / `ARCHIVED` show correct 409/403
 - [ ] Comment hide decrements count once, public hides, admin sees; idempotent
-- [ ] Audit trail readable, filterable by frame/action
+- [ ] Audit trail readable, filterable by action
 - [ ] Exhibitions CRUD (no delete); slug collision inline error; poster picker round-trips with preview; manual phase override writes audit
 - [ ] Users table search/filter/promote round-trips; self change disabled; last-admin 409; curator cannot reach users/flags/settings/exhibitions (403)
 - [ ] Settings toggles + `max_series_size` 1-20 round-trip; out-of-range validation; grandfathering holds; toggles instant (no 10s wait)
@@ -368,6 +350,5 @@ Global:
 - Cover: frame `item_order=0`. Sizes the gallery card.
 - Curated order: public default sort by curated rank (`display_order`).
 - Blurhash: placeholder string per frame, prevents layout shift.
-- `CURATED`: frame replaced by curator (orange badge). Original kept in audit.
 - Exhibition: time-boxed event with `phase`. Root `/` = latest.
 - Auth Wall: login modal preserving state (file-drop, draft, pending like).

@@ -79,7 +79,7 @@ Palette (`.dark` values, from PRD-FE §4.1, unchanged):
 
 Rules: `--primary` never backgrounds; works/covers always sit on
 `.dark --background`; `SERIES` badge = `--secondary` bg + `--secondary-foreground`
-text; `CURATED` badge = orange. Never use the `:root` light values in v1
+text. Never use the `:root` light values in v1
 (app is always `.dark`); a future light mode = design new `:root`
 gallery-light values, no structural change.
 
@@ -95,8 +95,8 @@ needed, never upfront.
 | `Dialog`, `Sheet` | shadcn/Base UI | `LightboxModal` (carousel-aware), per-frame EXIF drawer |
 | `DropdownMenu`, `Select` | shadcn/Base UI | sort options, admin filters |
 | `Toast`/`Sonner` | shadcn | feedback toasts (upload ok, layout saved, per-frame errors) |
-| `Badge` | shadcn | statuses (`Pending` yellow, `Approved` green, `Rejected` red), `SERIES • N`, `CURATED` orange, `Auto-filled from EXIF` |
-| `GalleryGrid`, `WorkCard`, `CurationCanvas`, `SeriesCarousel`, `FrameReorderList`, `CuratedDiffViewer` | custom (+ dnd-kit where noted) | see [PRD-FE](../specs/PRD-FE.md) §4.2 |
+| `Badge` | shadcn | statuses (`Pending` yellow, `Approved` green, `Rejected` red), `SERIES • N`, `Auto-filled from EXIF` |
+| `GalleryGrid`, `WorkCard`, `CurationCanvas`, `SeriesCarousel`, `FrameReorderList` | custom (+ dnd-kit where noted) | see [PRD-FE](../specs/PRD-FE.md) §4.2 |
 
 Rules: never style raw HTML for these — always the component (variants
 via `cva`-style props); custom components compose primitives, never
@@ -112,9 +112,9 @@ reimplement focus/keyboard handling the primitive already provides.
 3. **Don't reimplement what Base UI gives free.** Dialog focus-trap,
    Escape-to-close, arrow-key navigation, toast live-regions come from
    the primitive — custom components (`SeriesCarousel`,
-   `CurationCanvas`, `CuratedDiffViewer`) MUST wire the equivalent
+   `CurationCanvas`) MUST wire the equivalent
    keyboard behavior explicitly (documented per component at build time).
-4. **Alt text, two tiers.** Informative (work cover, curated diff):
+4. **Alt text, two tiers.** Informative (work cover):
    curatorial one-liner (title + photographer + frame note). Decorative
    (skeletons, placeholders): empty `alt=""`. EXIF text is data, not alt.
 

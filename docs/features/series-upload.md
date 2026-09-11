@@ -145,12 +145,12 @@ same gate).
 
 ```json
 [
-  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg", "curated": false, "revert": false },
-  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg", "curated": false, "revert": false }
+  { "postId": "cuid-post", "photoItemId": "cuid-item-1", "s3Key": "raw-uploads/cuid-1.jpg" },
+  { "postId": "cuid-post", "photoItemId": "cuid-item-2", "s3Key": "raw-uploads/cuid-2.jpg" }
 ]
 ```
 
-> Canonical payload `{postId, photoItemId, s3Key, curated, revert?}` (full shape in [contracts](../specs/contracts.md) §3; see [PRD-Worker](../specs/PRD-Worker.md) §1). Fresh uploads always send `curated: false, revert: false`.
+> Canonical payload `{postId, photoItemId, s3Key}` (full shape in [contracts](../specs/contracts.md) §3; see [PRD-Worker](../specs/PRD-Worker.md) §1).
 
 > Post status transitions to `PENDING` only after **all** its photo_items
 > finish processing (see [PRD-Worker](../specs/PRD-Worker.md) §3.3).
@@ -178,8 +178,7 @@ is a curation decision → `409 {code:"EDIT_CLOSED"}`). Title/caption edit on `F
 ```
 
 > Frame replacement by the photographer is **not** covered here — replace
-> frames via withdraw + re-upload (or curator replace, see
-> [curator-replace-revert](./curator-replace-revert.md)). Frame *order* is §5.
+> frames via withdraw + re-upload. Frame *order* is §5.
 
 **API Actions:** `UPDATE posts SET title=COALESCE(:title,title),
 caption=COALESCE(:caption,caption), updated_at=now() WHERE id=:id`.

@@ -34,7 +34,7 @@ The web app serves **four roles** within a **single unified TanStack Start app**
 |---|---|---|
 | **Viewer** (default, incl. anon browsing) | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions) | Public, Auth Wall for actions |
 | **Photographer** | Personal dashboard, upload SINGLE/SERIES works, edit Pending works (reorder frames) | `SessionGuard` + `Role=PHOTOGRAPHER` |
-| **Curator** | Moderation per work, curation canvas (order works), frame replace/revert, comment moderation, audit read | `SessionGuard` + `Role=CURATOR` |
+| **Curator** | Moderation per work, curation canvas (order works), comment moderation, audit read | `SessionGuard` + `Role=CURATOR` |
 | **Admin** | Everything a curator can do, plus exhibitions (create/edit/phase-override/poster, no delete in v1), user management, settings | `SessionGuard` + `Role=ADMIN` |
 
 A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N frames). Likes/comments/curation attach to the **work**; derivatives/blurhash/exif are per **frame**. Gallery grid shows a work as one card (cover = first frame).
@@ -63,7 +63,7 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 |---|---|---|
 | `/dashboard` | **Contributor Work List** — Manages uploaded **works** (cuid2 ids) scoped to selected exhibition (dropdown `GET /api/exhibitions`), and their moderation status (`PROCESSING` + spinner, `FAILED_PROCESSING` + Retry, `PENDING`, `APPROVED`, `REJECTED`, `PUBLISHED`, `UNPUBLISHED`). Shows `exhibition` badge + type badge (`SINGLE`/`SERIES` • N frames) and per-frame progress (derived: `blurhash NULL` + parent `PROCESSING` = in-flight, + parent `FAILED_PROCESSING` = failed). `REJECTED` cards render `rejectionReason` (available to owner via detail endpoint). Each `PENDING`/`REJECTED`/`PROCESSING`/`FAILED_PROCESSING`/`UNPUBLISHED` work has a **Withdraw** button (confirm dialog → `DELETE /api/posts/:id` → `204`, removed from list; else `409 {code:"WITHDRAW_CLOSED"}` toast). `PROCESSING` works show a spinner alongside the button (withdraw cancels worker jobs best-effort). Defaults to latest exhibition. | `PHOTOGRAPHER`, `ADMIN` |
 | `/dashboard/upload` | **Work Upload Form** — Drag-and-drop zone for **1–N files** (SINGLE or SERIES) into selected exhibition, automatic EXIF extraction (`exifr`) per file, zero-CPU previews, sortable `item_order`, batch S3 Compatible Object Storage Presigned URLs. Gated by `feature_flags.series_enabled` and **exhibition `phase`** — when `ARCHIVED` or `series_enabled=false`, SERIES toggle hidden and blocked with `ARCHIVED`/`FEATURE_DISABLED`. Max `max_series_size` from `site_settings`. Requires `exhibitionId` (defaults to latest non-`ARCHIVED`). | `PHOTOGRAPHER`, `ADMIN` (checks `exhibitions.phase != ARCHIVED` + `FeatureFlagGuard` + `ExhibitionPhaseGuard`) |
-| `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders/replaces frames inside a `SERIES` while status is `PENDING` (`FAILED_PROCESSING` allows title/caption edit + Retry, reorder stays `PENDING`-only; exhibition not `ARCHIVED`). | Owner only |
+| `/dashboard/edit/$postId` | **Work Edit Form** — Edits `title`/`caption` for the work (cuid2 `id`) and reorders frames inside a `SERIES` while status is `PENDING` (`FAILED_PROCESSING` allows title/caption edit + Retry, reorder stays `PENDING`-only; exhibition not `ARCHIVED`). | Owner only |
 
 ### 2.2.1 Exhibition Selection
 
@@ -74,8 +74,8 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 | Route | Description | Guard |
 |---|---|---|
 | `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to Object Storage (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
-| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Each frame has **Replace with curated version** button (see §3.2.1). | `ADMIN`, `CURATOR` |
-| `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover, `CURATED` badge if any frame replaced). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
+| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Revisi visual diminta via `REJECT` + reason, fotografer perbaiki via withdraw + re-upload. | `ADMIN`, `CURATOR` |
+| `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover + stacked frames hint). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
 | `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
 | `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](../features/auth-rbac.md) §7. | `ADMIN` |
 | `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [feature-flags-site-settings](../features/feature-flags-site-settings.md) §6. | `ADMIN` |
@@ -170,22 +170,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 - Step (3) goes directly browser → Object Storage (saves server bandwidth), N PUTs in parallel (with concurrency limit).
 - Step (4) triggers **N** `image-processing` jobs (one per `photo_item`). Work status starts `PROCESSING`, dashboard shows per-frame progress and promotes to `PENDING` → `APPROVED`/`REJECTED` as a whole.
 
-#### 3.2.1 Curator Replacement (Admin, Option C)
-
-**Flow (non-destructive, blocked when `exhibitions.phase === 'ARCHIVED'`):**
-
-```text
-[Admin] --(1) POST /api/posts/upload-url (curated file)--> [API] -- presigned URL
-[Admin] --(2) PUT curated file --> [MinIO] raw-uploads/cuid-curated.jpg
-[Admin] --(3) POST /api/admin/posts/:postId/frames/:itemId/replace {s3Key}--> [API]
-        → UPDATE photo_items source=CURATED, audit old_s3_key, delete old derivatives
-        → enqueue image-processing job (same worker pipeline, blurhash + 3 derivatives)
-[Admin] --(4) Poll GET /api/posts/:id (items blurhash) --> worker done
-```
-
-- UI in `/admin/moderation` frame row: button `Replace` → file picker → instant `URL.createObjectURL` preview → **side-by-side diff viewer** (left: current `web.webp`, right: new preview) with slider. Badge `CURATED` (orange) on replaced frames; tooltip shows `audit` time.
-- Original file stays in `raw-uploads/` (audit `payload.old_s3_key`); no delete. **Revert (IN for 1.0):** admin picks `Revert` → confirm dialog showing which replace is undone (latest one; repeatable) → `POST /api/admin/posts/:postId/frames/:itemId/revert` → `202`, frame returns to `PROCESSING` until worker finishes; history via `GET /api/admin/audit-logs?targetId=:itemId` rendered as a mini timeline under the frame.
-- Disabled when exhibition `ARCHIVED` with banner `"Archived — replacements frozen"`.
+> Kurator tidak mengedit visual. Revisi visual diminta via `REJECT` + `rejectionReason`; fotografer perbaiki via withdraw + re-upload.
 
 ### 3.3 Admin Visual Layout Editor (`/admin/curate`)
 
@@ -263,13 +248,12 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 | `<Dialog />` & `<Sheet />` | shadcn/ui | `LightboxModal` (now carousel-aware) and per-frame EXIF drawer |
 | `<DropdownMenu />` & `<Select />` | shadcn/ui | Sorting options (`Curated`, `Most Liked`, `Recent`) and admin status/type filters (`SINGLE`/`SERIES`) |
 | `<Toast />` / `<Sonner />` | shadcn/ui | Feedback: `"Work uploaded successfully"`, `"Layout order saved"`, per-frame upload errors |
-| `<Badge />` | shadcn/ui | Moderation status (`Pending` yellow, `Approved` green, `Rejected` red) + `SERIES • N` + `"Auto-filled from EXIF"` + `CURATED` (orange, admin-replaced frame) |
+| `<Badge />` | shadcn/ui | Moderation status (`Pending` yellow, `Approved` green, `Rejected` red) + `SERIES • N` + `"Auto-filled from EXIF"` |
 | `<GalleryGrid />` | Custom | Main grid container rendering **works** (cover-based justified layout) |
-| `<WorkCard />` (`<PhotoCard />` alias) | Custom | Work card with cover hover overlay (title, photographer, Like, type badge, `CURATED` indicator if any frame curated) |
+| `<WorkCard />` (`<PhotoCard />` alias) | Custom | Work card with cover hover overlay (title, photographer, Like, type badge) |
 | `<CurationCanvas />` | Custom (dnd-kit) | Drag-and-drop grid canvas of **works** for curator panel (desktop) |
-| `<SeriesCarousel />` | Custom | Frame carousel inside lightbox/detail (dots, 1/N, per-frame metadata, `CURATED` badge per frame) |
+| `<SeriesCarousel />` | Custom | Frame carousel inside lightbox/detail (dots, 1/N, per-frame metadata) |
 | `<FrameReorderList />` | Custom (dnd-kit) | Sortable frame list in upload/edit for SERIES `item_order` |
-| `<CuratedDiffViewer />` | Custom | Side-by-side slider diff for curator replacement (current vs new preview, in `/admin/moderation`) |
 
 ---
 

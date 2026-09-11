@@ -78,13 +78,11 @@ A work can be `SINGLE` (1 job) or `SERIES` (N jobs, one per `photo_items` row). 
 {
   "postId": "cuid-post",
   "photoItemId": "cuid-photo-item",
-  "s3Key": "raw-uploads/cuid-original.jpg",
-  "curated": false,
-  "revert": false
+  "s3Key": "raw-uploads/cuid-original.jpg"
 }
 ```
 
-> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). **Curator replacement (Option C)** enqueues a single job with `curated:true` — same pipeline, but `photo_items.source` is already `CURATED` and old derivatives were deleted; worker regenerates them. **Curator revert** enqueues a single job with `curated:false, revert:true` — worker regenerates derivatives from `original_s3_key` (see [curator-replace-revert](../features/curator-replace-revert.md) §6). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
+> For a SINGLE work, one job is enqueued. For a SERIES of 3, three jobs are enqueued (same `postId`, different `photoItemId`). When `feature_flags.series_enabled=false` or exhibition `ARCHIVED`, no new jobs of that type are enqueued; existing jobs in queue still process to completion.
 
 **Object Storage bucket layout (cuid2 s3Key):**
 
@@ -140,7 +138,7 @@ import { Job } from 'bullmq';
 
 @Processor('image-processing')
 export class ImageProcessorConsumer extends WorkerHost {
-  async process(job: Job<{ postId: string; photoItemId: string; s3Key: string; curated: boolean; revert?: boolean }>): Promise<void> { // ids are cuid2 text
+  async process(job: Job<{ postId: string; photoItemId: string; s3Key: string }>): Promise<void> { // ids are cuid2 text
 
     const { postId, photoItemId, s3Key } = job.data;
 
@@ -202,10 +200,7 @@ export class ImageProcessorConsumer extends WorkerHost {
   }
 }
 
-// Replacement and revert follow the same pipeline — no separate code path
-// `curated:true` is only for audit/logging (replacement); `revert:true`
-// regenerates from `original_s3_key`. Derivatives are regenerated
-// identically and `posts.status` aggregation remains PENDING → PENDING
+// Single pipeline for all frames — no separate code path.
 ```
 
 > **Locked assumption (v1):** the sketch above is the contract —
@@ -217,11 +212,10 @@ export class ImageProcessorConsumer extends WorkerHost {
 
 ### 3.3 Database Transactions
 
-**Per-frame transaction (`markFrameReady`, also for `curated:true` replacement):**
+**Per-frame transaction (`markFrameReady`):**
 
 ```sql
 BEGIN;
-  -- for replacement, blurhash is nulled beforehand and old derivatives already deleted
   UPDATE photo_items SET blurhash = :blurhash, updated_at = now() WHERE id = :photoItemId;
   INSERT INTO photo_derivatives (id, photo_item_id, variant, s3_key, url, width, height, size_bytes)
   VALUES (cuid2, :photoItemId, ...), (cuid2, ...), (cuid2, ...);
@@ -245,7 +239,7 @@ If any frame fails, rollback for that frame only — sibling frames still succee
 
 ## 4. Resilience, Error Handling & Memory Management
 
-### 4.1 Retry Strategy & Dead Letter Queue (DLQ) — same for original and `curated` replacement
+### 4.1 Retry Strategy & Dead Letter Queue (DLQ)
 
 **BullMQ configuration (per photo_item job):**
 

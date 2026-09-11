@@ -29,8 +29,8 @@ updated: 2026-09-07
   fellow admins and curators — but I cannot lock everyone out
   (self/last-admin guards).
 - As a curator, I manage artworks (approve/reject, layout order,
-  frame replace/revert, comment hide) but I cannot manage users,
-  exhibitions, flags, or settings.
+  comment hide) but I cannot manage users,
+  exhibitions, flags, or settings. I never edit visuals.
 - As the system, the very first admin is bootstrapped out-of-band
   (direct DB edit), exactly once.
 
@@ -94,7 +94,6 @@ export const ROLE_MATRIX = {
   'audit:read':      ['ADMIN', 'CURATOR'],
   'moderate:write':  ['ADMIN', 'CURATOR'],
   'curate:write':    ['ADMIN', 'CURATOR'],
-  'replace:write':   ['ADMIN', 'CURATOR'],
   'posts:write':     ['ADMIN', 'PHOTOGRAPHER'],
   'posts:own':       ['ADMIN', 'PHOTOGRAPHER'],
 } as const;
@@ -105,8 +104,7 @@ export const ROLE_MATRIX = {
 Key → endpoint binding (owner checks live in the service, not the guard):
 `posts:write` = `POST /api/posts/upload-url`, `POST /api/posts`;
 `posts:own` = `PATCH /api/posts/:id`, `PATCH /api/posts/:id/items/reorder`,
-`DELETE /api/posts/:id` (owner or `ADMIN`); `replace:write` also covers
-`POST .../frames/:itemId/revert`; like/comment creation needs session
+`DELETE /api/posts/:id` (owner or `ADMIN`); like/comment creation needs session
 only (freeze enforced by `ExhibitionPhaseGuard` + `FeatureFlagGuard`).
 
 > Ownership is a row fact (`photographer_id`), not a role: a user whose
