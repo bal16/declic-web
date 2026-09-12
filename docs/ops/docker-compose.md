@@ -68,7 +68,7 @@ services:
 
   # ── Database ────────────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
+    image: docker.io/postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-declic}
@@ -79,7 +79,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-declic}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-declic} -d ${POSTGRES_DB:-declic_dev}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -88,7 +88,7 @@ services:
 
   # ── Queue / cache (BullMQ backend) ─────────────────────────────
   redis:
-    image: redis:7-alpine
+    image: docker.io/redis:7-alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -104,7 +104,7 @@ services:
 
   # ── Object storage (S3-compatible, dev/prod parity) ───────────
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -125,7 +125,7 @@ services:
 
   # One-off: auto-create the app's bucket on first startup
   minio-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: docker.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy

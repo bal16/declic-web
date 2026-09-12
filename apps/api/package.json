@@ -25,7 +25,6 @@
     "@thallesp/nestjs-better-auth": "^2.8.0",
     "better-auth": "^1.7.2",
     "bullmq": "^6.3.4",
-    "drizzle-orm": "^0.45.2",
     "nestjs-zod": "^5.5.0",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",

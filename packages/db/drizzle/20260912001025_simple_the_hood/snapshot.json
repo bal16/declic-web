@@ -1,0 +1,717 @@
+{
+  "version": "8",
+  "dialect": "postgres",
+  "id": "9f706423-d20d-442b-b404-009bf3ffdd02",
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "ddl": [
+    {
+      "values": ["thumbnail", "web", "lightbox"],
+      "name": "photo_variant",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "PROCESSING",
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "PUBLISHED",
+        "UNPUBLISHED",
+        "FAILED_PROCESSING"
+      ],
+      "name": "post_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": ["SINGLE", "SERIES"],
+      "name": "post_type",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "photo_derivatives",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "photo_items",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "posts",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "photo_item_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "photo_variant",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "photo_variant",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "s3_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "url",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "width",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "height",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "size_bytes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "post_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "item_order",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "original_s3_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "blurhash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "exif_metadata",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "exhibition_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "photographer_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "title",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "caption",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "post_type",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "post_type",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "post_status",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "post_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "rejection_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "display_order",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "likes_count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "comments_count",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "photo_item_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "photo_derivatives_photo_item_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "post_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "item_order",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "photo_items_post_item_unique",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "post_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "photo_items_post_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "exhibition_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_exhibition_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "post_status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_status_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "exhibition_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "post_status",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_gallery_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "photographer_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_photographer_id_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_created_at_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "display_order",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_display_order_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "post_type",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "posts_type_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "posts"
+    },
+    {
+      "nameExplicit": false,
+      "columns": ["photo_item_id"],
+      "schemaTo": "public",
+      "tableTo": "photo_items",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "photo_derivatives_photo_item_id_photo_items_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "photo_derivatives"
+    },
+    {
+      "nameExplicit": false,
+      "columns": ["post_id"],
+      "schemaTo": "public",
+      "tableTo": "posts",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "photo_items_post_id_posts_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "photo_items"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "photo_derivatives_pkey",
+      "schema": "public",
+      "table": "photo_derivatives",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "photo_items_pkey",
+      "schema": "public",
+      "table": "photo_items",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "posts_pkey",
+      "schema": "public",
+      "table": "posts",
+      "entityType": "pks"
+    }
+  ],
+  "renames": []
+}
