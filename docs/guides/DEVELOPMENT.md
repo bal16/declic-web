@@ -59,9 +59,11 @@ declic/                              # bal16/declic (private monorepo)
 │   │   # (next) feature modules per PRD-API.md §1.1 (auth, posts, queue, …)
 │   └── worker/                      # BullMQ consumer + Bun.Image — @declic/worker
 │       ├── package.json / tsconfig.json / Dockerfile (no EXPOSE, no build step)
-│       ├── src/                     # main.ts, worker.module.ts, logger.ts
-│       └── test/context.e2e.test.ts # context lifecycle
-│       # (next) image-processing consumer per PRD-Worker.md §3
+│       ├── src/                     # main.ts, worker.module.ts, logger.ts +
+│       │                           # image-processing/ (consumer, transform,
+│       │                           # blurhash, variants, repository, storage),
+│       │                           # common/ (config, job-options)
+│       └── test/context.e2e.test.ts # context lifecycle (queue stubbed, no TCP)
 ├── packages/
 │   ├── contracts/                   # @declic/contracts — zod (src/index.ts, src/posts.ts)
 │   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/data/seed.ts
@@ -192,9 +194,35 @@ bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
 
 Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `packages/*` plus the affected apps — no version bumps or pointer commits.
 
+### 5.3.1 Testing tiers (all tiers run in CI)
+
+* Unit (`src/`, `bun run test`): pure logic + DI compile with external
+  clients stubbed (e.g. BullMQ queue token overridden, never a real
+  connection). In-process engines are allowed: PGlite (WASM Postgres,
+  no TCP) may back repository tests — real SQL semantics, still CI-safe.
+* E2E (`test/`, `bun run test:e2e`): full module graph boot, same stub
+  rule — CI proves boot + wiring, not real connections. (NestJS-canonical
+  e2e may use real infra; ours stays stubbed by choice, keeping this
+  tier fast and deterministic.)
+* Integration (`integration/`, `bun run test:integration`): real
+  Redis/MinIO/Postgres. Runs in CI **with services** (postgres, redis,
+  minio + bucket bootstrap in `ci.yml`/`release.yml`; minio image pinned
+  to `docs/ops/docker-compose.yml` for dev parity) after unit/e2e pass,
+  and locally via `podman-compose up -d`. End-to-end acceptance lives
+  here.
+* Tests self-contain dummy env via the shared `setupTestEnv()` helper
+  (single literal source — file execution order can never matter);
+  integration defaults match the compose dev stack and real env wins;
+  app runs use `--env-file` (dev) or deploy env (prod).
+* Enforcement ritual for unit/e2e: run them with compose **down** —
+  green means compliant. Coverage gate (`bun run coverage`, `src/` only)
+  is satisfiable from unit tests alone by design.
+
 ### 5.4 Typical dev loop (target flow, wires landing incrementally)
 
-1. Start apps (§5.3) and, once Compose lands, `podman-compose up` + seed.
+1. Start apps (§5.3) and, once Compose lands, `podman-compose up`, then
+   `bun run db:migrate` (fresh volumes have no tables — seed and tests
+   assume a migrated DB), then seed.
 2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to S3 Compatible Object Storage uploads, then `POST /api/posts` enqueues one job per frame).
 3. Watch the worker generate thumbnail/web/lightbox derivatives + blurhash; the work flips `PROCESSING → PENDING`.
 4. Approve in `/admin/moderation`, check ordering in `/admin/curate`, browse at `/`.

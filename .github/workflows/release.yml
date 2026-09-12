@@ -37,6 +37,45 @@ jobs:
   # Re-runs every gate on the exact tagged tree — never trusts main's status.
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: declic
+          POSTGRES_PASSWORD: declic
+          POSTGRES_DB: declic_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U declic -d declic_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      minio:
+        # Keep image in sync with docs/ops/docker-compose.yml (dev parity).
+        image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+        # Service containers run the image default CMD (bare `minio` =
+        # help-text exit); pass the compose start command explicitly.
+        command: server /data --console-address ":9001"
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd "mc ready local"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout tag
         uses: actions/checkout@v5
@@ -50,6 +89,20 @@ jobs:
 
       - name: Install (frozen lockfile)
         run: bun install --frozen-lockfile
+
+      - name: Create MinIO bucket (integration tests)
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          aws configure set default.s3.addressing_style path
+          aws --endpoint-url http://localhost:9000 s3 mb s3://declic
+
+      - name: Apply DB migrations (integration tests)
+        env:
+          DATABASE_URL: postgres://declic:declic@localhost:5432/declic_dev
+        run: bun run --filter @declic/db migrate
 
       # Fail-fast order: cheapest checks without build output first
       # (format/lint/boundaries/compose/leak-guard), then typecheck/unit,
@@ -91,6 +144,9 @@ jobs:
 
       - name: Test workspaces (e2e, needs build output)
         run: bun run --filter "@declic/*" test:e2e
+
+      - name: Test worker (integration, needs services above)
+        run: bun run --filter @declic/worker test:integration
 
       - name: Coverage gate (>=90% lines per app)
         run: bun run coverage

@@ -1,0 +1,6 @@
+# Worker-local test config. Root bunfig.toml [test] is not consulted for
+# runs from this dir, so coverage scoping lives here.
+[test]
+# App coverage measures app code only: workspace packages carry their own
+# tests (or none yet) and must not dilute per-app numbers.
+coveragePathIgnorePatterns = ["**/packages/**"]

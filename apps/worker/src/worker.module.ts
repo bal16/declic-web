@@ -1,10 +1,21 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-// Base module: global config only. The image-processing consumer
-// (@Processor('image-processing')) and BullModule wiring land here next
-// (PRD-Worker.md §3.1: @nestjs/bullmq, concurrency 2).
+import { requiredEnv } from './common/config';
+import { ImageProcessingModule } from './image-processing/image-processing.module';
+
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    // Async: connection read at DI time (not import time) so unit tests
+    // can set dummy env before compiling the module.
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        connection: { url: requiredEnv('REDIS_URL') },
+      }),
+    }),
+    ImageProcessingModule,
+  ],
 })
 export class WorkerModule {}
