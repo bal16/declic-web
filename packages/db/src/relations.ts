@@ -2,7 +2,7 @@ import { defineRelations } from 'drizzle-orm';
 
 import * as schemas from './schema';
 
-export const contains = defineRelations(schemas, (r) => ({
+export const relations = defineRelations(schemas, (r) => ({
   posts: {
     photoItems: r.many.photoItems(),
   },
@@ -11,11 +11,6 @@ export const contains = defineRelations(schemas, (r) => ({
       from: r.photoItems.postId,
       to: r.posts.id,
     }),
-  },
-}));
-
-export const derivatives = defineRelations(schemas, (r) => ({
-  photoItems: {
     photoDerivatives: r.many.photoDerivatives(),
   },
   photoDerivatives: {
