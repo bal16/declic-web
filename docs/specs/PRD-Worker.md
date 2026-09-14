@@ -311,7 +311,15 @@ phase='ARCHIVED' WHERE phase='LIVE' AND end_date <= now()`.
 
 ---
 
-## 6. Cross References
+## 6. Testing (acceptance proof)
+
+- **Unit (`apps/worker/src/`, `bun run test`):** transformer/variants/blurhash pure logic, `FrameRepository` against PGlite, `ImageProcessor` + module DI compile with queue/processor stubbed.
+- **E2E (`apps/worker/test/e2e/`, `bun run test:e2e`, needs services):** `pipeline.e2e.test.ts` boots the real `WorkerModule` (no overrides) against Redis/MinIO/Postgres — T1 SINGLE → `PENDING`, T2 SERIES-3 promotes after all frames, T3 poison (missing object) → `FAILED_PROCESSING`, T4 malformed payload → job `failed` without touching the DB. Runs in CI with services and locally via `docker compose up -d`.
+- Tier contract: see [DEVELOPMENT](../guides/DEVELOPMENT.md) §5.3.1.
+
+---
+
+## 7. Cross References
 
 - **General PRD:** [PRD](./PRD.md) — vision, SERIES (SINGLE|SERIES) works, `feature_flags` kill-switch, `cuid2` domain ids, lifecycle `PRE_EVENT` → `LIVE` → `ARCHIVED`.
 - **Backend API:** [PRD-API](./PRD-API.md) — schema `posts`/`photo_items`/`photo_derivatives` (`text` cuid2), endpoint `POST /api/posts` (producer, batch), `ARCHIVED` + `FEATURE_DISABLED` rules.

@@ -81,7 +81,7 @@ bun run --filter "@declic/*" test        # transports stay out of tests
 ```
 
 Proven green at adoption: typecheck 0 errors, 11 unit + 12 e2e passing,
-coverage gate passing, lint/format clean.
+coverage gate passing, lint/format clean. (2026-09-14: 40 unit + 15 e2e.)
 
 ## 6. Consequences
 

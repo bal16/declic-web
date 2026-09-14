@@ -50,8 +50,8 @@ deploy step empty.
      suffix; `--generate-notes`).
   4. `deploy` job exists but is a disabled stub (`if: false`).
 * **Coverage gate placement:** release-only (not CI). Rationale: coverage is
-  a release-worthiness claim, and CI stays fast and manual while scaffolding
-  moves. Revisit if untested code starts landing on `main` regularly.
+  a release-worthiness claim. CI runs automatically on `push:main` + PRs.
+  Revisit if untested code starts landing on `main` regularly.
 
 ## 3. Alternatives considered
 
@@ -87,9 +87,9 @@ deploy step empty.
 4. **Trial image cleanup** — `:v0.0.0-rc.1` images still sit in GHCR; the
    CLI token lacks `packages` scope, so delete via web UI
    (package → settings → delete version).
-5. **Dead CI fallbacks** — the `|| echo "::notice::... skipping"` branches
-   in `ci.yml` no longer trigger (all workspaces define the scripts);
-   remove when touching CI next.
+5. **Dead CI fallbacks** — the `|| echo "::notice::... skipping"` branch
+  on the `build` step still triggers (`api`/`worker` define no `build`
+  script; only `web` does). Remove when every workspace defines `build`.
 
 ## 6. GitHub free-tier limits analysis (recorded 2026-09-04)
 
@@ -99,7 +99,7 @@ Facts and burn rate at the time of writing:
   minutes/month** (public repos unlimited; our private repos consume
   quota; `ubuntu-latest` counts ×1 — multipliers apply only to
   macOS/Windows runners).
-* **Our burn:** mirror ≈ 0.25 min/push, CI manual ≈ 0.5 min/run,
+* **Our burn:** mirror ≈ 0.25 min/push, CI auto ≈ 0.5 min/run,
   release ≈ 2–6 min/tag. Even 100 pushes + 10 releases/month ≈
   **<100 min** — an order of magnitude below the cap.
 * **The binding constraint is GHCR storage (free: 500 MB), not
@@ -107,8 +107,8 @@ Facts and burn rate at the time of writing:
   trial `v0.0.0-rc.1` set (±900 MB total) likely already exceeds the
   allowance — hence follow-up §5.4.
 * **Policy consequence:** no need to scrimp on verification runs, but do
-  not enable minute-burning automation (per-push snapshots, CI on every
-  push) before it is needed. Current posture (manual CI, push-triggered
+  not enable minute-burning automation (per-push snapshots) before it is
+  needed. Current posture (auto CI on push/PR, push-triggered
   mirror, tag-triggered release) is the right cost point.
 
 ## 7. Consequences

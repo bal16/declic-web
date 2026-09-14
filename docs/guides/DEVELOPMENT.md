@@ -63,7 +63,7 @@ declic/                              # bal16/declic (private monorepo)
 │       │                           # image-processing/ (consumer, transform,
 │       │                           # blurhash, variants, repository, storage),
 │       │                           # common/ (config, job-options)
-│       └── test/context.e2e.test.ts # context lifecycle (queue stubbed, no TCP)
+│       └── test/e2e/pipeline.e2e.test.ts # real Redis/MinIO/Postgres acceptance (T1-T4)
 ├── packages/
 │   ├── contracts/                   # @declic/contracts — zod (src/index.ts, src/posts.ts)
 │   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/data/seed.ts
@@ -75,21 +75,20 @@ declic/                              # bal16/declic (private monorepo)
 │   ├── sync-compose.ts              # materializes root docker-compose.yml from spec
 │   └── sync-docs-mirrors.ts         # embeds sources into docs/*.md companions
 ├── .github/workflows/
-│   ├── ci.yml                       # verify + leak-guard (workflow_dispatch only)
+│   ├── ci.yml                       # verify + leak-guard (push:main + PR + workflow_dispatch)
 │   ├── mirror.yml                   # push to main → update 3 mirrors (automatic)
 │   └── release.yml                  # push tags v* → gates + GHCR + GitHub Release (§8)
 ├── .vscode/
 │   ├── settings.json                # oxc formatter/linter on save; eslint+prettier disabled
 │   └── extensions.json              # recommends oxc, tailwind, markdownlint, editorconfig
 └── docs/
-    ├── adr/                         # ADR-001…ADR-007 (mirror, release, zod, pino, boundaries, branch protection, aliases)
-    ├── DEVELOPMENT.md               # this file
+    ├── adr/                         # ADR-001…ADR-008 (mirror, release, zod, pino, boundaries, branch protection, aliases, docs-reorg)
+    ├── guides/DEVELOPMENT.md          # this file
     ├── README.md                    # docs map of content
-    ├── PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md
+    ├── specs/                       # PRD.md / PRD-API.md / PRD-FE.md / PRD-Worker.md / contracts.md
     ├── features/                    # 1 file per feature + README index (acceptance specs)
-    ├── db-schema.md / seeds.md / seed.ts
-    ├── docker-compose.md / docker-compose.yml (spec) / env.md
-    └── .obsidian/                   # vault config (local-only)
+    ├── data/                        # db-schema.md / seeds.md / seed.ts
+    ├── ops/                         # docker-compose.md / docker-compose.yml (spec) / env.md
 ├── docker-compose.yml               # root materialization of the docs/ spec (infra default, --profile apps for full stack)
 ├── docker-compose.prod.yml          # prod-like overrides (profiles: prod, GHCR images)
 ```
@@ -164,7 +163,11 @@ Full-stack in containers (e.g. web e2e needing build output):
 docker compose --profile apps up -d
 ```
 
-Image builds (when needed) use root context (`podman build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
+Podman works as a drop-in (`podman-compose up -d`, `podman build -f …`);
+the compose file is verified against podman-compose — keep image names
+fully qualified (`docker.io/…`, see §9).
+
+Image builds (when needed) use root context (`docker build -f apps/<app>/Dockerfile .`) or the `:latest`/release images from GHCR.
 
 Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, site settings, and the demo exhibition. `docs/data/seed.ts` is the current source of truth.
 
@@ -186,7 +189,7 @@ environment (Docker/host), never from a file.
 
 ```bash
 bun run --filter "@declic/*" test       # unit tests (src/)
-bun run --filter "@declic/*" test:e2e   # e2e tests (test/, web needs build output first)
+bun run --filter "@declic/*" test:e2e   # e2e tests (test/; worker needs services: docker compose up -d, web needs build output first)
 bun run --filter "@declic/*" build      # per-app builds
 bun run coverage                        # coverage gate: >=90% lines per app (release-only, §8)
 bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
@@ -200,27 +203,27 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
   clients stubbed (e.g. BullMQ queue token overridden, never a real
   connection). In-process engines are allowed: PGlite (WASM Postgres,
   no TCP) may back repository tests — real SQL semantics, still CI-safe.
-* E2E (`test/`, `bun run test:e2e`): full module graph boot, same stub
-  rule — CI proves boot + wiring, not real connections. (NestJS-canonical
-  e2e may use real infra; ours stays stubbed by choice, keeping this
-  tier fast and deterministic.)
-* Integration (`integration/`, `bun run test:integration`): real
-  Redis/MinIO/Postgres. Runs in CI **with services** (postgres, redis,
-  minio + bucket bootstrap in `ci.yml`/`release.yml`; minio image pinned
-  to `docs/ops/docker-compose.yml` for dev parity) after unit/e2e pass,
-  and locally via `podman-compose up -d`. End-to-end acceptance lives
+* E2E (`test/`, `bun run test:e2e`): full module graph boot proving
+  aggregate behavior. `api`/`web` stay service-free (in-memory HTTP
+  round-trips; web needs build output first). `worker` uses real
+  Redis/MinIO/Postgres — it runs in CI **with services** (postgres,
+  redis, minio + bucket bootstrap in `ci.yml`/`release.yml`; minio
+  image pinned to `docs/ops/docker-compose.yml` for dev parity) after
+  unit passes, and locally via `docker compose up -d`. Worker
+  end-to-end acceptance (`test/e2e/pipeline.e2e.test.ts` T1-T4) lives
   here.
 * Tests self-contain dummy env via the shared `setupTestEnv()` helper
   (single literal source — file execution order can never matter);
-  integration defaults match the compose dev stack and real env wins;
+  e2e defaults match the compose dev stack and real env wins;
   app runs use `--env-file` (dev) or deploy env (prod).
-* Enforcement ritual for unit/e2e: run them with compose **down** —
-  green means compliant. Coverage gate (`bun run coverage`, `src/` only)
+* Enforcement ritual for unit: run it with compose **down** —
+  green means compliant. Worker e2e needs compose **up** (or CI
+  services). Coverage gate (`bun run coverage`, `src/` only)
   is satisfiable from unit tests alone by design.
 
 ### 5.4 Typical dev loop (target flow, wires landing incrementally)
 
-1. Start apps (§5.3) and, once Compose lands, `podman-compose up`, then
+1. Start apps (§5.3) and, once Compose lands, `docker compose up`, then
    `bun run db:migrate` (fresh volumes have no tables — seed and tests
    assume a migrated DB), then seed.
 2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to S3 Compatible Object Storage uploads, then `POST /api/posts` enqueues one job per frame).
@@ -270,7 +273,8 @@ every push to bal16/declic:main touching the C1 slice (`mirror.yml`, `push` + `p
 Docs-only pushes skip the fan-out (see [ADR-001](../adr/ADR-001-monorepo-mirror.md) §6).
 
 * `mirror.yml` also supports manual `workflow_dispatch` (all or one app).
-  `ci.yml` stays manual-only.
+  `ci.yml` runs automatically on `push:main` + PRs (dispatch stays as
+  escape hatch).
 * Tag pushes do **not** trigger mirrors (workflow listens to `main` only).
 * Auth: one read-write deploy key per mirror (GitHub keys cannot be
   shared across repos), stored as `MIRROR_WEB/API/WORKER_KEY` secrets in
@@ -307,9 +311,9 @@ Compose/dev (§5.2) is local. Production artifacts come from releases (§8):
 Built from the **monorepo root** (context must include `packages/*`):
 
 ```bash
-podman build -f apps/api/Dockerfile -t declic-api:local .
-podman build -f apps/worker/Dockerfile -t declic-worker:local .
-podman build -f apps/web/Dockerfile -t declic-web:local .
+docker build -f apps/api/Dockerfile -t declic-api:local .
+docker build -f apps/worker/Dockerfile -t declic-worker:local .
+docker build -f apps/web/Dockerfile -t declic-web:local .
 ```
 
 All three have been built and boot-tested under podman 6 (api `/health` → ok, worker context ready, web serves SSR HTML with 200). Base image is `docker.io/oven/bun:1.4.2` (fully qualified — bare short-names fail podman resolution without `registries.conf`). Or pull release images from GHCR instead of building. Provide production `DATABASE_URL`, `REDIS_URL`, `S3_*`, `BETTER_AUTH_*`, and OAuth secrets via the host's secret manager, never baked into images.

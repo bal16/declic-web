@@ -179,18 +179,19 @@ preserving a later split path.
 * `bun run boundaries` green on the tree (only
   `examples/` + `common/` + `*.test.ts` cross-imports allowed until real
   modules land).
-* Unit test per module covers facade contract; one integration
-  test traces `POST /api/posts` → queued jobs → worker frames →
-  `PENDING` without importing internals across modules, plus one test
-  proving a failed audit listener never fails the request.
+* Unit test per module covers facade contract; four e2e tests in
+  `apps/worker/test/e2e/pipeline.e2e.test.ts` trace enqueue → worker
+  frames → `PENDING`/`FAILED_PROCESSING` without importing internals
+  across modules (T1 SINGLE, T2 SERIES-3, T3 poison, T4 malformed),
+  plus one test proving a failed audit listener never fails the request.
 * `bun run coverage` stays ≥90% lines per app ([ADR-002](./ADR-002-release-tagging.md) gate).
 
 ## 6. Addendum — layered boundary gate (2026-09-08)
 
 Agreed via grilling: benchmark `check-boundaries.ts` at `0.05s`
 (measured, equivalent to oxlint) invalidates the "pre-commit is slow"
-assumption, so the gate runs at every layer. `ci.yml` auto-trigger
-stays deferred (planning/docs still churn on `main`).
+  assumption, so the gate runs at every layer. `ci.yml` auto-trigger
+  is enabled (`push:main` + PRs, dispatch as escape hatch).
 
 * **Local:** `bun run boundaries` (`package.json` script over
   `scripts/check-boundaries.ts`) + Lefthook pre-commit (full-tree scan,

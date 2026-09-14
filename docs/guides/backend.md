@@ -104,8 +104,9 @@ flowchart LR
 
 - Unit, co-located `*.test.ts` with a `describe('contract')` block per
   `public-api` method (inputs, outputs, documented errors).
-- E2e in `apps/api/test/` (boots the app; worker pipeline traced
-  `POST → queue → worker → PENDING` without importing internals).
+- E2e in `apps/api/test/` (boots the app over real HTTP). Worker
+  pipeline acceptance (`POST → queue → worker → PENDING`) lives in
+  `apps/worker/test/e2e/pipeline.e2e.test.ts` (T1-T4), not here.
 - Coverage follows the repo ≥90% release gate; `bun run boundaries`
   guards the module graph at every layer.
 

@@ -64,16 +64,16 @@ are generated automatically — see `docs/guides/DEVELOPMENT.md`.
 
 ## Scripts
 
-| Command             | What it does                       |
-| ------------------- | ---------------------------------- |
-| `bun run dev`       | Dev servers for all apps           |
-| `bun run build`     | Production build for all apps      |
-| `bun run test`      | Unit tests for all apps            |
-| `bun run test:e2e`  | End-to-end tests for all apps      |
-| `bun run typecheck` | TypeScript check per app           |
-| `bun run lint`      | `oxlint` over the repo             |
-| `bun run format`    | `oxfmt` over the repo              |
-| `bun run coverage`  | Coverage gate (≥90% lines per app) |
+| Command             | What it does                                                                  |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `bun run dev`       | Dev servers for all apps                                                      |
+| `bun run build`     | Production build for all apps                                                 |
+| `bun run test`      | Unit tests for all apps                                                       |
+| `bun run test:e2e`  | End-to-end tests for all apps (worker needs services: `docker compose up -d`) |
+| `bun run typecheck` | TypeScript check per app                                                      |
+| `bun run lint`      | `oxlint` over the repo                                                        |
+| `bun run format`    | `oxfmt` over the repo                                                         |
+| `bun run coverage`  | Coverage gate (≥90% lines per app)                                            |
 
 Git hooks: `bunx lefthook install` once per clone (staged `oxlint --fix` + `oxfmt`).
 

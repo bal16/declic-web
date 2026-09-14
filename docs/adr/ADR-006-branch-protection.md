@@ -27,7 +27,8 @@ updated: 2026-09-09
   Stated preference: **strict** at the end state.
 * Current phase: **docs/planning churn directly on `main`** — direct push
   ends when the contracts slice (first feature branch) merges.
-* CI posture: `ci.yml` triggers still manual-only (`workflow_dispatch`);
+* CI posture: `ci.yml` runs automatically on `push:main` + PRs
+  (`workflow_dispatch` stays as escape hatch);
   jobs `verify` (incl. `sync:compose` + `sync:docs` checks) + `leak-guard`.
   Tracker ready: 5 labels + 2 issue templates. `mirror.yml` fans out on
   every push to `main` (paths-scoped, see [ADR-001](./ADR-001-monorepo-mirror.md) §6).
