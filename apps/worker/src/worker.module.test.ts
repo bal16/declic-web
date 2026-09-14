@@ -11,12 +11,12 @@ import { WorkerModule } from './worker.module';
 setupTestEnv();
 
 // Proves the worker DI graph compiles under the Bun test runner.
-// BullMQ queue + processor are stubbed here (infra-free rule: no TCP
-// in unit/e2e tests, ever — real-TCP boot is proven by the local-only
-// integration test).
+// BullMQ queue + processor are stubbed here (no TCP in this file).
+// Real-TCP boot is proven by the e2e test with services
+// (test/e2e/pipeline.e2e.test.ts, requires docker compose up).
 describe('WorkerModule (DI)', () => {
   it('compiles the testing module', async () => {
-    // Infra-free: queue + processor stubbed (no TCP, ever).
+    // Infra-free: queue + processor stubbed (no TCP in this file).
     const moduleRef = await Test.createTestingModule({
       imports: [WorkerModule],
     })
@@ -27,5 +27,22 @@ describe('WorkerModule (DI)', () => {
       .compile();
     expect(moduleRef.get(WorkerModule, { strict: false })).toBeDefined();
     await moduleRef.close();
+  });
+
+  it('refuses to boot without required env', async () => {
+    const saved = process.env.REDIS_URL;
+    delete process.env.REDIS_URL;
+    try {
+      await expect(
+        Test.createTestingModule({ imports: [WorkerModule] })
+          .overrideProvider(getQueueToken('image-processing'))
+          .useValue({})
+          .overrideProvider(ImageProcessor)
+          .useValue({})
+          .compile(),
+      ).rejects.toThrow(/REDIS_URL/);
+    } finally {
+      if (saved !== undefined) process.env.REDIS_URL = saved;
+    }
   });
 });

@@ -8,8 +8,7 @@
     "test": "bun test src/",
     "test:watch": "bun test --watch src/",
     "test:coverage": "bun test --coverage src/",
-    "test:e2e": "bun test test/e2e/",
-    "test:integration": "bun --env-file=../../.env test --timeout 60000 test/integration/",
+    "test:e2e": "bun --env-file=../../.env test --timeout 60000 test/e2e/",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

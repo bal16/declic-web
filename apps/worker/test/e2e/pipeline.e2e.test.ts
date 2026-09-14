@@ -6,24 +6,20 @@ import { eq, inArray } from 'drizzle-orm';
 
 import { IMAGE_JOB_OPTIONS } from '@/common/job-options';
 
-import type { IntegrationContext } from './setup';
-import {
-  setupIntegration,
-  sweepKeys,
-  teardownIntegration,
-  waitFor,
-} from './setup';
+import type { E2EContext } from './setup';
+import { setupE2E, sweepKeys, teardownE2E, waitFor } from './setup';
 
-// Full acceptance proof, real infra (compose up required, never CI):
+// Full acceptance proof, real infra (CI services or docker compose up):
 // upload → enqueue → worker consumes → derivatives + PENDING/FAILED.
-describe('Pipeline integration', () => {
-  let ctx: IntegrationContext;
+// Run: bun run test:e2e
+describe('Pipeline e2e', () => {
+  let ctx: E2EContext;
   const createdKeys = new Set<string>();
   const createdPosts: string[] = [];
   const createdItems: string[] = [];
 
   beforeAll(async () => {
-    ctx = await setupIntegration();
+    ctx = await setupE2E();
   });
 
   afterAll(async () => {
@@ -42,7 +38,7 @@ describe('Pipeline integration', () => {
     for (const id of createdPosts) {
       await ctx.db.delete(posts).where(eq(posts.id, id));
     }
-    await teardownIntegration(ctx);
+    await teardownE2E(ctx);
   });
 
   async function fixtureBytes(name: string): Promise<Uint8Array> {

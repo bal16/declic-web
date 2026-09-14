@@ -12,8 +12,8 @@ setupTestEnv();
 
 describe('ImageProcessingModule (DI)', () => {
   it('compiles the testing module', async () => {
-    // Infra-free: queue + processor stubbed (no TCP, ever). Real-TCP boot
-    // is proven by the local-only integration test, not here.
+    // Infra-free: queue + processor stubbed (no TCP in this file).
+    // Real-TCP boot is proven by the e2e test with services, not here.
     const moduleRef = await Test.createTestingModule({
       imports: [ImageProcessingModule],
     })

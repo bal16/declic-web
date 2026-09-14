@@ -10,8 +10,8 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { FrameRepository } from './frame.repository';
 
 // Repository against in-memory PGlite (real PG engine, no TCP/compose):
-// real migration + real SQL, CI-safe. S3 I/O stays in the (postponed)
-// compose-backed integration tier.
+// real migration + real SQL, CI-safe. S3 I/O stays in the compose-backed
+// e2e tier (test/e2e/pipeline.e2e.test.ts).
 describe('FrameRepository (pglite)', () => {
   let client: PGlite;
   let db: ReturnType<typeof drizzlePglite>;

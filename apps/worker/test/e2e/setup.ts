@@ -6,9 +6,9 @@ import { S3Client } from 'bun';
 
 import { WorkerModule } from '@/worker.module';
 
-// Integration harness: REAL everything (Redis/MinIO/Postgres via compose),
-// NO overrides. Requires `podman-compose up -d`. Never runs in CI — no
-// workflow calls `test:integration`.
+// E2E harness: REAL everything (Redis/MinIO/Postgres via compose),
+// NO overrides. Runs in CI with services and locally via
+// `docker compose up -d` (see ci.yml verify job).
 //
 // Env strategy: values come from `.env` (via --env-file in the script —
 // single source of truth, incl. custom passwords), with compose defaults
@@ -37,14 +37,14 @@ for (const key of ['REDIS_URL', 'DATABASE_URL', 'S3_ENDPOINT'] as const) {
   }
 }
 
-export interface IntegrationContext {
+export interface E2EContext {
   moduleRef: TestingModule;
   queue: Queue;
   db: Db;
   s3: S3Client;
 }
 
-export async function setupIntegration(): Promise<IntegrationContext> {
+export async function setupE2E(): Promise<E2EContext> {
   const moduleRef = await Test.createTestingModule({
     imports: [WorkerModule],
   }).compile();
@@ -61,9 +61,7 @@ export async function setupIntegration(): Promise<IntegrationContext> {
   return { moduleRef, queue, db, s3 };
 }
 
-export async function teardownIntegration(
-  ctx: IntegrationContext,
-): Promise<void> {
+export async function teardownE2E(ctx: E2EContext): Promise<void> {
   await ctx.moduleRef.close();
 }
 
