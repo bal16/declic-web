@@ -75,6 +75,19 @@ are generated automatically — see `docs/guides/DEVELOPMENT.md`.
 | `bun run format`    | `oxfmt` over the repo                                                         |
 | `bun run coverage`  | Coverage gate (≥90% lines per app)                                            |
 
+### Per-app scripts
+
+Use `<app>:<script>` to target a single app:
+
+| Command                    | What it does                                    |
+| -------------------------- | ----------------------------------------------- |
+| `bun run worker:dev`       | Worker dev server                               |
+| `bun run worker:test`      | Worker unit tests                               |
+| `bun run worker:test:e2e`  | Worker e2e tests (needs `docker compose up -d`) |
+| `bun run worker:typecheck` | Worker typecheck                                |
+
+Replace `worker` with `api` or `web` to target other apps.
+
 Git hooks: `bunx lefthook install` once per clone (staged `oxlint --fix` + `oxfmt`).
 
 ## Docs

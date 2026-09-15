@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { S3Client } from 'bun';
-
+import { newFakeStorage } from '../../test/helpers/storage.doubles';
 import { setupTestEnv } from '../../test/helpers/test-env';
-import {
-  ObjectStorageService,
-  buildDerivativeKey,
-  buildPublicUrl,
-} from './object-storage.service';
+import { buildDerivativeKey, buildPublicUrl } from './object-storage.service';
 
 setupTestEnv();
 
@@ -37,45 +32,22 @@ describe('buildPublicUrl', () => {
   });
 });
 
-interface WriteCall {
-  key: string;
-  data: Uint8Array;
-  opts: unknown;
-}
-
-function fakeService(exists: boolean, content = new Uint8Array([9, 9])) {
-  const writes: WriteCall[] = [];
-  const fake = {
-    file: (_key: string) => ({
-      exists: async () => exists,
-      arrayBuffer: async () => content.buffer as ArrayBuffer,
-    }),
-    write: async (key: string, data: Uint8Array, opts: unknown) => {
-      writes.push({ key, data, opts });
-    },
-  };
-  return {
-    svc: new ObjectStorageService(fake as unknown as S3Client),
-    writes,
-  };
-}
-
 describe('ObjectStorageService (fake client)', () => {
   it('getObject returns the exact bytes', async () => {
-    const { svc } = fakeService(true);
+    const { svc } = newFakeStorage(true);
     const out = await svc.getObject('raw-uploads/a.jpg');
     expect(out).toEqual(Buffer.from([9, 9]));
   });
 
   it('getObject throws on missing keys', async () => {
-    const { svc } = fakeService(false);
+    const { svc } = newFakeStorage(false);
     await expect(svc.getObject('nope.jpg')).rejects.toThrow(
       'Object not found in storage: nope.jpg',
     );
   });
 
   it('putObject records type and returns the public record', async () => {
-    const { svc, writes } = fakeService(true);
+    const { svc, writes } = newFakeStorage(true);
     const data = new Uint8Array([1, 2, 3, 4]);
     const stored = await svc.putObject(
       'derivatives/i/w.webp',

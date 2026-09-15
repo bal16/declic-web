@@ -1,32 +1,30 @@
 import { describe, expect, it } from 'bun:test';
 
+import {
+  BLUE_FIXTURE,
+  RED_FIXTURE,
+  fixtureBytes,
+} from '../../test/helpers/fixtures';
 import { BlurhashService } from './blurhash.service';
-
-async function fixtureBytes(name: string): Promise<Uint8Array> {
-  // Cwd-relative: tests always run from the package dir (package scripts,
-  // root --filter sets cwd per package).
-  const file = Bun.file(`test/fixtures/${name}`);
-  return new Uint8Array(await file.arrayBuffer());
-}
 
 describe('BlurhashService', () => {
   it('encodes a non-empty 4x3 hash', async () => {
     const hash = await new BlurhashService().encode(
-      await fixtureBytes('red-64x48.png'),
+      await fixtureBytes(RED_FIXTURE),
     );
     expect(hash.length).toBe(28);
   });
 
   it('is deterministic for the same input', async () => {
     const svc = new BlurhashService();
-    const bytes = await fixtureBytes('red-64x48.png');
+    const bytes = await fixtureBytes(RED_FIXTURE);
     expect(await svc.encode(bytes)).toBe(await svc.encode(bytes));
   });
 
   it('distinguishes different images', async () => {
     const svc = new BlurhashService();
-    const red = await svc.encode(await fixtureBytes('red-64x48.png'));
-    const blue = await svc.encode(await fixtureBytes('blue-48x64.png'));
+    const red = await svc.encode(await fixtureBytes(RED_FIXTURE));
+    const blue = await svc.encode(await fixtureBytes(BLUE_FIXTURE));
     expect(red).not.toBe(blue);
   });
 });

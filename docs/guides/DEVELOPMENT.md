@@ -174,24 +174,30 @@ Seeding (after `packages/db` lands): `bun packages/db/src/seed.ts` for flags, si
 ### 5.3 Per-app commands (Bun workspaces)
 
 ```bash
-bun run --filter @declic/web dev        # TanStack Start (Vite) dev server (:3000)
-bun run --filter @declic/api dev        # NestJS API watch mode (PORT=3001)
-bun run --filter @declic/worker dev     # worker watch mode (exits 0 until BullMQ lands)
+bun run web:dev                   # TanStack Start (Vite) dev server (:3000)
+bun run api:dev                   # NestJS API watch mode (PORT=3001)
+bun run worker:dev                # worker watch mode
+bun run --filter @declic/web dev  # same, via --filter
 ```
 
-`dev` scripts load the workspace-root `.env` explicitly: api/worker via
+`dev` scripts load the workspace-root `.env` explicitly: api via
 `bun --env-file ../../.env` (NestJS `ConfigModule` on its own only reads `.env` from the process
-cwd, which is wrong when running inside `apps/*`), web via Vite
+cwd, which is wrong when running inside `apps/*`), worker via root-level
+`--env-file=.env` passed through `--filter`, web via Vite
 `envDir: '../../'` in `vite.config.ts`
 (Vite defaults to `apps/web/.env`). Only `VITE_*` vars reach the browser.
 `start` scripts intentionally load nothing: production env comes from the
 environment (Docker/host), never from a file.
 
 ```bash
-bun run --filter "@declic/*" test       # unit tests (src/)
-bun run --filter "@declic/*" test:e2e   # e2e tests (test/; worker needs services: docker compose up -d, web needs build output first)
-bun run --filter "@declic/*" build      # per-app builds
-bun run coverage                        # coverage gate: >=90% lines per app (release-only, §8)
+bun run worker:test               # unit tests (src/)
+bun run worker:test:e2e           # e2e tests (test/; needs services: docker compose up -d)
+bun run worker:test:coverage      # unit tests with coverage
+bun run worker:test:watch         # unit tests in watch mode
+bun run worker:typecheck          # TypeScript check
+bun run test                      # all apps (unit)
+bun run test:e2e                  # all apps (e2e)
+bun run coverage                  # coverage gate: >=90% lines per app (release-only, §8)
 bun run lint / lint:fix / format / format:check   # oxlint + oxfmt, repo-wide
 ```
 

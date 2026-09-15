@@ -272,19 +272,26 @@ it('...', async () => {
 
 ```bash
 # Unit tests (compose down)
-bun run test                      # per app
-bun run test --filter @declic/*   # all apps
+bun run worker:test               # single app
+bun run test                      # all apps
 
 # E2E tests (compose up)
-bun run test:e2e                  # per app
+bun run worker:test:e2e           # single app
+bun run test:e2e                  # all apps
 
 # Coverage
-bun run test:coverage             # per app
+bun run worker:test:coverage      # single app
 bun run coverage                  # repo-wide gate
 
-# Type check
-bun run typecheck                 # per app
+# Typecheck
+bun run worker:typecheck          # single app
+bun run typecheck                 # all apps
+
+# Watch
+bun run worker:test:watch         # single app
 ```
+
+Replace `worker` with `api` or `web` to target other apps.
 
 ## 10. Coverage gate
 

@@ -3,4 +3,4 @@
 [test]
 # App coverage measures app code only: workspace packages carry their own
 # tests (or none yet) and must not dilute per-app numbers.
-coveragePathIgnorePatterns = ["**/packages/**"]
+coveragePathIgnorePatterns = ["**/packages/**", "**/test/**"]
