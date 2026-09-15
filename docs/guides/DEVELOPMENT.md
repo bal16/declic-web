@@ -199,6 +199,8 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 
 ### 5.3.1 Testing tiers (all tiers run in CI)
 
+> **Full conventions** (file layout, naming, Given-When-Then, helpers/factories, isolation rules): [testing.md](./testing.md).
+
 * Unit (`src/`, `bun run test`): pure logic + DI compile with external
   clients stubbed (e.g. BullMQ queue token overridden, never a real
   connection). In-process engines are allowed: PGlite (WASM Postgres,
