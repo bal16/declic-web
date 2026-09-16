@@ -1,0 +1,2 @@
+ALTER TABLE "job_logs" DROP CONSTRAINT "job_logs_post_id_posts_id_fkey", ADD CONSTRAINT "job_logs_post_id_posts_id_fkey" FOREIGN KEY ("post_id") REFERENCES "posts"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "job_logs" DROP CONSTRAINT "job_logs_photo_item_id_photo_items_id_fkey", ADD CONSTRAINT "job_logs_photo_item_id_photo_items_id_fkey" FOREIGN KEY ("photo_item_id") REFERENCES "photo_items"("id") ON DELETE CASCADE;

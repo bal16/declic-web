@@ -1,0 +1,1 @@
+ALTER TABLE "exhibitions" ADD CONSTRAINT "exhibitions_slug_key" UNIQUE("slug");

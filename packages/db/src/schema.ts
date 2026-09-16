@@ -28,6 +28,48 @@ export const photoVariantEnum = pgEnum('photo_variant', [
   'web',
   'lightbox',
 ]);
+export const exhibitionPhaseEnum = pgEnum('exhibition_phase', [
+  'PRE_EVENT',
+  'LIVE',
+  'ARCHIVED',
+  'DRAFT',
+]);
+export const jobLogStatusEnum = pgEnum('job_log_status', [
+  'running',
+  'completed',
+  'failed_retryable',
+  'failed_terminal',
+]);
+
+export const exhibitions = pgTable(
+  'exhibitions',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    title: varchar('title', { length: 255 }).notNull(),
+    slug: varchar('slug', { length: 255 }).unique().notNull(),
+    description: text('description'),
+    phase: exhibitionPhaseEnum('phase').notNull().default('DRAFT'),
+    posterS3Key: varchar('poster_s3_key', { length: 255 }),
+    location: varchar('location', { length: 255 }),
+    startDate: timestamp('start_date').notNull(),
+    endDate: timestamp('end_date').notNull(),
+    createdBy: text('created_by').notNull(), // Foreign key to the user table, for now we will just store the user ID as a string. In the future, we can create a separate table for users and establish a proper foreign key relationship.
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at')
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('exhibitions_start_date_idx').on(t.startDate),
+    index('exhibitions_end_date_idx').on(t.endDate),
+    index('exhibitions_phase_idx').on(t.phase),
+    index('exhibitions_slug_idx').on(t.slug),
+    index('exhibitions_created_by_idx').on(t.createdBy),
+  ],
+);
 
 export const posts = pgTable(
   'posts',
@@ -35,7 +77,9 @@ export const posts = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId()),
-    exhibitionId: text('exhibition_id').notNull(), // Foreign key to the exhibitions table, for now we will just store the exhibition ID as a string. In the future, we can create a separate table for exhibitions and establish a proper foreign key relationship.
+    exhibitionId: text('exhibition_id')
+      .notNull()
+      .references(() => exhibitions.id),
     photographerId: text('photographer_id').notNull(), // Foreign key to the user table, for now we will just store the photographer ID as a string. In the future, we can create a separate table for photographers and establish a proper foreign key relationship.
     title: varchar('title', { length: 255 }).notNull(),
     caption: text('caption'),
@@ -105,6 +149,37 @@ export const photoDerivatives = pgTable(
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
   },
   (t) => [index('photo_derivatives_photo_item_id_idx').on(t.photoItemId)],
+);
+
+export const jobLogs = pgTable(
+  'job_logs',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    jobId: varchar('job_id', { length: 255 }).notNull(),
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    photoItemId: text('photo_item_id')
+      .notNull()
+      .references(() => photoItems.id, { onDelete: 'cascade' }),
+    attempt: integer('attempt').notNull(),
+    maxAttempts: integer('max_attempts').notNull(),
+    status: jobLogStatusEnum('status').notNull(),
+    errorName: varchar('error_name', { length: 255 }),
+    errorMessage: text('error_message'),
+    errorStack: text('error_stack'),
+    durationMs: integer('duration_ms'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('job_logs_job_id_idx').on(t.jobId),
+    index('job_logs_post_id_idx').on(t.postId),
+    index('job_logs_photo_item_id_idx').on(t.photoItemId),
+    index('job_logs_status_idx').on(t.status),
+    index('job_logs_created_at_idx').on(t.createdAt),
+  ],
 );
 
 // export const photoItemsRelations = relations(photoItems, ({ one, many }) => ({

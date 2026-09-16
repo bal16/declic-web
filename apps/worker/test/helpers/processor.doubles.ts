@@ -6,6 +6,7 @@ import { BlurhashService } from '@/image-processing/blurhash.service';
 import { FrameRepository } from '@/image-processing/frame.repository';
 import { ImageTransformerService } from '@/image-processing/image-transformer.service';
 import { ImageProcessor } from '@/image-processing/image.processor';
+import { JobLogsRepository } from '@/image-processing/job-log.repository';
 import { ObjectStorageService } from '@/image-processing/object-storage.service';
 
 export interface Call {
@@ -73,6 +74,12 @@ export async function newProcessor() {
         },
       },
       {
+        provide: JobLogsRepository,
+        useValue: {
+          logAttempt: async () => {},
+        },
+      },
+      {
         provide: getQueueToken('image-processing'),
         useValue: {},
       },
@@ -83,7 +90,11 @@ export async function newProcessor() {
 
 export function jobWith(data: unknown, state = 'completed'): Job {
   return {
+    id: `job-${Date.now()}`,
     data,
+    opts: { attempts: 3 },
+    attemptsMade: state === 'failed' ? 3 : 0,
+    failedReason: state === 'failed' ? 'test error' : undefined,
     getState: async () => state,
   } as unknown as Job;
 }

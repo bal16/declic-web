@@ -4,11 +4,15 @@ import { drizzle as drizzlePglite } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 
 import { FrameRepository } from '@/image-processing/frame.repository';
+import { JobLogsRepository } from '@/image-processing/job-log.repository';
+
+export type PgTestDb = ReturnType<typeof drizzlePglite>;
 
 export interface TestDb {
   client: PGlite;
-  db: ReturnType<typeof drizzlePglite>;
-  repo: FrameRepository;
+  db: PgTestDb;
+  frameRepo: FrameRepository;
+  jobLogsRepo: JobLogsRepository;
   close(): Promise<void>;
 }
 
@@ -16,11 +20,12 @@ export async function newTestDb(): Promise<TestDb> {
   const client = new PGlite();
   const db = drizzlePglite({ client });
   await migrate(db, { migrationsFolder: '../../packages/db/drizzle' });
-  const repo = new FrameRepository(db as unknown as Db);
+  const typedDb = db as unknown as Db;
   return {
     client,
     db,
-    repo,
+    frameRepo: new FrameRepository(typedDb),
+    jobLogsRepo: new JobLogsRepository(typedDb),
     close: () => client.close(),
   };
 }

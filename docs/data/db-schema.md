@@ -10,10 +10,10 @@ updated: 2026-09-01
 ---
 # DB Schema — Déclic
 
-**Version:** 0.4-draft (2026-09-01)
+**Version:** 0.5-draft (2026-09-16)
 **App Version:** 0.x pre-release — `1.0.0` at first exhibition launch (PRD draft version is independent of app semver)
 **Source of truth for structure:** this file (columns, types, constraints — the Mermaid diagram in §1 is canonical). [PRD-API](../specs/PRD-API.md) §2 specifies **behavior** over these tables and never redefines columns.
-**Last updated:** 2026-09-01
+**Last updated:** 2026-09-16
 
 > Root `/` always shows the **latest `LIVE` exhibition** (fallback latest `ARCHIVED`; `DRAFT`/`PRE_EVENT` never public, ordered by `start_date DESC`).
 > A work is a `posts` row scoped to `exhibitions.id` (`type` `SINGLE` or `SERIES`).
@@ -36,7 +36,9 @@ erDiagram
     POSTS ||--o{ PHOTO_ITEMS : contains
     POSTS ||--o{ LIKES : liked
     POSTS ||--o{ COMMENTS : discussed
+    POSTS ||--o{ JOB_LOGS : tracked
     PHOTO_ITEMS ||--o{ PHOTO_DERIVATIVES : derivatives
+    PHOTO_ITEMS ||--o{ JOB_LOGS : tracked
     COMMENTS ||--o{ COMMENTS : replies
 
     USERS {
@@ -138,6 +140,21 @@ erDiagram
         string updated_by FK "refs USERS nullable"
     }
 
+    JOB_LOGS {
+        string id PK "cuid2"
+        string job_id "BullMQ job ID"
+        string post_id FK "cuid2 refs POSTS cascade"
+        string photo_item_id FK "cuid2 refs PHOTO_ITEMS cascade"
+        int attempt "1-based attempt number"
+        int max_attempts "configured retry limit"
+        string status "RUNNING COMPLETED FAILED_RETRYABLE FAILED_TERMINAL"
+        string error_name "nullable Error.name"
+        string error_message "nullable Error.message"
+        string error_stack "nullable truncated to 2KB"
+        int duration_ms "nullable processing time"
+        datetime created_at "cursor"
+    }
+
     SITE_SETTINGS {
         int id PK "1 singleton CHECK id=1"
         string site_title "default Déclic"
@@ -191,13 +208,14 @@ erDiagram
 - `likes`: composite PK `(user_id, post_id)`; transaction keeps `posts.likes_count` in sync; **frozen** when parent `exhibitions.phase='ARCHIVED'`.
 - `comments`: `post_id` index; `parent_id` gated by `feature_flags.threaded_comments_enabled`; frozen when `ARCHIVED`.
 - `photo_derivatives`: `photo_item_id` index; `poster_s3_key` in `exhibitions` is single image under `posters/` (dedicated ADMIN presign, no derivatives, no worker).
+- `job_logs`: `job_id`, `post_id`, `photo_item_id`, `status`, `created_at` indexes. FKs cascade on delete.
 - All cuid2 ids: `text` PK, no `DEFAULT gen_random_uuid()` — generated in app via `createId()`.
 
 **Better Auth tables (not visualized):** `sessions`, `accounts`, `verification` (`uuid` or `text`, unchanged).
 
 - **Singletons:** `feature_flags` = 3 rows (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`), cache `SELECT *` 10s TTL; `site_settings` = 1 row (`id=1`, `max_series_size` etc.).
 
-**History:** v1.0 `photos uuid` flat → v1.1 `posts uuid plus photo_items` → v1.2 cuid2 + `feature_flags` KV → v1.3 `exhibitions` → v1.4 row-per-flag `feature_flags` + `site_settings` singleton + `system_settings` deleted (phase only in `exhibitions`).
+**History:** v1.0 `photos uuid` flat → v1.1 `posts uuid plus photo_items` → v1.2 cuid2 + `feature_flags` KV → v1.3 `exhibitions` → v1.4 row-per-flag `feature_flags` + `site_settings` singleton + `system_settings` deleted (phase only in `exhibitions`) → v1.5 `job_logs` worker error logging (FKs cascade on delete).
 
 ---
 

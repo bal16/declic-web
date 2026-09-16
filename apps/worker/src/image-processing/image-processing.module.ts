@@ -5,6 +5,7 @@ import { BlurhashService } from './blurhash.service';
 import { FrameRepository } from './frame.repository';
 import { ImageTransformerService } from './image-transformer.service';
 import { ImageProcessor } from './image.processor';
+import { JobLogsRepository } from './job-log.repository';
 import { ObjectStorageService } from './object-storage.service';
 
 @Module({
@@ -14,6 +15,7 @@ import { ObjectStorageService } from './object-storage.service';
     ImageTransformerService,
     ObjectStorageService,
     FrameRepository,
+    JobLogsRepository,
     ImageProcessor,
   ],
 })

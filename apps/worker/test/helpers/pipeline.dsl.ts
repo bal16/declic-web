@@ -1,4 +1,4 @@
-import { photoDerivatives, photoItems, posts } from '@declic/db';
+import { jobLogs, photoDerivatives, photoItems, posts } from '@declic/db';
 import { createId } from '@paralleldrive/cuid2';
 import { eq } from 'drizzle-orm';
 
@@ -131,6 +131,25 @@ export async function expectDerivatives(
     },
     30000,
     `${expectedCount} derivatives`,
+  );
+}
+
+export async function expectJobLogs(
+  ctx: E2EContext,
+  photoItemId: string,
+  expectedStatus: string,
+): Promise<(typeof jobLogs.$inferSelect)[]> {
+  return waitFor(
+    async () => {
+      const rows = await ctx.db
+        .select()
+        .from(jobLogs)
+        .where(eq(jobLogs.photoItemId, photoItemId));
+      const match = rows.filter((r) => r.status === expectedStatus);
+      return match.length > 0 ? match : null;
+    },
+    30000,
+    `job_logs status=${expectedStatus} for ${photoItemId}`,
   );
 }
 

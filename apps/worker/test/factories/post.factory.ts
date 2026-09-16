@@ -1,29 +1,39 @@
-import { photoItems, posts } from '@declic/db';
+import { photoItems, posts, exhibitions } from '@declic/db';
 import { createId } from '@paralleldrive/cuid2';
 
 import type { FrameRepository } from '@/image-processing/frame.repository';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyDb = { insert: (table: any) => any };
+import type { PgTestDb } from '../helpers/db';
 
 export async function givenProcessingPost(
-  db: AnyDb,
+  db: PgTestDb,
   overrides?: { id?: string },
 ): Promise<string> {
-  const id = overrides?.id ?? `test-${createId()}`;
+  const exhibitionId = createId();
+  await db.insert(exhibitions).values({
+    id: exhibitionId,
+    title: 'Test Exhibition',
+    slug: `test-${exhibitionId}`,
+    phase: 'LIVE',
+    startDate: new Date(),
+    endDate: new Date(Date.now() + 86400000),
+    createdBy: 'test-user',
+  });
+
+  const postId = overrides?.id ?? `test-${createId()}`;
   await db.insert(posts).values({
-    id,
-    exhibitionId: 'test-ex',
+    id: postId,
+    exhibitionId,
     photographerId: 'test-user',
     title: 'test',
     type: 'SINGLE',
     status: 'PROCESSING',
   });
-  return id;
+  return postId;
 }
 
 export async function givenPhotoItem(
-  db: AnyDb,
+  db: PgTestDb,
   postId: string,
   overrides?: { id?: string; s3Key?: string; itemOrder?: number },
 ): Promise<string> {

@@ -6,6 +6,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { BLUE_FIXTURE, RED_FIXTURE } from '../helpers/fixtures';
 import {
   expectDerivatives,
+  expectJobLogs,
   expectObjectExists,
   expectPostBecomes,
   givenWork,
@@ -52,6 +53,10 @@ describe('Pipeline e2e', () => {
     for (const k of await expectDerivatives(ctx, tracker, items[0].id, 3)) {
       await expectObjectExists(ctx, k);
     }
+
+    const logs = await expectJobLogs(ctx, items[0].id, 'completed');
+    expect(logs).toHaveLength(1);
+    expect(logs[0].durationMs).toBeGreaterThan(0);
   }, 60000);
 
   it('T2 SERIES-3: promotes after all three frames', async () => {
@@ -70,6 +75,12 @@ describe('Pipeline e2e', () => {
       total += (await expectDerivatives(ctx, tracker, item.id, 3)).length;
     }
     expect(total).toBe(9);
+
+    for (const item of items) {
+      const logs = await expectJobLogs(ctx, item.id, 'completed');
+      expect(logs).toHaveLength(1);
+      expect(logs[0].durationMs).toBeGreaterThan(0);
+    }
   }, 60000);
 
   it('T3 poison: missing object → FAILED_PROCESSING', async () => {
@@ -85,6 +96,10 @@ describe('Pipeline e2e', () => {
       'terminal failure',
     );
     expect(await expectDerivatives(ctx, tracker, items[0].id, 0)).toEqual([]);
+
+    const logs = await expectJobLogs(ctx, items[0].id, 'failed_terminal');
+    expect(logs).toHaveLength(1);
+    expect(logs[0].errorMessage).toBeTruthy();
   }, 60000);
 
   it('T4 malformed payload fails without marking anything', async () => {

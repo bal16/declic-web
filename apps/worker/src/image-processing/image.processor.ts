@@ -6,6 +6,7 @@ import type { Job } from 'bullmq';
 import { BlurhashService } from './blurhash.service';
 import { FrameRepository } from './frame.repository';
 import { ImageTransformerService } from './image-transformer.service';
+import { JobLogsRepository } from './job-log.repository';
 import {
   ObjectStorageService,
   buildDerivativeKey,
@@ -23,6 +24,7 @@ export class ImageProcessor extends WorkerHost {
     private readonly blurhashService: BlurhashService,
     private readonly storage: ObjectStorageService,
     private readonly frames: FrameRepository,
+    private readonly jobLogs: JobLogsRepository,
   ) {
     super();
   }
@@ -31,9 +33,19 @@ export class ImageProcessor extends WorkerHost {
     // Validation point: parse at consume (malformed payloads fail the job).
     const input = imageProcessingJobSchema.parse(job.data);
     const startedAt = Date.now();
+
     this.logger.log(
       `Processing frame ${input.photoItemId} of work ${input.postId}`,
     );
+
+    await this.jobLogs.logAttempt({
+      jobId: job.id!,
+      postId: input.postId,
+      photoItemId: input.photoItemId,
+      attempt: job.attemptsMade + 1,
+      maxAttempts: job.opts.attempts ?? 3,
+      status: 'running',
+    });
 
     const original = await this.storage.getObject(input.s3Key);
     const blurhash = await this.blurhashService.encode(original);
@@ -69,6 +81,16 @@ export class ImageProcessor extends WorkerHost {
       `Frame ${input.photoItemId} done in ${Date.now() - startedAt}ms ` +
         `(work promoted: ${promoted})`,
     );
+
+    await this.jobLogs.logAttempt({
+      jobId: job.id!,
+      postId: input.postId,
+      photoItemId: input.photoItemId,
+      attempt: job.attemptsMade + 1,
+      maxAttempts: job.opts.attempts ?? 3,
+      status: 'completed',
+      durationMs: Date.now() - startedAt,
+    });
   }
 
   @OnWorkerEvent('active')
@@ -83,12 +105,6 @@ export class ImageProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   async onJobFailed(job: Job) {
-    this.logger.error(
-      `Job failed (id = ${job.id}, attempts ${job.attemptsMade})`,
-    );
-    // 'failed' state = no retries left (intermediate failures sit in
-    // 'delayed'). Exact terminal signal, no attempt-count arithmetic.
-    if ((await job.getState()) !== 'failed') return;
     const parsed = imageProcessingJobSchema.safeParse(job.data);
     if (!parsed.success) {
       this.logger.error(
@@ -96,7 +112,23 @@ export class ImageProcessor extends WorkerHost {
       );
       return;
     }
-    await this.frames.markPostFailed(parsed.data.postId);
-    this.logger.error(`Work ${parsed.data.postId} marked FAILED_PROCESSING`);
+
+    const state = await job.getState();
+    const isTerminal = state === 'failed';
+
+    await this.jobLogs.logAttempt({
+      jobId: job.id!,
+      postId: parsed.data.postId,
+      photoItemId: parsed.data.photoItemId,
+      attempt: job.attemptsMade,
+      maxAttempts: job.opts.attempts ?? 3,
+      status: isTerminal ? 'failed_terminal' : 'failed_retryable',
+      errorMessage: job.failedReason,
+    });
+
+    if (isTerminal) {
+      await this.frames.markPostFailed(parsed.data.postId);
+      this.logger.error(`Work ${parsed.data.postId} marked FAILED_PROCESSING`);
+    }
   }
 }

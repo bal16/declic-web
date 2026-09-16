@@ -16,13 +16,13 @@ import { newTestDb } from '../../test/helpers/db';
 describe('FrameRepository (pglite)', () => {
   let client: Awaited<ReturnType<typeof newTestDb>>['client'];
   let db: Awaited<ReturnType<typeof newTestDb>>['db'];
-  let repo: Awaited<ReturnType<typeof newTestDb>>['repo'];
+  let repo: Awaited<ReturnType<typeof newTestDb>>['frameRepo'];
 
   beforeAll(async () => {
     const ctx = await newTestDb();
     client = ctx.client;
     db = ctx.db;
-    repo = ctx.repo;
+    repo = ctx.frameRepo;
   });
 
   afterAll(async () => {
