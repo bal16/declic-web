@@ -7,6 +7,8 @@ import {
 
 import '../styles.css';
 
+import { ThemeProvider } from '@/components/theme-provider';
+
 export const Route = createRootRoute({
   component: RootComponent,
 });
@@ -21,7 +23,9 @@ function RootComponent(): React.JSX.Element {
         <HeadContent />
       </head>
       <body>
-        <Outlet />
+        <ThemeProvider>
+          <Outlet />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>

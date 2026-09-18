@@ -45,22 +45,24 @@ Work statuses: `PROCESSING`, `PENDING`, `APPROVED`, `REJECTED`, `FAILED_PROCESSI
 | `/og/$postId` | Server only (social crawler) | None. | Renders PNG preview: cover frame + title + photographer + `SERIES • N` badge + UKM CLIC UNNES branding. | No UI. Server route only. |
 | `/about` | Everyone | Public. | Static: exhibition intro, curatorial text, UKM CLIC UNNES profile. | No guard. |
 | `/login` | Everyone | Public. | Two buttons: Google, GitHub (OAuth). | If provider not configured: button disabled + tooltip. If all login disabled: banner `"Login saat ini dinonaktifkan — hanya lihat"`. Like/comment/upload buttons open Auth Wall modal showing same banner. |
-| `/dashboard` | `PHOTOGRAPHER`, `ADMIN` | Session required, else Auth Wall modal. Wrong role = 403 page. | Own works across exhibitions (all statuses), client-side exhibition filter dropdown. Card shows: exhibition badge, type badge (`SINGLE` / `SERIES • N`), status badge, per-frame progress, rejectionReason if `REJECTED` (owner only). | Withdraw button on `PENDING`, `REJECTED`, `PROCESSING`, `FAILED_PROCESSING`, `UNPUBLISHED`. Confirm dialog, then remove from list on success. |
+| `/dashboard` | `PHOTOGRAPHER`, `ADMIN` | Session required, else redirect `/login`. Logged-in `VIEWER` redirects `/`. (Auth Wall modal stays for in-surface actions.) | Own works across exhibitions (all statuses), client-side exhibition filter dropdown. Card shows: exhibition badge, type badge (`SINGLE` / `SERIES • N`), status badge, per-frame progress, rejectionReason if `REJECTED` (owner only). | Withdraw button on `PENDING`, `REJECTED`, `PROCESSING`, `FAILED_PROCESSING`, `UNPUBLISHED`. Confirm dialog, then remove from list on success. |
 | `/dashboard/upload` | `PHOTOGRAPHER`, `ADMIN` | Session + role. Blocked if exhibition `ARCHIVED` or `series_enabled=false` for SERIES. | Target exhibition picker (defaults to latest active). Mode toggle `SINGLE`/`SERIES` (auto-switch if >1 file dropped). Max files = `max_series_size` (default 10). | Flow: drag-drop -> validate -> local preview -> EXIF auto-fill -> parallel upload with progress -> create work. See §5.2. |
 | `/dashboard/edit/$postId` | Owner or `ADMIN` | Session + owner check. Blocked if `ARCHIVED`. | Work title/caption + frame order list. | Title/caption editable in `PENDING` and `FAILED_PROCESSING`. Frame reorder only in `PENDING`. See §5.2. |
-| `/admin/exhibitions` | `ADMIN` | Session + `ADMIN`. Else 403. | Exhibitions CRUD (no delete in v1). Fields: title, slug (unique), description, location, poster, start/end date, phase. Manual phase override. | Poster picker: file picker -> upload -> save key -> instant preview. See §5.5. |
-| `/admin/moderation` | `ADMIN`, `CURATOR` | Session + role. | Queue of works per exhibition filter. SERIES shows cover + frame strip. Buttons: Approve, Reject (reason required). | Whole work moderated as one unit. No per-frame approve. Revisi visual via Reject + reason. See §5.3. |
-| `/admin/curate` | `ADMIN`, `CURATOR` | Session + role. Disabled if exhibition `ARCHIVED`. | Canvas of works in curated order. Desktop/tablet: drag-drop grid. Mobile: ordered list with Move Up / Move Down + position number input. | Orders works only, not frames inside a series. Optimistic reorder + toast. See §5.3. |
-| `/admin/comments` | `ADMIN`, `CURATOR` | Session + role. | Flat comment list per exhibition. Toggle hide per comment. | v1 is flat list. No nested UI. |
-| `/admin/users` | `ADMIN` | Session + `ADMIN`. Own row dropdown disabled. | Searchable table: search name/email, role filter, per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), bulk-select promote. | Self change blocked with tooltip `"You cannot change your own role"`. Last-admin demote shows 409 error. |
-| `/admin/settings` | `ADMIN` | Session + `ADMIN`. | Three toggles: `series_enabled`, `threaded_comments_enabled`, `comments_enabled`. One number input: `max_series_size` (1-20). Link to audit trail. | Banner preview for `maintenance_mode`. See §7. |
+| `/exhibitions` | `ADMIN` | Session + `ADMIN`. Else 403. | Exhibitions CRUD (no delete in v1). Fields: title, slug (unique), description, location, poster, start/end date, phase. Manual phase override. | Poster picker: file picker -> upload -> save key -> instant preview. See §5.5. |
+| `/moderation` | `ADMIN`, `CURATOR` | Session + role. | Queue of works per exhibition filter. SERIES shows cover + frame strip. Buttons: Approve, Reject (reason required). | Whole work moderated as one unit. No per-frame approve. Revisi visual via Reject + reason. See §5.3. |
+| `/curate` | `ADMIN`, `CURATOR` | Session + role. Disabled if exhibition `ARCHIVED`. | Canvas of works in curated order. Desktop/tablet: drag-drop grid. Mobile: ordered list with Move Up / Move Down + position number input. | Orders works only, not frames inside a series. Optimistic reorder + toast. See §5.3. |
+| `/comments` | `ADMIN`, `CURATOR` | Session + role. | Flat comment list per exhibition. Toggle hide per comment. | v1 is flat list. No nested UI. |
+| `/users` | `ADMIN` | Session + `ADMIN`. Own row dropdown disabled. | Searchable table: search name/email, role filter, per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), bulk-select promote. | Self change blocked with tooltip `"You cannot change your own role"`. Last-admin demote shows 409 error. |
+| `/settings` | `ADMIN` | Session + `ADMIN`. | Three toggles: `series_enabled`, `threaded_comments_enabled`, `comments_enabled`. One number input: `max_series_size` (1-20). Link to audit trail. | Banner preview for `maintenance_mode`. See §7. |
 
 ## 3. Design Tokens (copy-paste, normative)
 
-Dark-only by lock (shadcn dual-mode scaffold). Structure follows shadcn default:
-`@custom-variant dark` + `@theme inline` + `:root` (upstream light defaults,
-kept unused) + `.dark` (gallery theme below, active). App always renders
-`<html class="dark">`. No theme toggle UI in v1. No light mode in v1.
+Dark-first with user override (shadcn dual-mode scaffold). Structure
+follows shadcn default: `@custom-variant dark` + `@theme inline` +
+`:root` (light defaults) + `.dark` (gallery theme below, active).
+App defaults to `<html class="dark">`; a `ModeToggle`
+(Light/Dark/System, `Shift+D` shortcut) is available in the panel
+header. System follows the OS preference.
 
 ```css
 @import "tailwindcss";
@@ -96,24 +98,24 @@ kept unused) + `.dark` (gallery theme below, active). App always renders
 Rules:
 
 - `--primary` orange: CTA, active state, focus ring only. Never large backgrounds.
-- Works/covers always sit on `.dark --background`. Never use `:root` light values in v1.
+- Works/covers render on the active theme background (dark-first default).
 - `SERIES` badge: `--secondary` bg + `--secondary-foreground` text.
 - Status badges: `Pending` yellow, `Approved` green, `Rejected` red.
 - `--muted-foreground`: EXIF metadata, secondary text.
 
 ## 4. Components (use these, do not invent)
 
-| Component | Source | Usage |
-|---|---|---|
-| `Dialog`, `Sheet` | shadcn / Base UI | Lightbox modal (carousel-aware), per-frame EXIF drawer, Auth Wall modal, confirm dialogs (withdraw, unpublish) |
-| `DropdownMenu`, `Select` | shadcn / Base UI | Sort (`Curated`, `Most Liked`, `Recent`), admin status/type filters, user role dropdown |
-| `Toast` / `Sonner` | shadcn | Feedback: upload ok, layout saved, per-frame errors, error-code toasts |
-| `Badge` | shadcn | Status, `SERIES • N`, `Auto-filled from EXIF` |
-| `GalleryGrid` | custom | Main grid container, cover-based justified layout |
-| `WorkCard` (`PhotoCard` alias ok) | custom | One work card: cover, hover overlay (title, photographer, Like, type badge) |
-| `SeriesCarousel` | custom | Frame carousel in lightbox/detail: dots, `1/N` indicator, per-frame metadata |
-| `FrameReorderList` | custom + dnd-kit | Sortable frame list in upload/edit for SERIES `item_order` |
-| `CurationCanvas` | custom + dnd-kit | Drag-drop grid of works for `/admin/curate` (desktop/tablet) |
+| Component                         | Source           | Usage                                                                                                          |
+| --------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `Dialog`, `Sheet`                 | shadcn / Base UI | Lightbox modal (carousel-aware), per-frame EXIF drawer, Auth Wall modal, confirm dialogs (withdraw, unpublish) |
+| `DropdownMenu`, `Select`          | shadcn / Base UI | Sort (`Curated`, `Most Liked`, `Recent`), admin status/type filters, user role dropdown                        |
+| `Toast` / `Sonner`                | shadcn           | Feedback: upload ok, layout saved, per-frame errors, error-code toasts                                         |
+| `Badge`                           | shadcn           | Status, `SERIES • N`, `Auto-filled from EXIF`                                                                  |
+| `GalleryGrid`                     | custom           | Main grid container, cover-based justified layout                                                              |
+| `WorkCard` (`PhotoCard` alias ok) | custom           | One work card: cover, hover overlay (title, photographer, Like, type badge)                                    |
+| `SeriesCarousel`                  | custom           | Frame carousel in lightbox/detail: dots, `1/N` indicator, per-frame metadata                                   |
+| `FrameReorderList`                | custom + dnd-kit | Sortable frame list in upload/edit for SERIES `item_order`                                                     |
+| `CurationCanvas`                  | custom + dnd-kit | Drag-drop grid of works for `/curate` (desktop/tablet)                                                   |
 
 Rules: never style raw HTML for the shadcn rows — always the component. Custom components compose primitives, never reimplement focus/keyboard the primitive already provides. Install Base UI per component as needed, never upfront.
 
@@ -155,7 +157,7 @@ Dashboard (`/dashboard`):
 - `FAILED_PROCESSING`: shows Retry (re-enqueues failed frames only) + title edit + withdraw. Reorder stays blocked until `PENDING`.
 - Withdraw button (see §5.7).
 
-### 5.3 Moderation queue + curation canvas (`/admin/moderation`, `/admin/curate`)
+### 5.3 Moderation queue + curation canvas (`/moderation`, `/curate`)
 
 Moderation queue:
 
@@ -171,7 +173,7 @@ Curation canvas:
 - Move calculates new order between neighbor works. Sends single reorder call `{postId, prevDisplayOrder, nextDisplayOrder}`. Optimistic reorder + toast `"Layout order saved"`, rollback on failure.
 - Disabled when exhibition `ARCHIVED`.
 
-### 5.4 Exhibition management (`/admin/exhibitions`)
+### 5.4 Exhibition management (`/exhibitions`)
 
 - Create/edit: `title`, `slug` (unique kebab-case), `description`, `location`, `poster`, `start_date`, `end_date`, `phase`. No delete in v1 (`ARCHIVED` is terminal; `DRAFT` for mistakes). Create generates ID. Slug collision = inline field error naming taken slug.
 - Manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`). Manual `ARCHIVED` triggers same freeze as cron.
@@ -194,7 +196,7 @@ Curation canvas:
 - In `ARCHIVED`: never-published works can still be withdrawn (cleanup path, no dead-end). `APPROVED`/`PUBLISHED` in `ARCHIVED` = frozen error.
 - During `PROCESSING` withdraw: allowed, worker jobs cancelled best-effort, spinner shown alongside button.
 
-### 5.7 Users + settings (`/admin/users`, `/admin/settings`)
+### 5.7 Users + settings (`/users`, `/settings`)
 
 Users table:
 
@@ -233,7 +235,7 @@ API wire messages stay English codes. Only the table above is user-facing Indone
 | Condition | UI behavior | API code (for toast branching) |
 |---|---|---|
 | Not logged in, clicks like/comment/upload | Uniform Auth Wall modal on every surface (gallery, lightbox, detail, dashboard, upload). Preserves state (file-drop, draft comment, pending like). Redirect to `/login` only for direct navigation to `/login`. | `UNAUTHENTICATED` (401) |
-| Logged in, insufficient role | 403 page. Routes: `/dashboard/*` requires `PHOTOGRAPHER` or `ADMIN`; `/admin/moderation`, `/admin/curate`, `/admin/comments` require `ADMIN` or `CURATOR`; `/admin/exhibitions`, `/admin/users`, `/admin/settings` require `ADMIN`. | `FORBIDDEN` (403) |
+| Logged in, insufficient role | Viewer on `/dashboard/*` redirects `/`. Admin area keeps the 403 page. Routes: `/dashboard/*` requires `PHOTOGRAPHER` or `ADMIN`; `/moderation`, `/curate`, `/comments` require `ADMIN` or `CURATOR`; `/exhibitions`, `/users`, `/settings` require `ADMIN`. | `FORBIDDEN` (403, admin area) |
 | Exhibition `ARCHIVED`, attempt upload/like-create/comment/reorder | Disable control + tooltip/banner from §6. Unlike stays enabled. Owner withdraw of never-published stays enabled. | `ARCHIVED` (403) |
 | `series_enabled=false`, attempt SERIES create | Hide SERIES toggle/batch UI. Toast on attempt. Existing SERIES readable. | `FEATURE_DISABLED` (403 for actions) |
 | `comments_enabled=false`, attempt comment | Disable comment inputs everywhere with frozen tooltip. Reads stay open. | `FEATURE_DISABLED` (403) |
@@ -277,7 +279,7 @@ I18n:
 
 Responsive:
 
-- [ ] Mobile-first. Gallery `1 col -> 2 -> justified`. Lightbox full-screen on mobile. `/admin/curate` canvas desktop/tablet, move up/down fallback on mobile.
+- [ ] Mobile-first. Gallery `1 col -> 2 -> justified`. Lightbox full-screen on mobile. `/curate` canvas desktop/tablet, move up/down fallback on mobile.
 - [ ] Images: plain `<img>` + lazy (first 4 high priority) + `sizes` + blurhash against layout shift.
 
 Motion:
@@ -337,7 +339,7 @@ Curator/Admin:
 
 Global:
 
-- [ ] Auth Wall modal uniform on all surfaces, preserves state; 403 page on wrong role; anon reads public; no-session write 401
+- [ ] Auth Wall modal uniform on in-surface actions, preserves state; direct nav without session redirects `/login`; viewer on `/dashboard/*` redirects `/`; 403 page on wrong role in admin area; anon reads public; no-session write 401
 - [ ] All toasts branch on `code`, never message text
 - [ ] States table §6 copy verbatim Indonesian
 - [ ] A11y/i18n/responsive/motion checklist §8 passes

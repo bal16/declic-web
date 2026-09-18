@@ -299,6 +299,92 @@ Replace `worker` with `api` or `web` to target other apps.
 * Measured on `src/` only — `test/` helpers and e2e are excluded.
 * Enforced at **release** (not per-PR CI). See
   [ADR-002](../adr/ADR-002-release-tagging.md) §2.
+* Bun caveat: coverage tracks **loaded files only** — a source file no
+  test imports is absent from the report (not 0%), so the gate can
+  pass while code is untested. Data-only modules picked up by a test
+  import (e.g. sample data validated against its schema) stay visible;
+  anything else needs a real test. See §11.
+
+## 11. Frontend testing (web)
+
+Bun + happy-dom + Testing Library. DOM env comes from `[test] preload`
+(`apps/web/bunfig.toml` → `test/setup.ts`): happy-dom globals,
+`IS_REACT_ACT_ENVIRONMENT`, `matchMedia` stub. Rules below are
+web-specific; tiers, naming, and doubles conventions above still apply.
+
+### Environment rules
+
+* Setup runs via **preload only**. Test files may import pure helpers
+  from it (`stubMatchMedia`) but must never depend on re-executing
+  registration — double `GlobalRegistrator.register()` swaps the
+  globals to a second realm and silently breaks prototype identity
+  (proven empirically: patching `Storage.prototype` stops affecting
+  `window.localStorage`).
+* `ScriptOnce` (TanStack router context) is mocked to `null` in
+  component tests — identical to client behavior; SSR emission is
+  covered by the `getThemeScript` unit test instead.
+
+### Sandboxing
+
+* Every component test file: `beforeEach` clears `localStorage`,
+  resets `documentElement` classes, re-stubs `matchMedia`;
+  `afterEach` runs Testing Library `cleanup()`.
+* No mutable module-level state in tested code — tests must be
+  order-independent.
+* `mock.module()` is **process-global**: one mock style per module
+  across the whole suite, or files bleed into each other.
+
+### Mocking boundaries
+
+| Mock (system boundary) | Never mock (the unit itself) |
+|---|---|
+| Router context the test doesn't exercise | Theme/guard resolution logic |
+| Browser APIs missing from happy-dom (`matchMedia`) | Component internal state (assert via UI) |
+| `fetch`/network (see below) | `localStorage` (happy-dom provides it; prototype patching is unreliable — inject instead, e.g. `readStoredTheme`) |
+| Timers entering a test | — |
+
+Mock at system boundaries, inject dependencies instead of patching
+globals.
+
+### Scope per area
+
+* **Pure lib** (theme helpers, guards once session is mockable, data
+  shapes): plain unit tests, no DOM. Highest density here.
+* **Hooks** (`useOrderedData`, `useIsMobile` + matchMedia stub):
+  unit-test via small probe renders — still unit tier.
+* **Components**: render + user-visible interaction (menu clicks,
+  keyboard shortcuts, persistence). One component + mocked deps is
+  the ceiling.
+* **E2E** (`test/`, real prod server): cross-page navigation, guard
+  redirect matrix, SSR, anything needing a real backend.
+
+### Anti-e2e boundaries (unit must NOT)
+
+1. No real network — a `fetch` to a live server (or `Bun.spawn`)
+   belongs in `test/`.
+2. No full `routeTree` — a test needing `RouterProvider` + the real
+   tree is e2e. Narrow exception: a hand-built minimal router
+   (memory history + 1–2 dummy routes).
+3. No real-time waiting — fake timers or `findBy*`; waiting on a
+   real async process is e2e.
+4. Assert behavior, not implementation — query by role/text. A test
+   that breaks on behavior-preserving refactors is too deep.
+5. Smell signals: setup > ~15 lines, >2 feature modules imported,
+   or assertions crossing page boundaries — trim or move to e2e.
+
+### Fetch strategy (TanStack Query)
+
+Manual `fetch` stubs per test, **not MSW** — until any trigger below
+fires. Rationale: web has no query consumers yet (pay-as-you-go);
+stub payloads are validated against the zod contracts (cheap
+anti-drift); cookie/session realism (MSW's real strength) only
+matters once Better Auth lands. Reduce repetition with one factory
+helper (`mockFetchJson` / `mockFetchCode`), never copy-pasted stubs.
+
+Adopt MSW when any trigger fires: (a) ≥3 features consume queries
+and stub boilerplate hurts; (b) first test needing realistic
+cookies/sessions/redirects; (c) centralized multi-endpoint handlers
+needed. Revisit at every auth-area touch.
 
 ---
 

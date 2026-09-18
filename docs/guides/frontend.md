@@ -5,7 +5,7 @@ tags:
   - declic
   - frontend
 status: draft
-updated: 2026-09-09
+updated: 2026-09-16
 ---
 
 # Frontend Guide (`apps/web`, TanStack Start)
@@ -19,30 +19,73 @@ How the web app is built: structure, data flow, guards, env, tests.
 
 ---
 
-## 1. Folder structure (feature-based, thin routes)
+## 1. Folder structure (per route area, thin routes)
+
+Target structure — implementation only reaches the `/` skeleton so far,
+everything else grows toward this (not a snapshot of the current state):
 
 ```text
 src/
 ├── router.tsx            # getRouter() factory + Register augmentation
-├── routes/               # THIN: route definition + composition only
-│   ├── index.tsx         # loader + <GalleryFeature/> (~20 lines)
-│   ├── post.$postId.tsx  # route masking for lightbox + <WorkDetailFeature/>
-│   └── dashboard/
-│       ├── index.tsx     # guard + <DashboardFeature/>
-│       └── upload.tsx    # guard + <UploadFeature/>
+├── routes/               # THIN: guard/meta + 1 feature, ≤ ~30 lines
+│   ├── __root.tsx        # outer layout: html/head/body (existing)
+│   ├── index.tsx         # / public gallery (existing, skeleton)
+│   ├── archive.tsx       # /archive — ARCHIVED list
+│   ├── exhibition.$slug.tsx  # /exhibition/$slug
+│   ├── post.$postId.tsx  # /post/$postId + lightbox mask
+│   ├── about.tsx         # /about
+│   ├── login.tsx         # /login — Google/GitHub
+│   ├── og.$postId.tsx    # /og/$postId server route (Satori)
+│   ├── _authed.tsx       # PATHLESS layout: beforeLoad session wall
+│   │                     # (anon → /login) + panel shell (Sidebar +
+│   │                     # role-driven nav + Header) + <Outlet/>
+│   ├── _authed/
+│   │   ├── dashboard/
+│   │   │   ├── index.tsx      # /dashboard (PHOTOGRAPHER|ADMIN, viewer → /)
+│   │   │   ├── upload.tsx     # /dashboard/upload (+flag/phase guard)
+│   │   │   └── edit.$postId.tsx  # /dashboard/edit/$postId (owner only)
+│   │   ├── _admin.tsx    # PATHLESS layout nested inside _authed:
+│   │                     # beforeLoad CURATOR|ADMIN + <Outlet/> (inherits shell)
+│   │   └── _admin/
+│   │       ├── moderation.tsx     # /moderation (ADMIN|CURATOR)
+│   │       ├── curate.tsx         # /curate (ADMIN|CURATOR)
+│   │       ├── comments.tsx       # /comments (ADMIN|CURATOR)
+│   │       ├── exhibitions.tsx    # /exhibitions (ADMIN only)
+│   │       ├── users.tsx          # /users (ADMIN only)
+│   │       └── settings.tsx       # /settings (ADMIN only)
 ├── routeTree.gen.ts      # generated AND committed (typecheck needs it)
-├── features/             # implementation per feature
-│   ├── gallery/          # components, hooks, queries, index.ts barrel
-│   ├── work-detail/
-│   ├── upload/
-│   ├── dashboard/
-│   ├── moderation/
-│   └── curate/
+├── features/             # implementation per area; exported via barrel
+│   ├── public/           # guard: public + Auth Wall for actions
+│   │   ├── gallery/      # GalleryGrid, WorkCard, search/sort,
+│   │   │                 # useInfiniteQuery(cursor, exhibitionId),
+│   │   │                 # blurhash, ARCHIVED banner
+│   │   └── work-detail/  # lightbox mask, SeriesCarousel, optimistic like,
+│   │                     # comment thread, per-frame EXIF drawer, OG cover+badge
+│   ├── photographer/     # guard: PHOTOGRAPHER|ADMIN
+│   │   ├── work-list/    # status, Withdraw (409 WITHDRAW_CLOSED),
+│   │   │                 # derived blurhash progress, rejectionReason,
+│   │   │                 # exhibition dropdown
+│   │   └── upload/       # dropzone SINGLE/SERIES, exifr, presigned batch,
+│   │                     # FrameReorderList (item_order)
+│   ├── admin/            # guard per subfolder (see routes/ above)
+│   │   ├── moderation/   # queue ?exhibitionId=, approve/reject + reason
+│   │   ├── curate/       # CurationCanvas dnd-kit, LexoRank reorder,
+│   │   │                 # move up/down fallback (mobile)
+│   │   ├── comments/     # is_hidden toggle, flat list v1
+│   │   ├── exhibitions/  # CRUD + poster picker
+│   │   ├── users/        # search/role/cursor table, bulk promote
+│   │   └── settings/     # flag toggles + max_series_size + banner preview
+│   └── shared/           # (optional) components/queries used by 3 areas —
+│                         # alternative: keep in public/gallery as the
+│                         # source of truth, never copy-paste
 ├── components/ui/        # shadcn-style copy-paste (Base UI primitives) only
 ├── lib/
 │   ├── env.ts            # VITE_* config (existing)
+│   ├── auth-client.ts    # better-auth/react client (when guards land)
+│   ├── query.ts          # QueryClient, 10s staleTime (when query lands)
 │   └── i18n/             # id.ts (v1), en.ts (later), t() accessor
-├── styles.css            # tokens (@theme inline) + Tailwind entry
+├── styles.css            # current shadcn scaffold; final gallery tokens
+│                         # follow once DESIGN §1 is implemented
 └── test/ (mirrors src)   # bun test, co-located *.test.ts
 ```
 
@@ -52,9 +95,23 @@ Rules (3, easy to remember):
    (guards), `head`/meta, then render one or two feature components.
    No business logic, no styling, no hooks beyond router-provided. If
    a route file passes ~30 lines, something leaked.
-2. **Feature = self-contained unit** — components + hooks + query
+   URL-less layouts use the underscore prefix (`_authed.tsx`,
+   `_authed/_admin.tsx`) — wrapper + `beforeLoad` only, no added path;
+   the component renders `<Outlet/>`. Exception: `_authed.tsx` also
+   owns the shared panel shell (sidebar + role nav + header), because
+   every authed area uses the identical shell — pages stay thin, the
+   shell lives once. Nesting rule: staff layout nests inside the
+   session layout (`_authed/_admin`), never as a sibling (see
+   [ADR-009](../adr/ADR-009-nested-rbac-layouts.md)). Page titles for
+   the shell header come from each page's `staticData.title`, read
+   via `useMatches()`.
+2. **Feature = one route area** — `public/` (public + Auth Wall),
+   `photographer/` (`PHOTOGRAPHER|ADMIN`), `admin/` (per subfolder:
+   `ADMIN|CURATOR` or `ADMIN`-only). Components + hooks + query
    options colocated, exported via `index.ts` barrel (mirrors the
-   backend `public-api.ts` pattern — one door per feature).
+   backend `public-api.ts` pattern — one door per feature). Cross-area
+   reuse (e.g. `WorkCard` in gallery + dashboard + moderation) moves
+   up to `components/ui/` or `features/shared/`, never duplicated.
 3. **One-way imports** — `routes → features → {ui, lib, contracts}`;
    feature-to-feature only via barrels; `ui`/`lib` never import
    features or routes.
@@ -91,21 +148,26 @@ sequenceDiagram
 ## 3. Guards + Auth Wall
 
 - `beforeLoad` on layout routes (fast path) + API guards as final
-  authority (UI guard never replaces API guard).
-- Not logged in → **uniform Auth Wall modal** on every surface
-  (gallery, lightbox, detail, dashboard, upload); modal preserves
-  state (file-drop, draft, pending like). Redirect to `/login` only
-  for direct navigation there.
-- Role gates: `/dashboard/*` → `PHOTOGRAPHER|ADMIN`; `/admin/*` →
-  `CURATOR|ADMIN` or `ADMIN` per route; insufficient role → 403 page.
-  Roles come from the session union in contracts (never raw strings).
+  authority (UI guard never replaces API guard). Guards compose by
+  nesting: `_authed` checks session, `_authed/_admin` checks staff
+  role on top (never re-checks session).
+- Direct navigation without session → redirect `/login` (not a
+  modal — the Auth Wall modal is for in-surface actions only:
+  like/comment/upload clicks, preserving file-drop, draft, pending
+  like). Redirect to `/login` only for direct navigation there.
+- Role gates: `/dashboard/*` → `PHOTOGRAPHER|ADMIN` (logged-in
+  `VIEWER` redirects `/`); staff pages → `CURATOR|ADMIN`, with
+  `exhibitions`/`users`/`settings` tightened to `ADMIN` per page;
+  insufficient role in the admin area → 403 page. Roles come from
+  the session union in contracts (`roleSchema`, never raw strings).
 
 ```mermaid
 flowchart TD
     NAV["navigation"] --> BL["beforeLoad (fast path)"]
-    BL -->|no session| MODAL["Auth Wall modal (state preserved)"]
+    BL -->|no session, direct nav| LOGIN["redirect /login"]
     BL -->|session| ROLE{"role sufficient?"}
-    ROLE -->|no| F403["403 page"]
+    ROLE -->|viewer on /dashboard| HOME["redirect /"]
+    ROLE -->|no, admin area| F403["403 page"]
     ROLE -->|yes| API["API guards — final authority"]
 ```
 
@@ -123,6 +185,8 @@ flowchart TD
   build output required first, see root `test:e2e` ordering).
 - Coverage follows the repo ≥90% release gate; web e2e covers
   gallery render + one authenticated flow when auth lands.
+- Frontend rules (DOM env, sandboxing, mocking boundaries, scope,
+  anti-e2e limits, fetch strategy): [testing.md](./testing.md) §11.
 
 ## 6. Branching into this app (mirrors!)
 

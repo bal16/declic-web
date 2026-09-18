@@ -132,7 +132,7 @@ reimplement focus/keyboard handling the primitive already provides.
 ## 5. Responsive + motion (standards)
 
 - **Breakpoints:** mobile-first; gallery `1 col → 2 → justified`;
-  lightbox full-screen on mobile; `/admin/curate` canvas desktop/tablet
+  lightbox full-screen on mobile; `/curate` canvas desktop/tablet
   with move up/down fallback on mobile (per [PRD-FE](../specs/PRD-FE.md) §2.3).
 - **Images:** plain `<img>` + `loading="lazy"` (`fetchpriority="high"`
   first 4) + responsive `sizes`; blurhash placeholder against CLS (no

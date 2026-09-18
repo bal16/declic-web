@@ -30,12 +30,12 @@ This document defines the technical specifications and user interface (UI) desig
 
 The web app serves **four roles** within a **single unified TanStack Start app** (TanStack Router file-based routes, SSR + streaming) with access separation based on **Role-Based Access Control (RBAC)** and **Session Guard** (`beforeLoad` on layout routes):
 
-| Role | Frontend Access | Guard |
-|---|---|---|
-| **Viewer** (default, incl. anon browsing) | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions) | Public, Auth Wall for actions |
-| **Photographer** | Personal dashboard, upload SINGLE/SERIES works, edit Pending works (reorder frames) | `SessionGuard` + `Role=PHOTOGRAPHER` |
-| **Curator** | Moderation per work, curation canvas (order works), comment moderation, audit read | `SessionGuard` + `Role=CURATOR` |
-| **Admin** | Everything a curator can do, plus exhibitions (create/edit/phase-override/poster, no delete in v1), user management, settings | `SessionGuard` + `Role=ADMIN` |
+| Role                                      | Frontend Access                                                                                                               | Guard                                |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Viewer** (default, incl. anon browsing) | Gallery of works, work detail/lightbox, likes & comments on works (login required for interactions)                           | Public, Auth Wall for actions        |
+| **Photographer**                          | Personal dashboard, upload SINGLE/SERIES works, edit Pending works (reorder frames)                                           | `SessionGuard` + `Role=PHOTOGRAPHER` |
+| **Curator**                               | Moderation per work, curation canvas (order works), comment moderation, audit read                                            | `SessionGuard` + `Role=CURATOR`      |
+| **Admin**                                 | Everything a curator can do, plus exhibitions (create/edit/phase-override/poster, no delete in v1), user management, settings | `SessionGuard` + `Role=ADMIN`        |
 
 A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N frames). Likes/comments/curation attach to the **work**; derivatives/blurhash/exif are per **frame**. Gallery grid shows a work as one card (cover = first frame).
 
@@ -47,15 +47,15 @@ A **work (post)** is either `SINGLE` (one `photo_items` row) or `SERIES` (2–N 
 
 ### 2.1 Public Area (Viewer)
 
-| Route | Description |
-|---|---|
-| `/` | **Gallery Home Page (latest exhibition)** — Immersive grid of **works from the latest `LIVE` exhibition** (fallback latest `ARCHIVED`; when neither exists — only `DRAFT`/`PRE_EVENT` — `200` empty-state "Pameran berikutnya sedang disiapkan."; resolved via `GET /api/exhibitions?limit=1` then `GET /api/posts` with the resolved `exhibitionId` (omitted `exhibitionId` also defaults to latest)). Shows exhibition header (title, poster, `startDate`/`endDate`, location) + justified layout by cover image, search (`title`/photographer), sorting (`Curated`, `Most Liked`, `Recent`). Filter `SINGLE`/`SERIES` pills optional. When latest is `ARCHIVED`, banner `"This exhibition is archived — browsing only"` and like/comment creation disabled (unlike stays enabled). |
-| `/archive` | **Archive List** — Grid/list of past `ARCHIVED` exhibitions (`GET /api/exhibitions?phase=ARCHIVED`) ordered by `start_date DESC`, with poster + title + date. |
-| `/exhibition/$slug` | **Exhibition Detail** — Gallery scoped to that `exhibitions.slug` (`GET /api/exhibitions/:slug` + `GET /api/posts?exhibition_slug=:slug`). Same grid/lightbox as `/` but header shows that exhibition’s metadata. `ARCHIVED` banner + frozen engagement if needed. |
-| `/post/$postId` + lightbox mask | **Work Lightbox (route-masked modal)** — Immersive modal over the grid without full page reload, synced with URL. Clicking a work navigates to the modal route while the URL bar keeps the gallery URL via TanStack Router **route masking**; refresh/share unmasks to `/post/$postId` detail. For `SERIES`, carousel of frames. Alias `/photo/$postId` → `/post/$postId`. Respects `ARCHIVED` freeze (like/comment buttons disabled with tooltip). |
-| `/post/$postId` | **Work Detail Standalone Page** — Fallback / direct link for individual works (includes `exhibition` breadcrumb). SEO-friendly & shareable (SSR + prerender). Shows all frames. Alias `/photo/$postId` → `/post/$postId`. |
-| `/og/$postId` (server route) | **Dynamic OpenGraph Image** — Social media preview rendered server-side as PNG (Satori + resvg, or `@vercel/og` on Vercel). For SERIES, uses cover frame + series badge + exhibition title. |
-| `/about` | **About Exhibition & CLIC** — Exhibition introduction page, curatorial description, and profile of UKM CLIC UNNES. |
+| Route                           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                             | **Gallery Home Page (latest exhibition)** — Immersive grid of **works from the latest `LIVE` exhibition** (fallback latest `ARCHIVED`; when neither exists — only `DRAFT`/`PRE_EVENT` — `200` empty-state "Pameran berikutnya sedang disiapkan."; resolved via `GET /api/exhibitions?limit=1` then `GET /api/posts` with the resolved `exhibitionId` (omitted `exhibitionId` also defaults to latest)). Shows exhibition header (title, poster, `startDate`/`endDate`, location) + justified layout by cover image, search (`title`/photographer), sorting (`Curated`, `Most Liked`, `Recent`). Filter `SINGLE`/`SERIES` pills optional. When latest is `ARCHIVED`, banner `"This exhibition is archived — browsing only"` and like/comment creation disabled (unlike stays enabled). |
+| `/archive`                      | **Archive List** — Grid/list of past `ARCHIVED` exhibitions (`GET /api/exhibitions?phase=ARCHIVED`) ordered by `start_date DESC`, with poster + title + date.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `/exhibition/$slug`             | **Exhibition Detail** — Gallery scoped to that `exhibitions.slug` (`GET /api/exhibitions/:slug` + `GET /api/posts?exhibition_slug=:slug`). Same grid/lightbox as `/` but header shows that exhibition’s metadata. `ARCHIVED` banner + frozen engagement if needed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `/post/$postId` + lightbox mask | **Work Lightbox (route-masked modal)** — Immersive modal over the grid without full page reload, synced with URL. Clicking a work navigates to the modal route while the URL bar keeps the gallery URL via TanStack Router **route masking**; refresh/share unmasks to `/post/$postId` detail. For `SERIES`, carousel of frames. Alias `/photo/$postId` → `/post/$postId`. Respects `ARCHIVED` freeze (like/comment buttons disabled with tooltip).                                                                                                                                                                                                                                                                                                                                   |
+| `/post/$postId`                 | **Work Detail Standalone Page** — Fallback / direct link for individual works (includes `exhibition` breadcrumb). SEO-friendly & shareable (SSR + prerender). Shows all frames. Alias `/photo/$postId` → `/post/$postId`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `/og/$postId` (server route)    | **Dynamic OpenGraph Image** — Social media preview rendered server-side as PNG (Satori + resvg, or `@vercel/og` on Vercel). For SERIES, uses cover frame + series badge + exhibition title.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `/about`                        | **About Exhibition & CLIC** — Exhibition introduction page, curatorial description, and profile of UKM CLIC UNNES.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### 2.2 Photographer Area (Contributor Dashboard)
 
@@ -73,12 +73,12 @@ Upload and dashboard lists are **scoped to `exhibitions.id`**. Header dropdown (
 
 | Route | Description | Guard |
 |---|---|---|
-| `/admin/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to Object Storage (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
-| `/admin/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Revisi visual diminta via `REJECT` + reason, fotografer perbaiki via withdraw + re-upload. | `ADMIN`, `CURATOR` |
-| `/admin/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover + stacked frames hint). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
-| `/admin/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
-| `/admin/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](../features/auth-rbac.md) §7. | `ADMIN` |
-| `/admin/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [feature-flags-site-settings](../features/feature-flags-site-settings.md) §6. | `ADMIN` |
+| `/exhibitions` | **Exhibition Management** — Create/edit `exhibitions` (`title`/`slug`/`description`/`location`/`poster`/`start_date`/`end_date`/`phase`) — no delete in v1 (`ARCHIVED` is terminal, `DRAFT` for mistakes). Create `cuid2`, edit slug unique, manual `ARCHIVED` transition. **Poster picker (dedicated endpoint):** file picker → `POST /api/admin/exhibitions/:id/poster-upload-url` → PUT to Object Storage (`posters/`) → `PATCH /api/admin/exhibitions/:id {posterS3Key}`; instant `URL.createObjectURL` preview before save (see [exhibition-lifecycle](../features/exhibition-lifecycle.md) §3). | `ADMIN` |
+| `/moderation` | **Moderation Queue** — Reviews incoming **works** per selected exhibition (filter `?exhibitionId=`), cover + frame strip for SERIES, quick **Approve** or **Reject** on whole work including `rejectionReason`. Revisi visual diminta via `REJECT` + reason, fotografer perbaiki via withdraw + re-upload. | `ADMIN`, `CURATOR` |
+| `/curate` | **Visual Layout Canvas** (Desktop/Tablet optimized) — Drag-and-drop canvas editor per exhibition for arranging public order of **works** (`posts.display_order` LexoRank scoped to `exhibition_id`). Series work as one card (cover + stacked frames hint). Mobile fallback: move up/down. Disabled when exhibition `ARCHIVED`. | `ADMIN`, `CURATOR` |
+| `/comments` | **Comment Moderation** — Monitors and filters work-level comment threads per exhibition (`is_hidden` toggle, flat list in v1). | `ADMIN`, `CURATOR` |
+| `/users` | **User Management (NEW for 1.0)** — Searchable table (`GET /api/admin/users`: `search` name/email, `role` filter, cursor pagination) + per-row role dropdown (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`) + bulk-select promote for launch onboarding → `PATCH /api/admin/users/:id/role` → toast + refetch. Own row's dropdown disabled (tooltip "You cannot change your own role"); last-ADMIN demotion surfaces `409 ROLE_CHANGE_DENIED`. Full spec: [auth-rbac](../features/auth-rbac.md) §7. | `ADMIN` |
+| `/settings` | **Settings (NEW for 1.0, minimal)** — Three flag toggles + `max_series_size` input over existing `PATCH` endpoints; `maintenance_mode` banner preview. Full spec: [feature-flags-site-settings](../features/feature-flags-site-settings.md) §6. | `ADMIN` |
 
 > All routes under `/dashboard/*` and `/admin/*` are protected by an **Auth Guard** (Middleware + HOC) that verifies the Better Auth session and `role` before rendering.
 
@@ -172,7 +172,7 @@ When files are dropped, `exifr` reads each file buffer locally (before upload):
 
 > Kurator tidak mengedit visual. Revisi visual diminta via `REJECT` + `rejectionReason`; fotografer perbaiki via withdraw + re-upload.
 
-### 3.3 Admin Visual Layout Editor (`/admin/curate`)
+### 3.3 Admin Visual Layout Editor (`/curate`)
 
 #### Drag-and-Drop Grid Canvas (`dnd-kit`, works)
 
@@ -269,7 +269,7 @@ Theme is designed with a dark backdrop like a photography exhibition space — *
 **Additional optimizations:**
 
 - `useInfiniteQuery` with `staleTime` + `cacheTime` for gallery of works — no excessive refetch when navigating back from Lightbox.
-- Route-level code splitting for `CurationCanvas` + `SeriesCarousel` (only loads `dnd-kit`/carousel code on `/admin/curate` and `/post/$postId`).
+- Route-level code splitting for `CurationCanvas` + `SeriesCarousel` (only loads `dnd-kit`/carousel code on `/curate` and `/post/$postId`).
 - Series lightbox prefetches next frame's `web` derivative.
 
 ---
@@ -299,16 +299,26 @@ const { data: session, isPending } = useSession();
 ### 6.3 Auth Guard Component
 
 ```typescript
-// apps/web/src/routes/_authed.tsx (layout route, TanStack Router)
-// beforeLoad checks the Better Auth session + role for all child routes:
-// - /dashboard/*  → requires session + role PHOTOGRAPHER|ADMIN
-// - /admin/moderation, /admin/curate, /admin/comments → role ADMIN|CURATOR
-// - /admin/exhibitions, /admin/users, /admin/settings → role ADMIN
-// - If not logged in → Auth Wall modal (uniform on every surface:
-//   gallery grid, lightbox, work detail, dashboard, upload). The modal
-//   preserves state (file-drop, draft comment, pending like). Redirect to
-//   /login happens only for direct navigation to /login itself.
-// - If insufficient role → 403 page
+// apps/web/src/routes/_authed.tsx (pathless session layout, TanStack Router)
+// beforeLoad runs requireSession(): anonymous → redirect /login.
+// Renders the shared panel shell (Sidebar + navByRole[role] + Header
+// titled from the leaf staticData.title) + <Outlet/>.
+//
+// apps/web/src/routes/_authed/_admin.tsx (pathless staff layout, nested)
+// beforeLoad runs requireRoles(['CURATOR', 'ADMIN']) — session is already
+// guaranteed by the parent, never re-checked. Renders <Outlet/> only.
+//
+// Per-page tightening (beforeLoad + staticData.title on each page):
+// - /dashboard/* → requireRoles(['PHOTOGRAPHER', 'ADMIN']); VIEWER → '/'
+// - /moderation, /curate, /comments → inherit CURATOR|ADMIN, no extra check
+// - /exhibitions, /users, /settings → requireRoles(['ADMIN'])
+// - Insufficient role in the admin area → 403 page
+// - In-surface actions (like/comment/upload clicks) keep the uniform Auth
+//   Wall modal (preserves file-drop, draft comment, pending like);
+//   redirect to /login happens only for direct navigation.
+// - Roles are z.infer<typeof roleSchema> from @declic/contracts.
+// - Until Better Auth lands, useSessionRole() is a stub returning 'ADMIN'
+//   (single swap point, marked TODO).
 ```
 
 - Guard is **two-layered**: `beforeLoad` on layout routes (fast redirect) + API `RolesGuard` + `FeatureFlagGuard` + `ExhibitionPhaseGuard` (final authority — UI guard does not replace API guard).

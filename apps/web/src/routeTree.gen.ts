@@ -10,33 +10,239 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as ArchiveRouteImport } from './routes/archive'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthedAdminRouteImport } from './routes/_authed/_admin'
+import { Route as ExhibitionSlugRouteImport } from './routes/exhibition.$slug'
+import { Route as OgPostIdRouteImport } from './routes/og.$postId'
+import { Route as PostPostIdRouteImport } from './routes/post.$postId'
+import { Route as AuthedAdminCommentsRouteImport } from './routes/_authed/_admin/comments'
+import { Route as AuthedAdminCurateRouteImport } from './routes/_authed/_admin/curate'
+import { Route as AuthedAdminExhibitionsRouteImport } from './routes/_authed/_admin/exhibitions'
+import { Route as AuthedAdminModerationRouteImport } from './routes/_authed/_admin/moderation'
+import { Route as AuthedAdminSettingsRouteImport } from './routes/_authed/_admin/settings'
+import { Route as AuthedAdminUsersRouteImport } from './routes/_authed/_admin/users'
+import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
+import { Route as AuthedDashboardUploadRouteImport } from './routes/_authed/dashboard/upload'
+import { Route as AuthedDashboardEditPostIdRouteImport } from './routes/_authed/dashboard/edit.$postId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedRoute = AuthedRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedAdminRoute = AuthedAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const ExhibitionSlugRoute = ExhibitionSlugRouteImport.update({
+  id: '/exhibition/$slug',
+  path: '/exhibition/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OgPostIdRoute = OgPostIdRouteImport.update({
+  id: '/og/$postId',
+  path: '/og/$postId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PostPostIdRoute = PostPostIdRouteImport.update({
+  id: '/post/$postId',
+  path: '/post/$postId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedAdminCommentsRoute = AuthedAdminCommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedAdminCurateRoute = AuthedAdminCurateRouteImport.update({
+  id: '/curate',
+  path: '/curate',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedAdminExhibitionsRoute = AuthedAdminExhibitionsRouteImport.update({
+  id: '/exhibitions',
+  path: '/exhibitions',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedAdminModerationRoute = AuthedAdminModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedAdminSettingsRoute = AuthedAdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedAdminUsersRoute = AuthedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthedAdminRoute,
+} as any)
+const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardUploadRoute = AuthedDashboardUploadRouteImport.update({
+  id: '/dashboard/upload',
+  path: '/dashboard/upload',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardEditPostIdRoute =
+  AuthedDashboardEditPostIdRouteImport.update({
+    id: '/dashboard/edit/$postId',
+    path: '/dashboard/edit/$postId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/archive': typeof ArchiveRoute
+  '/login': typeof LoginRoute
+  '/exhibition/$slug': typeof ExhibitionSlugRoute
+  '/og/$postId': typeof OgPostIdRoute
+  '/post/$postId': typeof PostPostIdRoute
+  '/comments': typeof AuthedAdminCommentsRoute
+  '/curate': typeof AuthedAdminCurateRoute
+  '/exhibitions': typeof AuthedAdminExhibitionsRoute
+  '/moderation': typeof AuthedAdminModerationRoute
+  '/settings': typeof AuthedAdminSettingsRoute
+  '/users': typeof AuthedAdminUsersRoute
+  '/dashboard/upload': typeof AuthedDashboardUploadRoute
+  '/dashboard/': typeof AuthedDashboardIndexRoute
+  '/dashboard/edit/$postId': typeof AuthedDashboardEditPostIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/archive': typeof ArchiveRoute
+  '/login': typeof LoginRoute
+  '/exhibition/$slug': typeof ExhibitionSlugRoute
+  '/og/$postId': typeof OgPostIdRoute
+  '/post/$postId': typeof PostPostIdRoute
+  '/comments': typeof AuthedAdminCommentsRoute
+  '/curate': typeof AuthedAdminCurateRoute
+  '/exhibitions': typeof AuthedAdminExhibitionsRoute
+  '/moderation': typeof AuthedAdminModerationRoute
+  '/settings': typeof AuthedAdminSettingsRoute
+  '/users': typeof AuthedAdminUsersRoute
+  '/dashboard/upload': typeof AuthedDashboardUploadRoute
+  '/dashboard': typeof AuthedDashboardIndexRoute
+  '/dashboard/edit/$postId': typeof AuthedDashboardEditPostIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteWithChildren
+  '/about': typeof AboutRoute
+  '/archive': typeof ArchiveRoute
+  '/login': typeof LoginRoute
+  '/_authed/_admin': typeof AuthedAdminRouteWithChildren
+  '/exhibition/$slug': typeof ExhibitionSlugRoute
+  '/og/$postId': typeof OgPostIdRoute
+  '/post/$postId': typeof PostPostIdRoute
+  '/_authed/_admin/comments': typeof AuthedAdminCommentsRoute
+  '/_authed/_admin/curate': typeof AuthedAdminCurateRoute
+  '/_authed/_admin/exhibitions': typeof AuthedAdminExhibitionsRoute
+  '/_authed/_admin/moderation': typeof AuthedAdminModerationRoute
+  '/_authed/_admin/settings': typeof AuthedAdminSettingsRoute
+  '/_authed/_admin/users': typeof AuthedAdminUsersRoute
+  '/_authed/dashboard/upload': typeof AuthedDashboardUploadRoute
+  '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
+  '/_authed/dashboard/edit/$postId': typeof AuthedDashboardEditPostIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/archive'
+    | '/login'
+    | '/exhibition/$slug'
+    | '/og/$postId'
+    | '/post/$postId'
+    | '/comments'
+    | '/curate'
+    | '/exhibitions'
+    | '/moderation'
+    | '/settings'
+    | '/users'
+    | '/dashboard/upload'
+    | '/dashboard/'
+    | '/dashboard/edit/$postId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/archive'
+    | '/login'
+    | '/exhibition/$slug'
+    | '/og/$postId'
+    | '/post/$postId'
+    | '/comments'
+    | '/curate'
+    | '/exhibitions'
+    | '/moderation'
+    | '/settings'
+    | '/users'
+    | '/dashboard/upload'
+    | '/dashboard'
+    | '/dashboard/edit/$postId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/about'
+    | '/archive'
+    | '/login'
+    | '/_authed/_admin'
+    | '/exhibition/$slug'
+    | '/og/$postId'
+    | '/post/$postId'
+    | '/_authed/_admin/comments'
+    | '/_authed/_admin/curate'
+    | '/_authed/_admin/exhibitions'
+    | '/_authed/_admin/moderation'
+    | '/_authed/_admin/settings'
+    | '/_authed/_admin/users'
+    | '/_authed/dashboard/upload'
+    | '/_authed/dashboard/'
+    | '/_authed/dashboard/edit/$postId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRoute: typeof AuthedRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  ArchiveRoute: typeof ArchiveRoute
+  LoginRoute: typeof LoginRoute
+  ExhibitionSlugRoute: typeof ExhibitionSlugRoute
+  OgPostIdRoute: typeof OgPostIdRoute
+  PostPostIdRoute: typeof PostPostIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +254,176 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/_admin': {
+      id: '/_authed/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedAdminRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/exhibition/$slug': {
+      id: '/exhibition/$slug'
+      path: '/exhibition/$slug'
+      fullPath: '/exhibition/$slug'
+      preLoaderRoute: typeof ExhibitionSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/og/$postId': {
+      id: '/og/$postId'
+      path: '/og/$postId'
+      fullPath: '/og/$postId'
+      preLoaderRoute: typeof OgPostIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/post/$postId': {
+      id: '/post/$postId'
+      path: '/post/$postId'
+      fullPath: '/post/$postId'
+      preLoaderRoute: typeof PostPostIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/_admin/comments': {
+      id: '/_authed/_admin/comments'
+      path: '/comments'
+      fullPath: '/comments'
+      preLoaderRoute: typeof AuthedAdminCommentsRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/_admin/curate': {
+      id: '/_authed/_admin/curate'
+      path: '/curate'
+      fullPath: '/curate'
+      preLoaderRoute: typeof AuthedAdminCurateRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/_admin/exhibitions': {
+      id: '/_authed/_admin/exhibitions'
+      path: '/exhibitions'
+      fullPath: '/exhibitions'
+      preLoaderRoute: typeof AuthedAdminExhibitionsRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/_admin/moderation': {
+      id: '/_authed/_admin/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof AuthedAdminModerationRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/_admin/settings': {
+      id: '/_authed/_admin/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthedAdminSettingsRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/_admin/users': {
+      id: '/_authed/_admin/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthedAdminUsersRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/dashboard/': {
+      id: '/_authed/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthedDashboardIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/upload': {
+      id: '/_authed/dashboard/upload'
+      path: '/dashboard/upload'
+      fullPath: '/dashboard/upload'
+      preLoaderRoute: typeof AuthedDashboardUploadRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/edit/$postId': {
+      id: '/_authed/dashboard/edit/$postId'
+      path: '/dashboard/edit/$postId'
+      fullPath: '/dashboard/edit/$postId'
+      preLoaderRoute: typeof AuthedDashboardEditPostIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
+interface AuthedAdminRouteChildren {
+  AuthedAdminCommentsRoute: typeof AuthedAdminCommentsRoute
+  AuthedAdminCurateRoute: typeof AuthedAdminCurateRoute
+  AuthedAdminExhibitionsRoute: typeof AuthedAdminExhibitionsRoute
+  AuthedAdminModerationRoute: typeof AuthedAdminModerationRoute
+  AuthedAdminSettingsRoute: typeof AuthedAdminSettingsRoute
+  AuthedAdminUsersRoute: typeof AuthedAdminUsersRoute
+}
+
+const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
+  AuthedAdminCommentsRoute: AuthedAdminCommentsRoute,
+  AuthedAdminCurateRoute: AuthedAdminCurateRoute,
+  AuthedAdminExhibitionsRoute: AuthedAdminExhibitionsRoute,
+  AuthedAdminModerationRoute: AuthedAdminModerationRoute,
+  AuthedAdminSettingsRoute: AuthedAdminSettingsRoute,
+  AuthedAdminUsersRoute: AuthedAdminUsersRoute,
+}
+
+const AuthedAdminRouteWithChildren = AuthedAdminRoute._addFileChildren(
+  AuthedAdminRouteChildren,
+)
+
+interface AuthedRouteChildren {
+  AuthedAdminRoute: typeof AuthedAdminRouteWithChildren
+  AuthedDashboardUploadRoute: typeof AuthedDashboardUploadRoute
+  AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
+  AuthedDashboardEditPostIdRoute: typeof AuthedDashboardEditPostIdRoute
+}
+
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedAdminRoute: AuthedAdminRouteWithChildren,
+  AuthedDashboardUploadRoute: AuthedDashboardUploadRoute,
+  AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
+  AuthedDashboardEditPostIdRoute: AuthedDashboardEditPostIdRoute,
+}
+
+const AuthedRouteWithChildren =
+  AuthedRoute._addFileChildren(AuthedRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRoute: AuthedRouteWithChildren,
+  AboutRoute: AboutRoute,
+  ArchiveRoute: ArchiveRoute,
+  LoginRoute: LoginRoute,
+  ExhibitionSlugRoute: ExhibitionSlugRoute,
+  OgPostIdRoute: OgPostIdRoute,
+  PostPostIdRoute: PostPostIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

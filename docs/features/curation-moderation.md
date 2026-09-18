@@ -40,7 +40,7 @@ scope)
 reads `created_at`; neither reads `display_order`). There is exactly one
 rank order per exhibition (global, not per-filter): any neighbor pair
 yields a valid rank, and neighbors are interpreted in curated sequence
-(the `/admin/curate` canvas is the curated view, so this holds by
+(the `/curate` canvas is the curated view, so this holds by
 construction — including drags inside a filter).
 
 **Validation:** any non-deleted status may be ranked (effect lands when
@@ -140,7 +140,7 @@ audit log. Query params: `targetId`
 targetId, payload, createdAt}], nextCursor }`. Powers the phase-change
 trail; retention unbounded for 1.0.
 
-## 6. Frontend (`/admin/moderation`, `/admin/curate`, `/admin/comments`)
+## 6. Frontend (`/moderation`, `/curate`, `/comments`)
 
 Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §2.3/§3.3):
 

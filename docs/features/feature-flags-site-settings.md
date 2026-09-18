@@ -114,7 +114,7 @@ current value. Emits `AuditRequestedEvent` (`action: site_settings.update`).
   reusing the `ARCHIVED` frozen UI (see [engagement](./engagement.md) §5); reads
   remain. No new endpoint — status comes from the cached
   `GET /api/feature-flags`.
-- **`/admin/settings` (IN for 1.0, minimal):** three toggles
+- **`/settings` (IN for 1.0, minimal):** three toggles
   (`series_enabled`, `threaded_comments_enabled`, `comments_enabled`)
   plus one number input
   (`max_series_size` 1–20) over the existing `PATCH` endpoints;
@@ -160,4 +160,4 @@ Retirement is verified by `grep` finding no reference to the retired key.
 - [ ] Lower limit `10`→`5` → old 10-frame SERIES still valid
 - [ ] Toggle invalidates cache immediately (no 10s wait)
 - [ ] `GET` endpoints carry CDN cache headers
-- [ ] `/admin/settings` toggles round-trip via `PATCH` + audit rows appear
+- [ ] `/settings` toggles round-trip via `PATCH` + audit rows appear

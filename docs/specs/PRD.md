@@ -148,9 +148,9 @@ Each `exhibitions` row has its own lifecycle; **root `/` always renders the late
 
 - Log in via Google or GitHub OAuth (same auth system, elevated role).
 - Everything a curator can do (see §4.4), plus:
-- Manage **exhibitions** at `/admin/exhibitions` — create/edit `title`/`slug`/`start_date`/`end_date`/`location`/`poster`, manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`), slug unique. Creation auto-generates `cuid2` id.
-- Manage **users** at `/admin/users` — role elevation (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), self/last-admin guards.
-- Toggle **feature flags** and **site settings** at `/admin/settings`.
+- Manage **exhibitions** at `/exhibitions` — create/edit `title`/`slug`/`start_date`/`end_date`/`location`/`poster`, manual phase override (`PRE_EVENT`/`LIVE`/`ARCHIVED`), slug unique. Creation auto-generates `cuid2` id.
+- Manage **users** at `/users` — role elevation (`VIEWER`/`PHOTOGRAPHER`/`CURATOR`/`ADMIN`), self/last-admin guards.
+- Toggle **feature flags** and **site settings** at `/settings`.
 - Manage the pre-event → archive transition — scheduled via `end_date` cron; manual override allowed.
 
 ### 4.4 Curator

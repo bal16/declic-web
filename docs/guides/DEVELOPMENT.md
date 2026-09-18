@@ -236,7 +236,7 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
    assume a migrated DB), then seed.
 2. Log in via OAuth (or stub), upload a SINGLE or SERIES work from `/dashboard/upload` (presigned PUT straight to S3 Compatible Object Storage uploads, then `POST /api/posts` enqueues one job per frame).
 3. Watch the worker generate thumbnail/web/lightbox derivatives + blurhash; the work flips `PROCESSING → PENDING`.
-4. Approve in `/admin/moderation`, check ordering in `/admin/curate`, browse at `/`.
+4. Approve in `/moderation`, check ordering in `/curate`, browse at `/`.
 
 ### 5.5 Branching (issues → branch → PR → squash)
 

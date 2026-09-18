@@ -15,7 +15,7 @@ updated: 2026-09-07
 **Status:** Specced ([PRD](../specs/PRD.md) 0.4-draft) — not implemented
 **Owner modules:** `exhibitions`, `queue` (scheduler), `audit`
 **Related:** [PRD-API](../specs/PRD-API.md) §2.2 (schema), §4.0 (error contract),
-[PRD-FE](../specs/PRD-FE.md) §2.1/§2.3 (gallery + `/admin/exhibitions`), [db-schema](../data/db-schema.md),
+[PRD-FE](../specs/PRD-FE.md) §2.1/§2.3 (gallery + `/exhibitions`), [db-schema](../data/db-schema.md),
 [gallery-discovery](./gallery-discovery.md) (scoped reads), [engagement](./engagement.md) (freeze)
 
 ---
@@ -133,14 +133,14 @@ withdraw of never-published works stays `204` (cleanup path, see
 [withdraw-work](./withdraw-work.md) §2) — the freeze protects public
 content, and an unpublished work has none.
 
-## 6. Frontend (`/`, `/archive`, `/exhibition/$slug`, `/admin/exhibitions`)
+## 6. Frontend (`/`, `/archive`, `/exhibition/$slug`, `/exhibitions`)
 
 Summary (full UI spec: [PRD-FE](../specs/PRD-FE.md) §2.1/§2.3):
 
 - `/` resolves latest via `GET /api/exhibitions?limit=1` then gallery;
   exhibition header (title, poster, dates, location); `ARCHIVED` banner
   - disabled engagement when applicable.
-- `/admin/exhibitions`: CRUD + **poster picker** (dedicated presign →
+- `/exhibitions`: CRUD + **poster picker** (dedicated presign →
   PUT → `PATCH {poster_s3_key}`, instant preview) + manual phase
   override + scheduler status hint.
 

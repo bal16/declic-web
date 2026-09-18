@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { ModeToggle } from '@/components/mode-toggle';
 import { getApiUrl } from '@/lib/env';
 
 export const Route = createFileRoute('/')({
@@ -16,6 +17,7 @@ function HomePage(): React.JSX.Element {
       <p>
         <small>API: {getApiUrl()}</small>
       </p>
+      <ModeToggle />
     </main>
   );
 }

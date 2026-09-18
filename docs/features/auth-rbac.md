@@ -182,10 +182,10 @@ role='ADMIN' WHERE email='...'`). This is the *only* role change
 allowed outside the API. No seed admin, no invite flow in 1.0.
 Launch runbook: collect photographer emails → each logs in once via
 OAuth (creating `VIEWER` rows) → admin bulk-promotes to
-`PHOTOGRAPHER` from `/admin/users` (or a one-off script over the same
+`PHOTOGRAPHER` from `/users` (or a one-off script over the same
 `PATCH` endpoint).
 
-## 7. Frontend (`/admin/users`, NEW for 1.0)
+## 7. Frontend (`/users`, NEW for 1.0)
 
 Summary (route to be added in [PRD-FE](../specs/PRD-FE.md) §2.3): searchable table
 (`GET /api/admin/users`) + per-row role dropdown + bulk-select promote
@@ -195,8 +195,8 @@ own role"); `last_admin` demotion attempt surfaces the `409` message.
 Requires `ADMIN` (route guard + API guard).
 
 Route guards: `/dashboard/*` → session + `PHOTOGRAPHER|ADMIN`;
-`/admin/*` → session + `ADMIN`, except artwork routes
-(`/admin/moderation`, `/admin/curate`, `/admin/comments`) which allow
+staff pages → session + `ADMIN`, except artwork routes
+(`/moderation`, `/curate`, `/comments`) which allow
 `ADMIN|CURATOR` (see [PRD-FE](../specs/PRD-FE.md) §2.3).
 
 ## 8. Worker
@@ -234,7 +234,7 @@ runtime-only (never persisted).
 - [ ] Non-admin (incl. CURATOR) calls either endpoint → `403`
 - [ ] New ADMIN/CURATOR can immediately use their routes (cache
   invalidated — no stale-role delay beyond one request)
-- [ ] CURATOR cannot reach `/admin/users`, flags, settings, exhibitions
+- [ ] CURATOR cannot reach `/users`, flags, settings, exhibitions
   CRUD → `403`
 - [ ] One-row change in `ROLE_MATRIX` flips exactly one rule (no stray
   literals — grep `ADMIN.*CURATOR` outside the matrix finds nothing)

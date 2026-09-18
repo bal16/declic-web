@@ -1,0 +1,11 @@
+# Web-local test config. Root bunfig.toml [test] is not consulted for
+# runs from this dir, so preload + coverage scoping live here.
+[test]
+# DOM environment for component tests (*.test.tsx under src/).
+# Preload runs before every `bun test` invocation from this dir,
+# including the coverage gate (scripts/check-coverage.ts runs
+# `bun test --coverage ... src/` directly, bypassing package.json scripts).
+preload = ["./test/setup.ts"]
+# App coverage measures app code only: e2e tests under test/ must not
+# dilute per-app numbers.
+coveragePathIgnorePatterns = ["**/packages/**", "**/test/**"]
