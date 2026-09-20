@@ -5,11 +5,13 @@ import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../src/app.module';
+import { setupTestEnv } from './helpers/test-env';
 
 // End-to-end: the Scalar API reference is served outside the /api prefix
 // (grilled decision: GET /docs, all environments). Companion to
 // health.e2e.test.ts — one file per concern.
 // Run: bun run test:e2e
+setupTestEnv();
 describe('API docs e2e', () => {
   let app: INestApplication;
   let baseUrl: string;

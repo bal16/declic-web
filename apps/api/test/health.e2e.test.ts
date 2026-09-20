@@ -5,10 +5,12 @@ import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from '../src/app.module';
+import { setupTestEnv } from './helpers/test-env';
 
 // End-to-end: boots the real AppModule over real HTTP (Express on Bun)
 // and exercises it with fetch — no supertest/superagent needed.
 // Run: bun run test:e2e   (unit tests stay under src/, see package.json)
+setupTestEnv();
 describe('API e2e', () => {
   let app: INestApplication;
   let baseUrl: string;

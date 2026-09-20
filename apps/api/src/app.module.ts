@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './modules/auth/auth.module';
 import { ExamplesModule } from './modules/examples/examples.module';
 
 // Base module: global config + health only.
@@ -10,7 +11,11 @@ import { ExamplesModule } from './modules/examples/examples.module';
 // auth, users, exhibitions, posts/photo-items, curation, moderation,
 // engagement, storage, queue, feature-flags, site-settings, audit.
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), ExamplesModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    AuthModule,
+    ExamplesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

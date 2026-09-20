@@ -7,11 +7,13 @@ import { ZodValidationPipe } from 'nestjs-zod';
 
 import { AppModule } from '../src/app.module';
 import { setupDocs } from '../src/docs';
+import { setupTestEnv } from './helpers/test-env';
 
 // End-to-end for the living EXAMPLE module: full HTTP round-trips proving
 // the contracts → DTO → pipe → Swagger chain. Delete with the module when
 // the real posts module lands.
 // Run: bun run test:e2e
+setupTestEnv();
 describe('Examples e2e', () => {
   let app: INestApplication;
   let baseUrl: string;

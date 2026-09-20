@@ -8,7 +8,10 @@ import { PinoNestLogger, requestLoggingMiddleware } from './logger';
 
 async function bootstrap(): Promise<void> {
   // bufferLogs: hold early boot logs until pino takes over below.
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    bodyParser: false,
+  });
   const logger = new PinoNestLogger('Bootstrap');
   app.useLogger(logger);
   app.use(requestLoggingMiddleware);

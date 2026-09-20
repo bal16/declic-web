@@ -4,11 +4,13 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
+import { setupTestEnv } from '../test/helpers/test-env';
 import { AppController } from './app.controller';
 import { AppModule } from './app.module';
 
 // Proves the NestJS DI graph (decorator metadata included) resolves
 // under the Bun test runner — the foundation every module test builds on.
+setupTestEnv();
 describe('AppController (DI)', () => {
   let app: INestApplication | undefined;
 
