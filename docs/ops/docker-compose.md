@@ -11,16 +11,21 @@ status: living
 
 # Docker Compose Stack
 
-Local dev stack for Déclic: Postgres + Redis + MinIO plus the three
-Bun services (`api`, `worker`, `web`). Production parity comes from the
-same images (`apps/*/Dockerfile`, see [DEVELOPMENT](../guides/DEVELOPMENT.md) §9).
+Local dev stack for Déclic: Postgres + Redis + Silo (S3-compatible
+MinIO fork) plus the three Bun services (`api`, `worker`, `web`).
+Production parity comes from the same images (`apps/*/Dockerfile`,
+see [DEVELOPMENT](../guides/DEVELOPMENT.md) §9).
+
+> [!note] CI uses the same pinned Silo image as this dev stack
+> (see [ADR-010](../adr/ADR-010-s3-backends.md) §7 for why the
+> LocalStack split was reverted).
 
 | Service      | Image                | Ports                     | Depends on                            |
 | ------------ | -------------------- | ------------------------- | ------------------------------------- |
 | `postgres`   | `postgres:16-alpine` | `5432`                    | — (healthy: `pg_isready`)             |
 | `redis`      | `redis:7-alpine`     | `6379`                    | — (healthy: `ping`)                   |
-| `minio`      | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | `9000` S3, `9001` console | —                                     |
-| `minio-init` | `minio/mc:RELEASE.2025-08-13T08-35-41Z`    | —                         | `minio` healthy (creates bucket once) |
+| `minio`      | `pgsty/silo:RELEASE.2026-09-16T00-00-00Z` | `9000` S3, `9001` console | —                                     |
+| `minio-init` | `pgsty/mc:RELEASE.2026-09-16T00-00-00Z`    | —                         | `minio` healthy (creates bucket once) |
 | `api`        | `oven/bun:1.4.2`     | `3001`                    | postgres, redis, minio healthy        |
 | `worker`     | `oven/bun:1.4.2`     | —                         | redis, minio healthy                  |
 | `web`        | `oven/bun:1.4.2`     | `3000`                    | `api`                                 |
@@ -103,8 +108,11 @@ services:
       - declic-net
 
   # ── Object storage (S3-compatible, dev/prod parity) ───────────
+  # Silo: community-maintained MinIO fork (drop-in — same S3 API,
+  # MINIO_* env, ports, on-disk format). Pinned RELEASE tag only;
+  # quay.io/minio is dead (see ADR-010). CI uses the same Silo image.
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -116,7 +124,7 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "silo", "healthcheck", "ready"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -125,7 +133,7 @@ services:
 
   # One-off: auto-create the app's bucket on first startup
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: docker.io/pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       minio:
         condition: service_healthy

@@ -10,7 +10,7 @@ status: living
 ---
 # Development & Deployment Guide (Monorepo + C1 Mirrors)
 
-**Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · MinIO (S3-compatible)
+**Stack:** Bun 1.4 · TanStack Start (web) · NestJS (api, worker) · PostgreSQL · Redis (BullMQ) · Silo (S3-compatible MinIO fork)
 **Repo decision:** [ADR-001](../adr/ADR-001-monorepo-mirror.md) (source of truth `bal16/declic`, read-only mirrors per app)
 **Release decision:** [ADR-002](../adr/ADR-002-release-tagging.md) (single `vX.Y.Z` tag, rc-only, deploy deferred)
 **Infra spec:** `docker-compose.yml`, `env.example` · **Schema:** [db-schema](../data/db-schema.md) · **Seeds:** `seed.ts`
@@ -63,7 +63,7 @@ declic/                              # bal16/declic (private monorepo)
 │       │                           # image-processing/ (consumer, transform,
 │       │                           # blurhash, variants, repository, storage),
 │       │                           # common/ (config, job-options)
-│       └── test/e2e/pipeline.e2e.test.ts # real Redis/MinIO/Postgres acceptance (T1-T4)
+│       └── test/e2e/pipeline.e2e.test.ts # real Redis/S3/Postgres acceptance (T1-T4)
 ├── packages/
 │   ├── contracts/                   # @declic/contracts — zod (src/index.ts, src/posts.ts)
 │   ├── db/                          # @declic/db — (next) Drizzle schema + seed from docs/data/seed.ts
@@ -123,8 +123,8 @@ cp .env.example .env
 |---|---|---|
 | `POSTGRES_USER/PASSWORD/DB`, `DATABASE_URL` | postgres, api, worker | `DATABASE_URL` points at the `postgres` service name inside Compose |
 | `REDIS_URL` | api, worker | Points at the `redis` service name inside Compose |
-| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | minio | Dev defaults `minioadmin/minioadmin`, bucket `declic` |
-| `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for MinIO; endpoint is localhost outside Compose |
+| `MINIO_ROOT_USER/PASSWORD`, `S3_BUCKET` | silo (MinIO-compatible) | Dev defaults `minioadmin/minioadmin`, bucket `declic` |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY/SECRET_KEY`, `S3_FORCE_PATH_STYLE` | api, worker | Path-style required for S3-compatible storage; endpoint is localhost outside Compose |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | api | URL is `http://localhost:3001` in dev |
 | `GOOGLE_CLIENT_ID/SECRET`, `GITHUB_CLIENT_ID/SECRET` | api | Empty = OAuth login disabled, rest of app still runs |
 | `VITE_API_URL`, `VITE_BETTER_AUTH_URL` | web | `http://localhost:3001` in dev (`VITE_` prefix = client-exposed) |
@@ -149,11 +149,11 @@ Dependency convention: libraries use caret ranges (`^`, one range shared across 
 
 ### 5.2 Infra via Compose, apps on host (default) or full-stack in containers
 
-The stack (postgres 5432, redis 6379, minio 9000+9001, api 3001, worker, web 3000) is specified in `docs/ops/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
+The stack (postgres 5432, redis 6379, silo 9000+9001, api 3001, worker, web 3000) is specified in `docs/ops/docker-compose.yml` and materialized at root `docker-compose.yml` via `bun run sync:compose` (root keeps its own header; body must match the spec — enforced by `bun run sync:compose --check` in release verify; edit the spec, never the root body). Services `api`/`worker`/`web` carry `profiles: ["apps"]`, so the default is **infra only**:
 
 ```bash
 cp .env.example .env          # once
-docker compose up -d          # postgres + redis + minio (+ one-off minio-init)
+docker compose up -d          # postgres + redis + silo (+ one-off minio-init)
 bun run --filter @declic/api dev   # apps on host, ports free (§5.3)
 ```
 
@@ -214,10 +214,10 @@ Cross-cutting changes (schema, DTO, flag keys) are a single PR touching `package
 * E2E (`test/`, `bun run test:e2e`): full module graph boot proving
   aggregate behavior. `api`/`web` stay service-free (in-memory HTTP
   round-trips; web needs build output first). `worker` uses real
-  Redis/MinIO/Postgres — it runs in CI **with services** (postgres,
-  redis, minio + bucket bootstrap in `ci.yml`/`release.yml`; minio
-  image pinned to `docs/ops/docker-compose.yml` for dev parity) after
-  unit passes, and locally via `docker compose up -d`. Worker
+   Redis/S3/Postgres — it runs in CI **with services** (postgres,
+   redis, Silo + bucket bootstrap in `ci.yml`/`release.yml`; same
+   pinned image as the dev stack per [ADR-010](../adr/ADR-010-s3-backends.md))
+   after unit passes, and locally via `docker compose up -d`. Worker
   end-to-end acceptance (`test/e2e/pipeline.e2e.test.ts` T1-T4) lives
   here.
 * Tests self-contain dummy env via the shared `setupTestEnv()` helper
@@ -364,7 +364,7 @@ From [PRD](../specs/PRD.md) §8.5: web and API must share one registrable domain
 | Per-app oxlint config ignored | Nested `.oxlintrc.json` files are silently ignored (verified 1.81) | Express per-app rules in root `overrides`, never nested files |
 | `podman build` fails resolving `oven/bun` | Short-name needs `registries.conf` | Dockerfiles already use fully-qualified `docker.io/oven/bun:1.4.2` |
 | Web login loops / session missing in prod | Cross-domain cookie treated as third-party | Apply §9.3: same registrable domain + `trustedOrigins`, or `/api/*` proxy |
-| Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), MinIO key exists; retry the failed frame job |
+| Uploads stuck in `PROCESSING` | Worker down, Redis unreachable, or one frame failing | Check worker logs, BullMQ failed set (DLQ), S3 key exists; retry the failed frame job |
 | Object Storage presign 403 | Wrong `S3_ENDPOINT` / credentials / bucket missing | Verify `.env`, `minio-init` bucket creation, `S3_FORCE_PATH_STYLE=true` |
 
 ---

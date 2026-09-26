@@ -60,11 +60,14 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # S3 backend for CI — Silo, the same drop-in MinIO fork used by
+      # dev compose (ADR-010 fallback C: LocalStack's unified image
+      # requires a paid auth token since 2026.03.0, exit 55 without it).
+      # Pin immutable RELEASE tags only.
       minio:
-        # Keep image in sync with docs/ops/docker-compose.yml (dev parity).
-        image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-        # Service containers run the image default CMD (bare `minio` =
-        # help-text exit); pass the compose start command explicitly.
+        image: docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+        # Service containers run the image default CMD; pass the server
+        # start command explicitly (same as compose spec).
         command: server /data --console-address ":9001"
         env:
           MINIO_ROOT_USER: minioadmin
@@ -72,7 +75,7 @@ jobs:
         ports:
           - 9000:9000
         options: >-
-          --health-cmd "mc ready local"
+          --health-cmd "silo healthcheck ready"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -90,7 +93,7 @@ jobs:
       - name: Install (frozen lockfile)
         run: bun install --frozen-lockfile
 
-      - name: Create MinIO bucket
+      - name: Create S3 bucket (Silo)
         env:
           AWS_ACCESS_KEY_ID: minioadmin
           AWS_SECRET_ACCESS_KEY: minioadmin

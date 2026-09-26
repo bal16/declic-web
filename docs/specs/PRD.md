@@ -230,7 +230,7 @@ just in the frontend UI. Runtime feature flags (`feature_flags` table, row-per-f
 | Backend API | **NestJS** on Bun | Modular structure: auth, photos, moderation, layout, comments/likes |
 | Worker | **NestJS** on Bun, `@nestjs/bullmq` | Consumes image-processing jobs asynchronously |
 | Database | **PostgreSQL** (self-hosted via Docker) | Relational data: users, exhibitions, posts, photo_items, likes, comments, ordering, audit logs |
-| Object storage | **MinIO** (self-hosted, S3-compatible) | Chosen over LocalStack for dev/prod parity — same tool in dev and production; stores one original per `photo_items` + poster per `exhibitions` |
+| Object storage | **Silo** (MinIO fork, self-hosted, S3-compatible) | Chosen over LocalStack for dev/prod parity — same tool in dev and production; stores one original per `photo_items` + poster per `exhibitions` |
 | Queue | **BullMQ + Redis** (self-hosted) | Decouples upload from image processing + **exhibition-scheduler cron** (`LIVE` → `ARCHIVED`) |
 | Image processing | **Bun.Image** (native, built into Bun since v1.3.14) | Drop-in alternative to `sharp`; no native module compilation needed |
 | Auth | **Better Auth**, mounted on the NestJS API via `@thallesp/nestjs-better-auth` | OAuth-only (Google + GitHub); API owns user/session/account tables directly |
@@ -245,10 +245,12 @@ just in the frontend UI. Runtime feature flags (`feature_flags` table, row-per-f
 - **Bun.Image over `sharp`**: removes the need for native module
   compilation in Docker images entirely, and keeps the worker on the same
   runtime as the rest of the stack (no Node/Bun hybrid needed).
-- **MinIO over LocalStack**: LocalStack emulates broad AWS services (Lambda,
-  SQS, etc.) we don't use; MinIO is production-grade S3-compatible storage
+- **Silo (MinIO fork) over LocalStack**: LocalStack emulates broad AWS services (Lambda,
+  SQS, etc.) we don't use; Silo is production-grade S3-compatible storage
   that can be the *same* tool in both dev and production, giving true
-  dev/prod parity.
+  dev/prod parity. (Upstream MinIO was archived, so the fork carries the
+  line; LocalStack's unified image additionally requires a paid auth
+  token since 2026.03.0 — see ADR-010 §7.)
 - **Better Auth over Auth.js**: Better Auth is the OAuth-only choice
   distributed with better multi-client support out of the box.
   Since September 2025, the Auth.js team has joined Better Auth, and

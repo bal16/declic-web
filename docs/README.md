@@ -43,6 +43,7 @@ Start here. Every note below is linked with standard markdown links (relative pa
 | [ADR-005](adr/ADR-005-modular-monolith.md)    | Modular monolith boundaries + `check-boundaries.ts` gate     | accepted + addendum 2026-09-08 (layered gate) |
 | [ADR-006](adr/ADR-006-branch-protection.md) | Phased branch protection (strict on trigger)                 | proposed                                      |
 | [ADR-007](adr/ADR-007-path-aliases.md)      | Per-app `@/*` path alias (app `src` anchor)                  | accepted                                      |
+| [ADR-010](adr/ADR-010-s3-backends.md)       | S3 backends after MinIO archival (Silo everywhere)           | accepted                                      |
 
 ## Ops
 

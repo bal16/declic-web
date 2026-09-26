@@ -56,8 +56,11 @@ services:
       - declic-net
 
   # ── Object storage (S3-compatible, dev/prod parity) ───────────
+  # Silo: community-maintained MinIO fork (drop-in — same S3 API,
+  # MINIO_* env, ports, on-disk format). Pinned RELEASE tag only;
+  # quay.io/minio is dead (see ADR-010). CI uses the same Silo image.
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -69,7 +72,7 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      test: ['CMD', 'silo', 'healthcheck', 'ready']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -78,7 +81,7 @@ services:
 
   # One-off: auto-create the app's bucket on first startup
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: docker.io/pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       minio:
         condition: service_healthy

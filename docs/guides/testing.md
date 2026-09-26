@@ -39,8 +39,9 @@ backend/frontend guides. This file is *how we test it*.
 ### E2E tests
 
 * `api`/`web`: service-free (in-memory HTTP round-trips).
-* `worker`: real Redis/MinIO/Postgres via `docker compose up -d` or
-  CI services (`ci.yml` verify job).
+* `worker`: real Redis/S3/Postgres via `docker compose up -d`
+  or CI services (`ci.yml` verify job) — same pinned Silo image in
+  both, see [ADR-010](../adr/ADR-010-s3-backends.md).
 * Worker acceptance tests (T1-T4) live in
   `apps/worker/test/e2e/pipeline.e2e.test.ts`.
 
