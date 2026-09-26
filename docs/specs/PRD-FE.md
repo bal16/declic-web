@@ -287,7 +287,7 @@ const { data: session, isPending } = useSession();
 ```
 
 - `better-auth` is mounted on the **NestJS API** (`@thallesp/nestjs-better-auth`), not on the web app — `apps/web` acts only as a client (same `better-auth/react` `useSession` client SDK).
-- Frontend env: `VITE_API_URL=http://localhost:3001`, `VITE_BETTER_AUTH_URL=http://localhost:3001` (Vite `VITE_` prefix for client-exposed vars).
+- Frontend env: `VITE_API_URL=http://localhost:3001`, `VITE_BETTER_AUTH_URL=http://localhost:3001` (Vite `VITE_` prefix for client-exposed vars). OAuth client IDs are mirrored as `VITE_GOOGLE_CLIENT_ID` / `VITE_GITHUB_CLIENT_ID` (public by design; empty = provider button disabled, see §6.4).
 
 ### 6.2 Session Handling (Cookie vs Bearer)
 

@@ -3,7 +3,7 @@ import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { STAFF_ROLES, requireRoles } from '@/features/shared/auth/guards';
 
 export const Route = createFileRoute('/_authed/_admin')({
-  beforeLoad: () => requireRoles(STAFF_ROLES),
+  beforeLoad: () => requireRoles(STAFF_ROLES, '/403'),
   component: RouteComponent,
 });
 

@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { ADMIN_ONLY, requireRoles } from '@/features/shared/auth/guards';
 
 export const Route = createFileRoute('/_authed/_admin/settings')({
-  beforeLoad: () => requireRoles(ADMIN_ONLY),
+  beforeLoad: () => requireRoles(ADMIN_ONLY, '/403'),
   staticData: { title: 'Settings' },
   component: RouteComponent,
 });

@@ -174,7 +174,9 @@ flowchart TD
 ## 4. Env + config
 
 - Vite reads root `.env` via `envDir: '../../'`; only `VITE_*` reaches
-  the browser (`VITE_API_URL`, `VITE_BETTER_AUTH_URL`).
+  the browser (`VITE_API_URL`, `VITE_BETTER_AUTH_URL`,
+  `VITE_GOOGLE_CLIENT_ID`, `VITE_GITHUB_CLIENT_ID` — public OAuth
+  mirrors; empty = provider button disabled).
 - Runtime config in `lib/env.ts` (existing) — no other file reads
   `import.meta.env` directly.
 

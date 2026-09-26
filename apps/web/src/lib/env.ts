@@ -7,6 +7,8 @@ export const DEFAULT_API_URL = 'http://localhost:3001';
 export interface WebEnv {
   VITE_API_URL?: string;
   VITE_BETTER_AUTH_URL?: string;
+  VITE_GOOGLE_CLIENT_ID?: string;
+  VITE_GITHUB_CLIENT_ID?: string;
 }
 
 const realEnv: WebEnv =
@@ -20,4 +22,12 @@ export function getApiUrl(env: WebEnv = realEnv): string {
 
 export function getBetterAuthUrl(env: WebEnv = realEnv): string {
   return env.VITE_BETTER_AUTH_URL ?? getApiUrl(env);
+}
+
+export function getGoogleClientId(env: WebEnv = realEnv): string {
+  return env.VITE_GOOGLE_CLIENT_ID ?? '';
+}
+
+export function getGithubClientId(env: WebEnv = realEnv): string {
+  return env.VITE_GITHUB_CLIENT_ID ?? '';
 }

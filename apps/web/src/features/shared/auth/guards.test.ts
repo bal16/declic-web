@@ -2,11 +2,10 @@ import { mock } from 'bun:test';
 
 // Controllable session double (worker-style `given*` setter below).
 // mock.module is hoisted, so this runs before the imports that follow.
-let currentRole: Role | null = 'ADMIN';
+let currentData: { user: { role: Role } } | null = { user: { role: 'ADMIN' } };
 
-mock.module('./session', () => ({
-  getSessionRole: () => currentRole,
-  useSessionRole: () => currentRole,
+mock.module('./client', () => ({
+  authClient: { getSession: async () => ({ data: currentData }) },
 }));
 
 import { afterEach, describe, expect, it } from 'bun:test';
@@ -22,12 +21,12 @@ import type { Role } from './session';
 
 /** Arrange: the session the guards will see. */
 function givenRole(role: Role | null): void {
-  currentRole = role;
+  currentData = role ? { user: { role } } : null;
 }
 
-function catchRedirect(fn: () => unknown): Response {
+async function catchRedirect(fn: () => Promise<unknown>) {
   try {
-    fn();
+    await fn();
   } catch (err) {
     if (err instanceof Response) return err;
     throw err;
@@ -47,41 +46,43 @@ afterEach(() => {
 });
 
 describe('requireSession', () => {
-  it('returns the role when logged in', () => {
+  it('returns the role when logged in', async () => {
     givenRole('CURATOR');
-    expect(requireSession()).toEqual({ role: 'CURATOR' });
+    expect(await requireSession()).toEqual({ role: 'CURATOR' });
   });
 
-  it('redirects anonymous to /login', () => {
+  it('redirects anonymous to /login', async () => {
     givenRole(null);
-    const res = catchRedirect(() => requireSession());
+    const res = await catchRedirect(() => requireSession());
     expectRedirectTo(res, '/login');
   });
 });
 
 describe('requireRoles', () => {
-  it('passes allowed roles and returns them for route context', () => {
+  it('passes allowed roles and returns them for route context', async () => {
     givenRole('PHOTOGRAPHER');
-    expect(requireRoles(PHOTOGRAPHER_ROLES)).toEqual({
+    expect(await requireRoles(PHOTOGRAPHER_ROLES)).toEqual({
       role: 'PHOTOGRAPHER',
     });
   });
 
-  it('redirects to / by default for insufficient role', () => {
+  it('redirects to / by default for insufficient role', async () => {
     givenRole('VIEWER');
-    const res = catchRedirect(() => requireRoles(PHOTOGRAPHER_ROLES));
+    const res = await catchRedirect(() => requireRoles(PHOTOGRAPHER_ROLES));
     expectRedirectTo(res, '/');
   });
 
-  it('redirects to the custom fallback when given', () => {
+  it('redirects to the custom fallback when given', async () => {
     givenRole('CURATOR');
-    const res = catchRedirect(() => requireRoles(ADMIN_ONLY, '/moderation'));
+    const res = await catchRedirect(() =>
+      requireRoles(ADMIN_ONLY, '/moderation'),
+    );
     expectRedirectTo(res, '/moderation');
   });
 
-  it('redirects anonymous to /login, not the role fallback', () => {
+  it('redirects anonymous to /login, not the role fallback', async () => {
     givenRole(null);
-    const res = catchRedirect(() => requireRoles(ADMIN_ONLY));
+    const res = await catchRedirect(() => requireRoles(ADMIN_ONLY));
     expectRedirectTo(res, '/login');
   });
 });

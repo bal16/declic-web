@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as R403RouteImport } from './routes/403'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ArchiveRouteImport } from './routes/archive'
@@ -31,6 +32,11 @@ import { Route as AuthedDashboardEditPostIdRouteImport } from './routes/_authed/
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R403Route = R403RouteImport.update({
+  id: '/403',
+  path: '/403',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedRoute = AuthedRouteImport.update({
@@ -120,6 +126,7 @@ const AuthedDashboardEditPostIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/403': typeof R403Route
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
   '/login': typeof LoginRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/403': typeof R403Route
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
   '/login': typeof LoginRoute
@@ -157,6 +165,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/403': typeof R403Route
   '/_authed': typeof AuthedRouteWithChildren
   '/about': typeof AboutRoute
   '/archive': typeof ArchiveRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/403'
     | '/about'
     | '/archive'
     | '/login'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/403'
     | '/about'
     | '/archive'
     | '/login'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/403'
     | '/_authed'
     | '/about'
     | '/archive'
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  R403Route: typeof R403Route
   AuthedRoute: typeof AuthedRouteWithChildren
   AboutRoute: typeof AboutRoute
   ArchiveRoute: typeof ArchiveRoute
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/403': {
+      id: '/403'
+      path: '/403'
+      fullPath: '/403'
+      preLoaderRoute: typeof R403RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -417,6 +437,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  R403Route: R403Route,
   AuthedRoute: AuthedRouteWithChildren,
   AboutRoute: AboutRoute,
   ArchiveRoute: ArchiveRoute,

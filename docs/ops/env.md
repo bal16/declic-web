@@ -22,7 +22,7 @@ Copy to root `.env` before first run: `cp .env.example .env`
 | MinIO / S3 | `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `S3_BUCKET`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE` |
 | Logging | `LOG_LEVEL` (commented default) |
 | Better Auth | `BETTER_AUTH_SECRET` (dev-only default), Google/GitHub OAuth `*_CLIENT_ID/SECRET` (empty = login disabled) |
-| Frontend | `VITE_API_URL`, `VITE_BETTER_AUTH_URL` |
+| Frontend | `VITE_API_URL`, `VITE_BETTER_AUTH_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_GITHUB_CLIENT_ID` (public OAuth mirrors; empty = button disabled) |
 
 > [!warning] Source of truth is root `.env.example`, not this note.
 > Edit that file, then run `bun scripts/sync-docs-mirrors.ts`.
@@ -66,5 +66,9 @@ GITHUB_CLIENT_SECRET=
 # Frontend (TanStack Start — client vars use the VITE_ prefix)
 VITE_API_URL=http://localhost:3001
 VITE_BETTER_AUTH_URL=http://localhost:3001
+# OAuth client-ID mirrors (public by design — secrets stay unprefixed).
+# Empty = provider button disabled (login-disabled state).
+VITE_GOOGLE_CLIENT_ID=
+VITE_GITHUB_CLIENT_ID=
 ```
 <!-- sync:env end -->
