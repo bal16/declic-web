@@ -5,7 +5,9 @@
     "correctness": "error"
   },
   "rules": {
-    "react/hooks": "error"
+    "react/hooks": "error",
+    "import/no-cycle": ["error", { "maxDepth": 3 }],
+    "import/no-self-import": "error"
   },
   "overrides": [
     {

@@ -7,6 +7,7 @@
   "sortImports": {},
   "sortTailwindcss": {
     "stylesheet": "./apps/web/src/styles.css",
+    "functions": ["clsx", "cn", "cva"],
   },
   "ignorePatterns": [
     "apps/web/.output/**",
