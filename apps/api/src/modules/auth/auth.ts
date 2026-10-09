@@ -10,7 +10,7 @@ import {
 import { betterAuth } from 'better-auth';
 import { bearer } from 'better-auth/plugins';
 
-export function createAuth(db: Db = createDb(process.env.DATABASE_URL!)) {
+export function createAuth(db: Db = createDb()) {
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: 'pg',

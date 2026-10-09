@@ -7,9 +7,18 @@
   "rules": {
     "react/hooks": "error",
     "import/no-cycle": ["error", { "maxDepth": 3 }],
-    "import/no-self-import": "error"
+    "import/no-self-import": "error",
+    "typescript/no-non-null-assertion": "error",
+    "eqeqeq": "error"
   },
   "overrides": [
+    {
+      "files": ["apps/web/src/routeTree.gen.ts"],
+      "rules": {
+        "eqeqeq": "off",
+        "typescript/no-non-null-assertion": "off"
+      }
+    },
     {
       "files": ["apps/web/**"],
       "rules": {
@@ -20,7 +29,7 @@
     {
       "files": ["**/*.test.ts", "**/test/**"],
       "rules": {
-        "@typescript-eslint/no-explicit-any": "off"
+        "typescript/no-explicit-any": "off"
       }
     }
   ]

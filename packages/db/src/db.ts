@@ -6,8 +6,11 @@ import { relations } from './relations';
 // Lazy: no connection opens at import time, so unit tests can import
 // schema without a database. URL comes from the environment only
 // (compose, --env-file, deploy env) — never from a file or default.
-export function createDb(url: string = process.env.DATABASE_URL!) {
-  return drizzle(url, { relations });
+export function createDb(url?: string) {
+  const resolved = url ?? process.env.DATABASE_URL;
+  if (resolved === undefined)
+    throw new Error('Missing required environment variable: DATABASE_URL');
+  return drizzle(resolved, { relations });
 }
 
 export type Db = ReturnType<typeof createDb>;

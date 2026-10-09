@@ -86,19 +86,24 @@ describe('DataTable', () => {
 
   it('changes rows per page', async () => {
     render(<DataTable data={givenTableRows()} />);
-    fireEvent.click(document.getElementById('rows-per-page')!);
+    const rowsPerPage = document.getElementById('rows-per-page');
+    if (!rowsPerPage) throw new Error('expected rows-per-page to render');
+    fireEvent.click(rowsPerPage);
     fireEvent.click(await screen.findByRole('option', { name: '20' }));
     expect(screen.getByText('Page 1 of 1')).not.toBeNull();
   });
 
   it('shows the selected view label, not the raw value', async () => {
     render(<DataTable data={givenTableRows()} />);
-    fireEvent.click(document.getElementById('view-selector')!);
+    const viewSelector = document.getElementById('view-selector');
+    if (!viewSelector) throw new Error('expected view-selector to render');
+    fireEvent.click(viewSelector);
     // Base UI options activate via keyboard, not bare click.
     const opt = await screen.findByRole('option', { name: 'Key Personnel' });
     (opt as HTMLElement).focus();
     fireEvent.keyDown(opt, { key: 'Enter', code: 'Enter' });
-    const trigger = document.getElementById('view-selector')!;
+    const trigger = document.getElementById('view-selector');
+    if (!trigger) throw new Error('expected view-selector to render');
     expect(trigger.textContent).toContain('Key Personnel');
     expect(trigger.textContent).not.toContain('key-personnel');
   });

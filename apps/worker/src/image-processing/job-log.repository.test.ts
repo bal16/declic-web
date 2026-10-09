@@ -94,6 +94,9 @@ describe('JobLogsRepository (pglite)', () => {
       .select()
       .from(jobLogs)
       .where(eq(jobLogs.jobId, 'test-job-3'));
-    expect(rows[0].errorStack!.length).toBe(2000);
+    const errorStack = rows[0].errorStack;
+    if (typeof errorStack !== 'string')
+      throw new Error('expected errorStack to be stored');
+    expect(errorStack.length).toBe(2000);
   });
 });

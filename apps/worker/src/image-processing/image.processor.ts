@@ -30,6 +30,8 @@ export class ImageProcessor extends WorkerHost {
   }
 
   async process(job: Job) {
+    const jobId = job.id;
+    if (jobId === undefined) throw new Error('job id missing');
     // Validation point: parse at consume (malformed payloads fail the job).
     const input = imageProcessingJobSchema.parse(job.data);
     const startedAt = Date.now();
@@ -39,7 +41,7 @@ export class ImageProcessor extends WorkerHost {
     );
 
     await this.jobLogs.logAttempt({
-      jobId: job.id!,
+      jobId,
       postId: input.postId,
       photoItemId: input.photoItemId,
       attempt: job.attemptsMade + 1,
@@ -83,7 +85,7 @@ export class ImageProcessor extends WorkerHost {
     );
 
     await this.jobLogs.logAttempt({
-      jobId: job.id!,
+      jobId,
       postId: input.postId,
       photoItemId: input.photoItemId,
       attempt: job.attemptsMade + 1,
@@ -105,6 +107,8 @@ export class ImageProcessor extends WorkerHost {
 
   @OnWorkerEvent('failed')
   async onJobFailed(job: Job) {
+    const jobId = job.id;
+    if (jobId === undefined) throw new Error('job id missing');
     const parsed = imageProcessingJobSchema.safeParse(job.data);
     if (!parsed.success) {
       this.logger.error(
@@ -117,7 +121,7 @@ export class ImageProcessor extends WorkerHost {
     const isTerminal = state === 'failed';
 
     await this.jobLogs.logAttempt({
-      jobId: job.id!,
+      jobId,
       postId: parsed.data.postId,
       photoItemId: parsed.data.photoItemId,
       attempt: job.attemptsMade,
