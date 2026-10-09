@@ -4,7 +4,7 @@ import { mock } from 'bun:test';
 // mock.module is hoisted, so this runs before the imports that follow.
 let currentData: { user: { role: Role } } | null = { user: { role: 'ADMIN' } };
 
-mock.module('./client', () => ({
+void mock.module('./client', () => ({
   authClient: { getSession: async () => ({ data: currentData }) },
 }));
 

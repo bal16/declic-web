@@ -7,7 +7,7 @@ import { mock } from 'bun:test';
 
 // Nav items use TanStack useLocation (active state) + Link. Stub both;
 // real navigation is covered by e2e.
-mock.module('@tanstack/react-router', () => ({
+void mock.module('@tanstack/react-router', () => ({
   useLocation: () => ({ pathname: '/dashboard' }),
   Link: ({
     to,

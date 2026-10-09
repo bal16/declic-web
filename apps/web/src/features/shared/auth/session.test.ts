@@ -5,7 +5,7 @@ let hookState: {
   isPending: boolean;
 } = { data: null, isPending: false };
 
-mock.module('./client', () => ({
+void mock.module('./client', () => ({
   authClient: { useSession: () => hookState },
 }));
 

@@ -15,7 +15,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator';
 // has no effect. Never rely on storage patching in tests; inject the
 // store instead (see `readStoredTheme`).
 if (typeof (globalThis as Record<string, unknown>).window === 'undefined') {
-  await GlobalRegistrator.register({ url: 'http://localhost:3000' });
+  GlobalRegistrator.register({ url: 'http://localhost:3000' });
 }
 
 // React 19 requires this flag for `act()` outside of a test framework

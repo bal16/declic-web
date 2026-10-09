@@ -2,7 +2,7 @@ import { mock } from 'bun:test';
 
 // Same stub as theme-provider.test.tsx: `<ScriptOnce>` needs router
 // context and renders `null` on the client.
-mock.module('@tanstack/react-router', () => ({
+void mock.module('@tanstack/react-router', () => ({
   ScriptOnce: () => null,
 }));
 

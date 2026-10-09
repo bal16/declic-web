@@ -10,7 +10,9 @@ export function LoginForm() {
 
   const isBothDisabled = !googleId && !githubId;
   const handleSocialLogin = (provider: 'google' | 'github') => {
-    authClient.signIn.social({
+    // Fire-and-forget: sign-in navigates away on success; surface
+    // failures via a follow-up (login error UI is tracked separately).
+    void authClient.signIn.social({
       provider,
       callbackURL: '/',
     });

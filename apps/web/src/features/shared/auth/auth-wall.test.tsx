@@ -3,7 +3,7 @@ import { describe, it, expect, mock } from 'bun:test';
 import { render } from '@testing-library/react';
 import React from 'react';
 
-mock.module('@tanstack/react-router', () => ({
+void mock.module('@tanstack/react-router', () => ({
   Link: ({
     to,
     children,
@@ -23,7 +23,7 @@ mock.module('@tanstack/react-router', () => ({
 let mockGoogleId = '';
 let mockGithubId = '';
 
-mock.module('@/lib/env', () => ({
+void mock.module('@/lib/env', () => ({
   getGoogleClientId: () => mockGoogleId,
   getGithubClientId: () => mockGithubId,
 }));

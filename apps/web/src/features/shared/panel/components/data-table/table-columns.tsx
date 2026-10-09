@@ -130,11 +130,14 @@ export const defaultColumns = columnHelper.columns([
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: 'Done',
-            error: 'Error',
-          });
+          void toast.promise(
+            new Promise((resolve) => setTimeout(resolve, 1000)),
+            {
+              loading: `Saving ${row.original.header}`,
+              success: 'Done',
+              error: 'Error',
+            },
+          );
         }}
       >
         <Label htmlFor={`${row.original.id}-target`} className="sr-only">
@@ -154,11 +157,14 @@ export const defaultColumns = columnHelper.columns([
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
-            success: 'Done',
-            error: 'Error',
-          });
+          void toast.promise(
+            new Promise((resolve) => setTimeout(resolve, 1000)),
+            {
+              loading: `Saving ${row.original.header}`,
+              success: 'Done',
+              error: 'Error',
+            },
+          );
         }}
       >
         <Label htmlFor={`${row.original.id}-limit`} className="sr-only">

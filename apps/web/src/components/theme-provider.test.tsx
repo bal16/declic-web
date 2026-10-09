@@ -3,7 +3,7 @@ import { mock } from 'bun:test';
 // `<ScriptOnce>` needs a TanStack router context and renders `null` on the
 // client anyway, so stub it to keep these tests focused on theme behavior.
 // (SSR script emission is covered by the `getThemeScript` unit test.)
-mock.module('@tanstack/react-router', () => ({
+void mock.module('@tanstack/react-router', () => ({
   ScriptOnce: () => null,
 }));
 

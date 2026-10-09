@@ -49,8 +49,8 @@ describe('ImageProcessor events', () => {
   it('logs active/completed without throwing', async () => {
     const { processor } = await newProcessor();
     const job = jobWith(payload);
-    await processor.onJobActive(job);
-    await processor.onJobCompleted(job);
+    processor.onJobActive(job);
+    processor.onJobCompleted(job);
   });
 });
 
