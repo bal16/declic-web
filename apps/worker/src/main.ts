@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { NativeLogger } from 'nestjs-pino';
 
-import { PinoNestLogger } from '@/logger';
 import { WorkerModule } from '@/worker.module';
 
 async function bootstrap(): Promise<void> {
@@ -12,7 +12,7 @@ async function bootstrap(): Promise<void> {
     bufferLogs: true,
   });
 
-  const logger = new PinoNestLogger('Bootstrap');
+  const logger = app.get(NativeLogger);
   app.useLogger(logger);
   await app.init();
   logger.log('@declic/worker context ready');

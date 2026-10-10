@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { NativeLogger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 import { AppModule } from './app.module';
 import { setupDocs } from './docs';
-import { PinoNestLogger, requestLoggingMiddleware } from './logger';
 
 async function bootstrap(): Promise<void> {
   // bufferLogs: hold early boot logs until pino takes over below.
@@ -12,9 +12,8 @@ async function bootstrap(): Promise<void> {
     bufferLogs: true,
     bodyParser: false,
   });
-  const logger = new PinoNestLogger('Bootstrap');
+  const logger = app.get(NativeLogger);
   app.useLogger(logger);
-  app.use(requestLoggingMiddleware);
   // All PRD endpoints live under /api; the liveness probe stays at /health.
   app.setGlobalPrefix('api', { exclude: ['health'] });
 
