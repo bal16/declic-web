@@ -1,0 +1,18 @@
+import { afterEach, describe, expect, it } from 'bun:test';
+
+import { cleanup, render } from '@testing-library/react';
+import type { ComponentType } from 'react';
+
+import { Route } from './curate';
+
+afterEach(() => {
+  cleanup();
+});
+
+describe('admin curate route', () => {
+  it('renders the placeholder', () => {
+    const Component = Route.options.component as ComponentType;
+    const { getByText } = render(<Component />);
+    expect(getByText('Hello "/_admin/curate"!')).not.toBeNull();
+  });
+});
